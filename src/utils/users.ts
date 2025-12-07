@@ -4,7 +4,9 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 
-// Use /tmp on Vercel (writable), fallback to src/data locally
+// IMPORTANT: /tmp on Vercel is EPHEMERAL - data is lost on cold starts!
+// This is a temporary solution for demo/development purposes.
+// For production, migrate to a persistent database (e.g., Vercel Postgres, PlanetScale, Supabase).
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR = isVercel
   ? '/tmp/halcyon-data'

@@ -132,3 +132,14 @@
   border-color: var(--color-primary);
   background-color: var(--color-surface-hover);
 }
+
+.buttonContainer {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.buttonContainer a {
+  text-align: center;
+}

@@ -3,12 +3,19 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 
-// Use /tmp on Vercel (writable), fallback to src/data locally
+// IMPORTANT: /tmp on Vercel is EPHEMERAL - data is lost on cold starts!
+// This is a temporary solution for demo/development purposes.
+// For production, migrate to a persistent database (e.g., Vercel Postgres, PlanetScale, Supabase).
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR = isVercel
   ? '/tmp/halcyon-data'
   : path.join(process.cwd(), 'src', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'projects.json');
+
+// Log warning on Vercel about ephemeral storage
+if (isVercel && typeof console !== 'undefined') {
+  console.warn('[halcyon-cinema] Using ephemeral /tmp storage. Data will not persist between cold starts. Consider migrating to a database.');
+}
 
 // In-memory storage (with optional file persistence when possible)
 let projects: Project[] = [];
