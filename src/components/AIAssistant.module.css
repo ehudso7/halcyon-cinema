@@ -146,6 +146,14 @@
   cursor: not-allowed;
 }
 
+.hint {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-top: 8px;
+  opacity: 0.7;
+}
+
 .suggestions {
   flex: 1;
   overflow-y: auto;

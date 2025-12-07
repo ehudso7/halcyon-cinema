@@ -49,8 +49,8 @@ export default function SignIn() {
             <h1 className={styles.logoText}>HALCYON-Cinema</h1>
           </div>
 
-          <h2 className={styles.title}>Welcome back</h2>
-          <p className={styles.subtitle}>Sign in to your account to continue</p>
+          <h2 className={styles.title}>Welcome back, Director.</h2>
+          <p className={styles.subtitle}>Pick up where you left off.</p>
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.field}>

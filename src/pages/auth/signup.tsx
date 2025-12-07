@@ -75,8 +75,8 @@ export default function SignUp() {
             <h1 className={styles.logoText}>HALCYON-Cinema</h1>
           </div>
 
-          <h2 className={styles.title}>Create your account</h2>
-          <p className={styles.subtitle}>Start building cinematic content with AI</p>
+          <h2 className={styles.title}>Create your cinematic universe.</h2>
+          <p className={styles.subtitle}>Join thousands of creators using HALCYON to visualize their stories.</p>
 
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.field}>
@@ -151,10 +151,10 @@ export default function SignUp() {
               {isLoading ? (
                 <>
                   <span className="spinner" />
-                  Creating account...
+                  Creating your universe...
                 </>
               ) : (
-                'Create Account'
+                'Start Creating — Free'
               )}
             </button>
           </form>

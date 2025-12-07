@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { GetServerSideProps } from 'next';
+import { getServerSession } from 'next-auth';
+import { useSession } from 'next-auth/react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import ProjectCard from '@/components/ProjectCard';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import { Project } from '@/types';
 import { getAllProjects } from '@/utils/storage';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Home.module.css';
 
 interface HomeProps {
@@ -15,9 +19,19 @@ interface HomeProps {
 
 export default function Home({ projects: initialProjects }: HomeProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  // Get the most recently updated project for "Continue" button
+  const lastProject = projects.length > 0
+    ? projects.reduce((latest, current) =>
+        new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
+      )
+    : null;
+
+  const userName = session?.user?.name?.split(' ')[0] || 'Creator';
 
   const handleCreateProject = async (name: string, description: string) => {
     setIsCreating(true);
@@ -58,21 +72,31 @@ export default function Home({ projects: initialProjects }: HomeProps) {
       <main className="page">
         <div className="container">
           <div className={styles.hero}>
-            <h1 className={styles.title}>Welcome to HALCYON-Cinema</h1>
+            <h1 className={styles.title}>Welcome back, {userName}.</h1>
             <p className={styles.subtitle}>
-              Create stunning cinematic visuals from natural-language prompts.
-              Build scenes, storyboards, and artworks powered by AI.
+              Your cinematic studio awaits. Create stunning visuals from natural-language prompts,
+              build storyboards, and bring your stories to life with AI.
             </p>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="btn btn-primary"
-              disabled={isCreating}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Create New Project
-            </button>
+            <div className={styles.heroButtons}>
+              {lastProject && (
+                <Link href={`/project/${lastProject.id}`} className="btn btn-secondary">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  Continue: {lastProject.name}
+                </Link>
+              )}
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="btn btn-primary"
+                disabled={isCreating}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                {projects.length === 0 ? 'Start Your First Project' : 'Create New Project'}
+              </button>
+            </div>
           </div>
 
           <section className={styles.section}>
@@ -84,9 +108,24 @@ export default function Home({ projects: initialProjects }: HomeProps) {
                 ))}
               </div>
             ) : (
-              <div className="empty-state">
-                <h3>No projects yet</h3>
-                <p>Create your first project to get started with AI-powered cinematic content.</p>
+              <div className={styles.emptyState}>
+                <div className={styles.emptyIcon}>🎬</div>
+                <h3>Your studio is ready</h3>
+                <p>Start your first project and watch your vision come to life with AI-powered scene generation.</p>
+                <div className={styles.emptyFeatures}>
+                  <div className={styles.emptyFeature}>
+                    <span>📝</span>
+                    <span>Describe scenes in plain English</span>
+                  </div>
+                  <div className={styles.emptyFeature}>
+                    <span>🎨</span>
+                    <span>Choose from 12+ visual styles</span>
+                  </div>
+                  <div className={styles.emptyFeature}>
+                    <span>📄</span>
+                    <span>Export as PDF or ZIP</span>
+                  </div>
+                </div>
               </div>
             )}
           </section>
