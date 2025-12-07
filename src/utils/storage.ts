@@ -13,8 +13,8 @@ const DATA_DIR = isVercel
 const DATA_FILE = path.join(DATA_DIR, 'projects.json');
 
 // Log warning on Vercel about ephemeral storage
-if (isVercel && typeof console !== 'undefined') {
-  console.warn('[halcyon-cinema] Using ephemeral /tmp storage. Data will not persist between cold starts. Consider migrating to a database.');
+if (isVercel) {
+  console.warn('[halcyon-cinema] Using ephemeral /tmp storage for project data. Data will not persist between cold starts. Consider migrating to a database.');
 }
 
 // In-memory storage (with optional file persistence when possible)
