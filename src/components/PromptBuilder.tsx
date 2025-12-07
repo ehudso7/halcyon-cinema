@@ -1,10 +1,12 @@
 import { useState, FormEvent } from 'react';
+import VisualStyleSelector, { getStyleModifier } from './VisualStyleSelector';
 import styles from './PromptBuilder.module.css';
 
 interface PromptBuilderProps {
   onSubmit: (data: PromptData) => void;
   isLoading?: boolean;
   initialPrompt?: string;
+  onPromptChange?: (prompt: string) => void;
 }
 
 export interface PromptData {
@@ -14,6 +16,7 @@ export interface PromptData {
   lighting?: string;
   mood?: string;
   aspectRatio?: string;
+  visualStyleId?: string;
 }
 
 const SHOT_TYPES = [
@@ -26,19 +29,6 @@ const SHOT_TYPES = [
   { value: 'low-angle', label: 'Low Angle' },
   { value: 'high-angle', label: 'High Angle' },
   { value: 'establishing', label: 'Establishing Shot' },
-];
-
-const STYLES = [
-  { value: '', label: 'Any' },
-  { value: 'photorealistic', label: 'Photorealistic' },
-  { value: 'cinematic film', label: 'Cinematic Film' },
-  { value: 'noir', label: 'Film Noir' },
-  { value: 'sci-fi', label: 'Sci-Fi' },
-  { value: 'fantasy', label: 'Fantasy' },
-  { value: 'anime', label: 'Anime' },
-  { value: 'oil painting', label: 'Oil Painting' },
-  { value: 'watercolor', label: 'Watercolor' },
-  { value: 'concept art', label: 'Concept Art' },
 ];
 
 const LIGHTING = [
@@ -71,15 +61,21 @@ const ASPECT_RATIOS = [
   { value: '1024x1792', label: '9:16 Portrait' },
 ];
 
-export default function PromptBuilder({ onSubmit, isLoading = false, initialPrompt = '' }: PromptBuilderProps) {
+export default function PromptBuilder({ onSubmit, isLoading = false, initialPrompt = '', onPromptChange }: PromptBuilderProps) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [shotType, setShotType] = useState('');
-  const [style, setStyle] = useState('');
   const [lighting, setLighting] = useState('');
   const [mood, setMood] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1024x1024');
+  const [visualStyleId, setVisualStyleId] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  const handlePromptChange = (value: string) => {
+    setPrompt(value);
+    onPromptChange?.(value);
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -91,15 +87,26 @@ export default function PromptBuilder({ onSubmit, isLoading = false, initialProm
       return;
     }
 
+    // Build the final prompt with style modifier
+    const styleModifier = getStyleModifier(visualStyleId);
+    const finalPrompt = styleModifier
+      ? `${trimmedPrompt}, ${styleModifier}`
+      : trimmedPrompt;
+
     onSubmit({
-      prompt: trimmedPrompt,
+      prompt: finalPrompt,
       shotType: shotType || undefined,
-      style: style || undefined,
+      style: visualStyleId || undefined,
       lighting: lighting || undefined,
       mood: mood || undefined,
       aspectRatio,
+      visualStyleId: visualStyleId || undefined,
     });
   };
+
+  const selectedStyleName = visualStyleId
+    ? require('./VisualStyleSelector').VISUAL_STYLES.find((s: { id: string }) => s.id === visualStyleId)?.name
+    : null;
 
   return (
     <div className={styles.builder}>
@@ -111,13 +118,49 @@ export default function PromptBuilder({ onSubmit, isLoading = false, initialProm
           <textarea
             id="prompt"
             value={prompt}
-            onChange={e => setPrompt(e.target.value)}
+            onChange={e => handlePromptChange(e.target.value)}
             placeholder="Describe your scene... e.g., 'A lone samurai standing on a misty mountain peak at dawn, cherry blossoms falling around him'"
             className={`input textarea ${styles.textarea}`}
             rows={4}
             disabled={isLoading}
           />
         </div>
+
+        {/* Visual Style Quick Toggle */}
+        <div className={styles.styleToggle}>
+          <button
+            type="button"
+            onClick={() => setShowStyleSelector(!showStyleSelector)}
+            className={`${styles.styleButton} ${visualStyleId ? styles.styleActive : ''}`}
+          >
+            <span className={styles.styleIcon}>🎨</span>
+            {visualStyleId ? (
+              <span>Style: <strong>{selectedStyleName}</strong></span>
+            ) : (
+              <span>Choose Visual Style</span>
+            )}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              style={{ transform: showStyleSelector ? 'rotate(180deg)' : 'none' }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+
+        {showStyleSelector && (
+          <div className={styles.styleSection}>
+            <VisualStyleSelector
+              selectedStyleId={visualStyleId}
+              onSelectStyle={setVisualStyleId}
+            />
+          </div>
+        )}
 
         <button
           type="button"
@@ -153,25 +196,6 @@ export default function PromptBuilder({ onSubmit, isLoading = false, initialProm
                   disabled={isLoading}
                 >
                   {SHOT_TYPES.map(option => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="style" className={styles.label}>
-                  Visual Style
-                </label>
-                <select
-                  id="style"
-                  value={style}
-                  onChange={e => setStyle(e.target.value)}
-                  className="input"
-                  disabled={isLoading}
-                >
-                  {STYLES.map(option => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
