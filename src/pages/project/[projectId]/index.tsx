@@ -2,15 +2,14 @@ import { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
+import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneCard from '@/components/SceneCard';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project } from '@/types';
 import { getProjectById } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
-import { PROJECT_TABS, getProjectTabHref } from '@/constants/navigation';
 import styles from '@/styles/Project.module.css';
 
 interface ProjectPageProps {
@@ -170,18 +169,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             </div>
           </div>
 
-          <nav className={styles.projectNav}>
-            {PROJECT_TABS.map(tab => (
-              <Link
-                key={tab.id}
-                href={getProjectTabHref(project.id, tab.id)}
-                className={`${styles.navTab} ${tab.id === 'scenes' ? styles.active : ''}`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </Link>
-            ))}
-          </nav>
+          <ProjectNavigation projectId={project.id} activeTab="scenes" />
 
           {showPromptBuilder && (
             <div className={styles.promptBuilderWrapper}>

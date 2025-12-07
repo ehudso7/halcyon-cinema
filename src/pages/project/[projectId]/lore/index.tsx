@@ -2,14 +2,13 @@ import { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
-import Link from 'next/link';
 import Header from '@/components/Header';
+import ProjectNavigation from '@/components/ProjectNavigation';
 import LoreCard from '@/components/LoreCard';
 import AddLoreModal from '@/components/AddLoreModal';
 import { LoreEntry, LoreType, Project } from '@/types';
 import { getProjectById, getProjectLore } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
-import { PROJECT_TABS, getProjectTabHref } from '@/constants/navigation';
 import styles from '@/styles/Lore.module.css';
 
 const LORE_FILTER_TABS: { type: LoreType | 'all'; label: string; icon: string }[] = [
@@ -158,18 +157,7 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
             </button>
           </div>
 
-          <nav className={styles.projectNav}>
-            {PROJECT_TABS.map(tab => (
-              <Link
-                key={tab.id}
-                href={getProjectTabHref(project.id, tab.id)}
-                className={`${styles.navTab} ${tab.id === 'lore' ? styles.active : ''}`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </Link>
-            ))}
-          </nav>
+          <ProjectNavigation projectId={project.id} activeTab="lore" />
 
           <div className={styles.tabs}>
             {LORE_FILTER_TABS.map(tab => (
