@@ -19,8 +19,9 @@ if (isVercel) {
 
 // In-memory storage (with optional file persistence when possible)
 let projects: Project[] = [];
-let initialized = false;
 let fileSystemAvailable = true;
+let lastFileReadTime = 0;
+const FILE_CACHE_TTL_MS = 100; // Re-read file if older than 100ms (for serverless consistency)
 
 function ensureDataDir(): boolean {
   try {
@@ -36,18 +37,26 @@ function ensureDataDir(): boolean {
 }
 
 function loadFromFile(): void {
-  if (initialized) return;
+  const now = Date.now();
+
+  // Always re-read from file in serverless environments to ensure consistency
+  // This handles cases where another instance wrote to the file
+  if (now - lastFileReadTime < FILE_CACHE_TTL_MS && projects.length > 0) {
+    return; // Use cached data if very recent and we have data
+  }
 
   try {
     if (ensureDataDir() && fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
       projects = JSON.parse(data);
+      lastFileReadTime = now;
     }
   } catch (error) {
     console.warn('Failed to load projects from file, using in-memory storage:', error);
-    projects = [];
+    if (projects.length === 0) {
+      projects = [];
+    }
   }
-  initialized = true;
 }
 
 function saveToFile(): void {
@@ -212,7 +221,7 @@ export function getProjectSceneCount(projectId: string): number {
 
 export function clearAllData(): void {
   projects = [];
-  initialized = false;
+  lastFileReadTime = 0;
   saveToFile();
 }
 
