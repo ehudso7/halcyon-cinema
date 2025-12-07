@@ -3,16 +3,28 @@ import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
 
-const DATA_FILE = path.join(process.cwd(), 'src', 'data', 'projects.json');
+// Use /tmp on Vercel (writable), fallback to src/data locally
+const isVercel = process.env.VERCEL === '1';
+const DATA_DIR = isVercel
+  ? '/tmp/halcyon-data'
+  : path.join(process.cwd(), 'src', 'data');
+const DATA_FILE = path.join(DATA_DIR, 'projects.json');
 
-// In-memory storage for development (with optional file persistence)
+// In-memory storage (with optional file persistence when possible)
 let projects: Project[] = [];
 let initialized = false;
+let fileSystemAvailable = true;
 
-function ensureDataDir(): void {
-  const dir = path.dirname(DATA_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+function ensureDataDir(): boolean {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    return true;
+  } catch (error) {
+    console.warn('Data directory not available, using in-memory storage only:', error);
+    fileSystemAvailable = false;
+    return false;
   }
 }
 
@@ -20,23 +32,26 @@ function loadFromFile(): void {
   if (initialized) return;
 
   try {
-    ensureDataDir();
-    if (fs.existsSync(DATA_FILE)) {
+    if (ensureDataDir() && fs.existsSync(DATA_FILE)) {
       const data = fs.readFileSync(DATA_FILE, 'utf-8');
       projects = JSON.parse(data);
     }
-  } catch {
+  } catch (error) {
+    console.warn('Failed to load projects from file, using in-memory storage:', error);
     projects = [];
   }
   initialized = true;
 }
 
 function saveToFile(): void {
+  if (!fileSystemAvailable) return;
+
   try {
     ensureDataDir();
     fs.writeFileSync(DATA_FILE, JSON.stringify(projects, null, 2));
   } catch (error) {
-    console.error('Failed to save projects:', error);
+    console.warn('Failed to save projects (using in-memory only):', error);
+    fileSystemAvailable = false;
   }
 }
 
