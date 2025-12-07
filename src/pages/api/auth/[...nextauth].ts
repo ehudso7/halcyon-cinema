@@ -52,8 +52,8 @@ export const authOptions: NextAuthOptions = {
     signIn: '/auth/signin',
     error: '/auth/error',
   },
-  // NEXTAUTH_SECRET is required in production - set it in Vercel environment variables
-  // For development, NextAuth will use a default if not set
+  // NEXTAUTH_SECRET is required - set it in Vercel environment variables for production
+  // For local development, set it in .env.local (e.g., run: openssl rand -base64 32)
   secret: process.env.NEXTAUTH_SECRET,
 };
 

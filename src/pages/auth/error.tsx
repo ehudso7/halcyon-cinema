@@ -36,11 +36,11 @@ export default function AuthError() {
           <h2 className={styles.title}>Authentication Error</h2>
           <p className={styles.subtitle}>{errorMessage}</p>
 
-          <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <Link href="/auth/signin" className="btn btn-primary" style={{ textAlign: 'center' }}>
+          <div className={styles.buttonContainer}>
+            <Link href="/auth/signin" className="btn btn-primary">
               Try Again
             </Link>
-            <Link href="/landing" className="btn btn-secondary" style={{ textAlign: 'center' }}>
+            <Link href="/landing" className="btn btn-secondary">
               Go to Home
             </Link>
           </div>
