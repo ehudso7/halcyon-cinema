@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Generated files
 /data/projects.json
+
+# Local data storage
+src/data/

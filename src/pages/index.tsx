@@ -23,6 +23,7 @@ export default function Home({ projects: initialProjects }: HomeProps) {
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   // Get the most recently updated project for "Continue" button
   const lastProject = projects.length > 0
@@ -35,6 +36,7 @@ export default function Home({ projects: initialProjects }: HomeProps) {
 
   const handleCreateProject = async (name: string, description: string) => {
     setIsCreating(true);
+    setCreateError('');
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
@@ -43,19 +45,31 @@ export default function Home({ projects: initialProjects }: HomeProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create project');
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          // Session expired, redirect to sign in
+          router.push('/auth/signin');
+          return;
+        }
+        throw new Error(errorData.error || 'Failed to create project');
       }
 
       const newProject = await response.json();
       setProjects(prev => [newProject, ...prev]);
       setIsModalOpen(false);
+      setCreateError('');
       router.push(`/project/${newProject.id}`);
     } catch (error) {
       console.error('Error creating project:', error);
-      alert('Failed to create project. Please try again.');
+      setCreateError(error instanceof Error ? error.message : 'Failed to create project. Please try again.');
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setCreateError('');
   };
 
   return (
@@ -134,18 +148,35 @@ export default function Home({ projects: initialProjects }: HomeProps) {
 
       <CreateProjectModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={handleCloseModal}
         onSubmit={handleCreateProject}
+        isSubmitting={isCreating}
+        externalError={createError}
       />
     </>
   );
 }
 
-export const getServerSideProps: GetServerSideProps<HomeProps> = async () => {
-  const projects = getAllProjects();
+export const getServerSideProps: GetServerSideProps<HomeProps> = async (context) => {
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  // Redirect to sign in if not authenticated
+  if (!session?.user?.id) {
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      },
+    };
+  }
+
+  // Get only the user's projects
+  const allProjects = getAllProjects();
+  const userProjects = allProjects.filter(p => p.userId === session.user.id);
+
   return {
     props: {
-      projects,
+      projects: userProjects,
     },
   };
 };

@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { GetServerSideProps } from 'next';
+import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project, Scene } from '@/types';
 import { getProjectById, getSceneById } from '@/utils/storage';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Scene.module.css';
 
 interface ScenePageProps {
@@ -238,12 +240,27 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
   );
 }
 
-export const getServerSideProps: GetServerSideProps<ScenePageProps> = async ({ params }) => {
-  const projectId = params?.projectId as string;
-  const sceneId = params?.sceneId as string;
+export const getServerSideProps: GetServerSideProps<ScenePageProps> = async (context) => {
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  if (!session?.user?.id) {
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      },
+    };
+  }
+
+  const projectId = context.params?.projectId as string;
+  const sceneId = context.params?.sceneId as string;
 
   const project = getProjectById(projectId);
   if (!project) {
+    return { notFound: true };
+  }
+
+  if (project.userId && project.userId !== session.user.id) {
     return { notFound: true };
   }
 

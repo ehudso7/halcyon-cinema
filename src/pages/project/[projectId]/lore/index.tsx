@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
+import { useState } from 'react';
+import { GetServerSideProps } from 'next';
+import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import LoreCard from '@/components/LoreCard';
 import AddLoreModal from '@/components/AddLoreModal';
-import { LoreEntry, LoreType } from '@/types';
+import { LoreEntry, LoreType, Project } from '@/types';
+import { getProjectById, getProjectLore } from '@/utils/storage';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Lore.module.css';
 
 const LORE_TABS: { type: LoreType | 'all'; label: string; icon: string }[] = [
@@ -16,44 +19,24 @@ const LORE_TABS: { type: LoreType | 'all'; label: string; icon: string }[] = [
   { type: 'system', label: 'Systems', icon: '⚙️' },
 ];
 
-export default function LoreDashboard() {
-  const router = useRouter();
-  const { projectId } = router.query;
+interface LorePageProps {
+  project: Project;
+  initialEntries: LoreEntry[];
+}
 
-  const [entries, setEntries] = useState<LoreEntry[]>([]);
+export default function LoreDashboard({ project, initialEntries }: LorePageProps) {
+  const [entries, setEntries] = useState<LoreEntry[]>(initialEntries);
   const [activeTab, setActiveTab] = useState<LoreType | 'all'>('all');
   const [showModal, setShowModal] = useState(false);
   const [editEntry, setEditEntry] = useState<LoreEntry | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [projectName, setProjectName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const clearError = () => setError(null);
 
-  useEffect(() => {
-    if (projectId && typeof projectId === 'string') {
-      fetchLore();
-      fetchProject();
-    }
-  }, [projectId]);
-
-  const fetchProject = async () => {
-    try {
-      const response = await fetch(`/api/projects/${projectId}`);
-      if (response.ok) {
-        const project = await response.json();
-        setProjectName(project.name);
-      }
-    } catch (error) {
-      console.error('Error fetching project:', error);
-    }
-  };
-
   const fetchLore = async () => {
-    setIsLoading(true);
     clearError();
     try {
-      const response = await fetch(`/api/projects/${projectId}/lore`);
+      const response = await fetch(`/api/projects/${project.id}/lore`);
       if (response.ok) {
         const data = await response.json();
         setEntries(data);
@@ -64,8 +47,6 @@ export default function LoreDashboard() {
     } catch (err) {
       console.error('Error fetching lore:', err);
       setError('Failed to load lore entries. Please try again.');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -74,7 +55,7 @@ export default function LoreDashboard() {
     try {
       if (editEntry) {
         // Update existing
-        const response = await fetch(`/api/projects/${projectId}/lore/${editEntry.id}`, {
+        const response = await fetch(`/api/projects/${project.id}/lore/${editEntry.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(entry),
@@ -87,7 +68,7 @@ export default function LoreDashboard() {
         }
       } else {
         // Create new
-        const response = await fetch(`/api/projects/${projectId}/lore`, {
+        const response = await fetch(`/api/projects/${project.id}/lore`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(entry),
@@ -111,7 +92,7 @@ export default function LoreDashboard() {
 
     clearError();
     try {
-      const response = await fetch(`/api/projects/${projectId}/lore/${id}`, {
+      const response = await fetch(`/api/projects/${project.id}/lore/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -148,7 +129,7 @@ export default function LoreDashboard() {
   return (
     <>
       <Head>
-        <title>World Lore | {projectName || 'Project'} | HALCYON-Cinema</title>
+        <title>World Lore | {project.name} | HALCYON-Cinema</title>
       </Head>
 
       <Header />
@@ -158,7 +139,7 @@ export default function LoreDashboard() {
           <div className={styles.breadcrumb}>
             <Link href="/">Projects</Link>
             <span>/</span>
-            <Link href={`/project/${projectId}`}>{projectName || 'Project'}</Link>
+            <Link href={`/project/${project.id}`}>{project.name}</Link>
             <span>/</span>
             <span>Lore</span>
           </div>
@@ -225,11 +206,7 @@ export default function LoreDashboard() {
             </div>
           )}
 
-          {isLoading ? (
-            <div className={styles.loading}>
-              <span className="spinner" /> Loading lore...
-            </div>
-          ) : filteredEntries.length > 0 ? (
+          {filteredEntries.length > 0 ? (
             <div className={styles.grid}>
               {filteredEntries.map(entry => (
                 <LoreCard
@@ -281,3 +258,36 @@ export default function LoreDashboard() {
     </>
   );
 }
+
+export const getServerSideProps: GetServerSideProps<LorePageProps> = async (context) => {
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  if (!session?.user?.id) {
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      },
+    };
+  }
+
+  const projectId = context.params?.projectId as string;
+  const project = getProjectById(projectId);
+
+  if (!project) {
+    return { notFound: true };
+  }
+
+  if (project.userId && project.userId !== session.user.id) {
+    return { notFound: true };
+  }
+
+  const initialEntries = getProjectLore(projectId);
+
+  return {
+    props: {
+      project,
+      initialEntries,
+    },
+  };
+};

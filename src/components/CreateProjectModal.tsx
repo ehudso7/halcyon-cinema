@@ -4,17 +4,21 @@ import styles from './CreateProjectModal.module.css';
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (name: string, description: string) => void;
+  onSubmit: (name: string, description: string) => Promise<void>;
+  isSubmitting?: boolean;
+  externalError?: string;
 }
 
-export default function CreateProjectModal({ isOpen, onClose, onSubmit }: CreateProjectModalProps) {
+export default function CreateProjectModal({ isOpen, onClose, onSubmit, isSubmitting = false, externalError }: CreateProjectModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: FormEvent) => {
+  const displayError = externalError || error;
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -24,9 +28,14 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit }: Create
       return;
     }
 
-    onSubmit(trimmedName, description.trim());
-    setName('');
-    setDescription('');
+    try {
+      await onSubmit(trimmedName, description.trim());
+      setName('');
+      setDescription('');
+    } catch (err) {
+      // Error will be handled by parent via externalError
+      console.error('Submit error:', err);
+    }
   };
 
   const handleClose = () => {
@@ -68,13 +77,13 @@ export default function CreateProjectModal({ isOpen, onClose, onSubmit }: Create
               rows={3}
             />
           </div>
-          {error && <p className={styles.error}>{error}</p>}
+          {displayError && <p className={styles.error}>{displayError}</p>}
           <div className={styles.actions}>
-            <button type="button" onClick={handleClose} className="btn btn-secondary">
+            <button type="button" onClick={handleClose} className="btn btn-secondary" disabled={isSubmitting}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              Create Project
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+              {isSubmitting ? 'Creating...' : 'Create Project'}
             </button>
           </div>
         </form>
