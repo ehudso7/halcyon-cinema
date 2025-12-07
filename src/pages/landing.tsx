@@ -25,7 +25,7 @@ export default function LandingPage() {
             </Link>
             <div className={styles.navLinks}>
               {session ? (
-                <Link href="/dashboard" className={styles.navLink}>Dashboard</Link>
+                <Link href="/" className={styles.navLink}>Dashboard</Link>
               ) : (
                 <>
                   <Link href="/auth/signin" className={styles.navLink}>Log In</Link>
@@ -46,7 +46,7 @@ export default function LandingPage() {
             </p>
             <div className={styles.buttons}>
               {session ? (
-                <Link href="/dashboard" className={styles.btnPrimary}>
+                <Link href="/" className={styles.btnPrimary}>
                   Go to Dashboard
                 </Link>
               ) : (
