@@ -196,7 +196,8 @@ export const getServerSideProps: GetServerSideProps<CharactersPageProps> = async
     return { notFound: true };
   }
 
-  if (project.userId && project.userId !== session.user.id) {
+  // Verify user owns this project (strict check - projects must have userId)
+  if (project.userId !== session.user.id) {
     return { notFound: true };
   }
 
