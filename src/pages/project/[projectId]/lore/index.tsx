@@ -11,7 +11,14 @@ import { getProjectById, getProjectLore } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Lore.module.css';
 
-const LORE_TABS: { type: LoreType | 'all'; label: string; icon: string }[] = [
+const PROJECT_TABS = [
+  { id: 'scenes', label: 'Scenes', icon: '🎬' },
+  { id: 'lore', label: 'World Lore', icon: '📚' },
+  { id: 'characters', label: 'Characters', icon: '👤' },
+  { id: 'sequence', label: 'Scene Flow', icon: '🎞️' },
+];
+
+const LORE_FILTER_TABS: { type: LoreType | 'all'; label: string; icon: string }[] = [
   { type: 'all', label: 'All', icon: '📚' },
   { type: 'character', label: 'Characters', icon: '👤' },
   { type: 'location', label: 'Locations', icon: '🏛️' },
@@ -118,7 +125,7 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
 
   const getCounts = () => {
     const counts: Record<string, number> = { all: entries.length };
-    LORE_TABS.slice(1).forEach(tab => {
+    LORE_FILTER_TABS.slice(1).forEach(tab => {
       counts[tab.type] = entries.filter(e => e.type === tab.type).length;
     });
     return counts;
@@ -132,23 +139,15 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
         <title>World Lore | {project.name} | HALCYON-Cinema</title>
       </Head>
 
-      <Header />
+      <Header showBackLink backLinkHref="/" backLinkText="Projects" />
 
       <main className="page">
         <div className="container">
-          <div className={styles.breadcrumb}>
-            <Link href="/">Projects</Link>
-            <span>/</span>
-            <Link href={`/project/${project.id}`}>{project.name}</Link>
-            <span>/</span>
-            <span>Lore</span>
-          </div>
-
           <div className={styles.header}>
-            <div>
-              <h1 className={styles.title}>World Lore</h1>
-              <p className={styles.subtitle}>
-                Build your universe — characters, locations, events, and systems
+            <div className={styles.headerInfo}>
+              <h1 className={styles.title}>{project.name}</h1>
+              <p className={styles.meta}>
+                {entries.length} lore {entries.length === 1 ? 'entry' : 'entries'}
               </p>
             </div>
             <button
@@ -165,8 +164,28 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
             </button>
           </div>
 
+          <nav className={styles.projectNav}>
+            {PROJECT_TABS.map(tab => {
+              const href = tab.id === 'scenes'
+                ? `/project/${project.id}`
+                : `/project/${project.id}/${tab.id}`;
+              const isActive = tab.id === 'lore';
+
+              return (
+                <Link
+                  key={tab.id}
+                  href={href}
+                  className={`${styles.navTab} ${isActive ? styles.active : ''}`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+
           <div className={styles.tabs}>
-            {LORE_TABS.map(tab => (
+            {LORE_FILTER_TABS.map(tab => (
               <button
                 key={tab.type}
                 className={`${styles.tab} ${activeTab === tab.type ? styles.active : ''}`}
@@ -220,12 +239,12 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
           ) : (
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>
-                {activeTab === 'all' ? '📚' : LORE_TABS.find(t => t.type === activeTab)?.icon}
+                {activeTab === 'all' ? '📚' : LORE_FILTER_TABS.find(t => t.type === activeTab)?.icon}
               </div>
               <h3>
                 {activeTab === 'all'
                   ? 'Start building your world'
-                  : `No ${LORE_TABS.find(t => t.type === activeTab)?.label.toLowerCase()} yet`}
+                  : `No ${LORE_FILTER_TABS.find(t => t.type === activeTab)?.label.toLowerCase()} yet`}
               </h3>
               <p>
                 {activeTab === 'all'
