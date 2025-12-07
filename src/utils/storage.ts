@@ -53,6 +53,8 @@ function loadFromFile(): void {
     }
   } catch (error) {
     console.warn('Failed to load projects from file, using in-memory storage:', error);
+    // Update timestamp even on failure to avoid re-reading a corrupt file repeatedly
+    lastFileReadTime = now;
     if (projects.length === 0) {
       projects = [];
     }

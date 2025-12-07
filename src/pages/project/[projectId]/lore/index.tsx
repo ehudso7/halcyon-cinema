@@ -9,14 +9,8 @@ import AddLoreModal from '@/components/AddLoreModal';
 import { LoreEntry, LoreType, Project } from '@/types';
 import { getProjectById, getProjectLore } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { PROJECT_TABS, getProjectTabHref } from '@/constants/navigation';
 import styles from '@/styles/Lore.module.css';
-
-const PROJECT_TABS = [
-  { id: 'scenes', label: 'Scenes', icon: '🎬' },
-  { id: 'lore', label: 'World Lore', icon: '📚' },
-  { id: 'characters', label: 'Characters', icon: '👤' },
-  { id: 'sequence', label: 'Scene Flow', icon: '🎞️' },
-];
 
 const LORE_FILTER_TABS: { type: LoreType | 'all'; label: string; icon: string }[] = [
   { type: 'all', label: 'All', icon: '📚' },
@@ -165,23 +159,16 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
           </div>
 
           <nav className={styles.projectNav}>
-            {PROJECT_TABS.map(tab => {
-              const href = tab.id === 'scenes'
-                ? `/project/${project.id}`
-                : `/project/${project.id}/${tab.id}`;
-              const isActive = tab.id === 'lore';
-
-              return (
-                <Link
-                  key={tab.id}
-                  href={href}
-                  className={`${styles.navTab} ${isActive ? styles.active : ''}`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </Link>
-              );
-            })}
+            {PROJECT_TABS.map(tab => (
+              <Link
+                key={tab.id}
+                href={getProjectTabHref(project.id, tab.id)}
+                className={`${styles.navTab} ${tab.id === 'lore' ? styles.active : ''}`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </Link>
+            ))}
           </nav>
 
           <div className={styles.tabs}>

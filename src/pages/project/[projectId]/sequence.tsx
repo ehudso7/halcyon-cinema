@@ -9,14 +9,8 @@ import VoiceoverPanel from '@/components/VoiceoverPanel';
 import { Project, ShotBlock } from '@/types';
 import { getProjectById } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { PROJECT_TABS, getProjectTabHref } from '@/constants/navigation';
 import styles from '@/styles/Sequence.module.css';
-
-const PROJECT_TABS = [
-  { id: 'scenes', label: 'Scenes', icon: '🎬' },
-  { id: 'lore', label: 'World Lore', icon: '📚' },
-  { id: 'characters', label: 'Characters', icon: '👤' },
-  { id: 'sequence', label: 'Scene Flow', icon: '🎞️' },
-];
 
 interface SequencePageProps {
   project: Project;
@@ -90,23 +84,16 @@ export default function SequencePage({ project }: SequencePageProps) {
           </div>
 
           <nav className={styles.projectNav}>
-            {PROJECT_TABS.map(tab => {
-              const href = tab.id === 'scenes'
-                ? `/project/${project.id}`
-                : `/project/${project.id}/${tab.id}`;
-              const isActive = tab.id === 'sequence';
-
-              return (
-                <Link
-                  key={tab.id}
-                  href={href}
-                  className={`${styles.navTab} ${isActive ? styles.active : ''}`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </Link>
-              );
-            })}
+            {PROJECT_TABS.map(tab => (
+              <Link
+                key={tab.id}
+                href={getProjectTabHref(project.id, tab.id)}
+                className={`${styles.navTab} ${tab.id === 'sequence' ? styles.active : ''}`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </Link>
+            ))}
           </nav>
 
           {project.scenes.length > 0 ? (
