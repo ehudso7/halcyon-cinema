@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import CharacterManager from '@/components/CharacterManager';
 import { Project, Character } from '@/types';
-import { getProjectById, updateProject } from '@/utils/storage';
+import { getProjectById } from '@/utils/storage';
 import styles from '@/styles/Characters.module.css';
 
 const PROJECT_TABS = [
@@ -21,8 +21,12 @@ interface CharactersPageProps {
 
 export default function CharactersPage({ project: initialProject }: CharactersPageProps) {
   const [project, setProject] = useState<Project>(initialProject);
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = () => setError(null);
 
   const handleAddCharacter = async (characterData: Omit<Character, 'id' | 'projectId' | 'createdAt' | 'updatedAt' | 'appearances'>) => {
+    clearError();
     try {
       const response = await fetch(`/api/projects/${project.id}/characters`, {
         method: 'POST',
@@ -36,13 +40,18 @@ export default function CharactersPage({ project: initialProject }: CharactersPa
           ...prev,
           characters: [...(prev.characters || []), newCharacter],
         }));
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to add character');
       }
-    } catch (error) {
-      console.error('Error adding character:', error);
+    } catch (err) {
+      console.error('Error adding character:', err);
+      setError('Failed to add character. Please try again.');
     }
   };
 
   const handleUpdateCharacter = async (id: string, updates: Partial<Character>) => {
+    clearError();
     try {
       const response = await fetch(`/api/projects/${project.id}/characters/${id}`, {
         method: 'PUT',
@@ -56,13 +65,18 @@ export default function CharactersPage({ project: initialProject }: CharactersPa
           ...prev,
           characters: prev.characters?.map(c => c.id === id ? updatedCharacter : c) || [],
         }));
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to update character');
       }
-    } catch (error) {
-      console.error('Error updating character:', error);
+    } catch (err) {
+      console.error('Error updating character:', err);
+      setError('Failed to update character. Please try again.');
     }
   };
 
   const handleDeleteCharacter = async (id: string) => {
+    clearError();
     try {
       const response = await fetch(`/api/projects/${project.id}/characters/${id}`, {
         method: 'DELETE',
@@ -73,9 +87,13 @@ export default function CharactersPage({ project: initialProject }: CharactersPa
           ...prev,
           characters: prev.characters?.filter(c => c.id !== id) || [],
         }));
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete character');
       }
-    } catch (error) {
-      console.error('Error deleting character:', error);
+    } catch (err) {
+      console.error('Error deleting character:', err);
+      setError('Failed to delete character. Please try again.');
     }
   };
 
@@ -118,8 +136,34 @@ export default function CharactersPage({ project: initialProject }: CharactersPa
             })}
           </nav>
 
+          {error && (
+            <div className="error-banner" style={{
+              background: 'var(--color-error, #f44336)',
+              color: 'white',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>{error}</span>
+              <button
+                onClick={clearError}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '1.2rem'
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           <CharacterManager
-            projectId={project.id}
             characters={project.characters || []}
             onAddCharacter={handleAddCharacter}
             onUpdateCharacter={handleUpdateCharacter}

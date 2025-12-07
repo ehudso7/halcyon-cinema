@@ -1,15 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSceneById, updateScene, deleteScene } from '@/utils/storage';
+import { getSceneById, updateScene, deleteScene, getProjectById } from '@/utils/storage';
 import { Scene, ApiError } from '@/types';
+import { requireAuth } from '@/utils/api-auth';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Scene | ApiError | { success: boolean }>
 ) {
+  // Require authentication
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+
   const { id, projectId } = req.query;
 
   if (typeof id !== 'string' || typeof projectId !== 'string') {
     return res.status(400).json({ error: 'Invalid scene or project ID' });
+  }
+
+  // Verify user owns this project
+  const project = getProjectById(projectId);
+  if (!project) {
+    return res.status(404).json({ error: 'Project not found' });
+  }
+  if (project.userId && project.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   if (req.method === 'GET') {

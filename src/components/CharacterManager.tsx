@@ -4,7 +4,6 @@ import CharacterCard from './CharacterCard';
 import styles from './CharacterManager.module.css';
 
 interface CharacterManagerProps {
-  projectId: string;
   characters: Character[];
   onAddCharacter: (character: Omit<Character, 'id' | 'projectId' | 'createdAt' | 'updatedAt' | 'appearances'>) => void;
   onUpdateCharacter: (id: string, updates: Partial<Character>) => void;

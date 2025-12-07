@@ -25,7 +25,7 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
       style,
     });
 
-    const imageUrl = response.data[0]?.url;
+    const imageUrl = response.data?.[0]?.url;
 
     if (!imageUrl) {
       return {

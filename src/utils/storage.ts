@@ -53,12 +53,13 @@ export function getProjectById(id: string): Project | null {
   return projects.find(p => p.id === id) || null;
 }
 
-export function createProject(name: string, description?: string): Project {
+export function createProject(name: string, description?: string, userId?: string): Project {
   loadFromFile();
 
   const now = new Date().toISOString();
   const project: Project = {
     id: uuidv4(),
+    userId,
     name,
     description,
     scenes: [],
@@ -189,6 +190,7 @@ export function getProjectSceneCount(projectId: string): number {
 
 export function clearAllData(): void {
   projects = [];
+  initialized = false;
   saveToFile();
 }
 

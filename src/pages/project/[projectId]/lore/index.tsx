@@ -26,6 +26,9 @@ export default function LoreDashboard() {
   const [editEntry, setEditEntry] = useState<LoreEntry | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [projectName, setProjectName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const clearError = () => setError(null);
 
   useEffect(() => {
     if (projectId && typeof projectId === 'string') {
@@ -48,20 +51,26 @@ export default function LoreDashboard() {
 
   const fetchLore = async () => {
     setIsLoading(true);
+    clearError();
     try {
       const response = await fetch(`/api/projects/${projectId}/lore`);
       if (response.ok) {
         const data = await response.json();
         setEntries(data);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to load lore entries');
       }
-    } catch (error) {
-      console.error('Error fetching lore:', error);
+    } catch (err) {
+      console.error('Error fetching lore:', err);
+      setError('Failed to load lore entries. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSave = async (entry: Omit<LoreEntry, 'id' | 'projectId' | 'createdAt' | 'updatedAt'>) => {
+    clearError();
     try {
       if (editEntry) {
         // Update existing
@@ -72,6 +81,9 @@ export default function LoreDashboard() {
         });
         if (response.ok) {
           fetchLore();
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Failed to update lore entry');
         }
       } else {
         // Create new
@@ -82,10 +94,14 @@ export default function LoreDashboard() {
         });
         if (response.ok) {
           fetchLore();
+        } else {
+          const data = await response.json();
+          setError(data.error || 'Failed to create lore entry');
         }
       }
-    } catch (error) {
-      console.error('Error saving lore:', error);
+    } catch (err) {
+      console.error('Error saving lore:', err);
+      setError('Failed to save lore entry. Please try again.');
     }
     setEditEntry(null);
   };
@@ -93,15 +109,20 @@ export default function LoreDashboard() {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this lore entry?')) return;
 
+    clearError();
     try {
       const response = await fetch(`/api/projects/${projectId}/lore/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
         setEntries(prev => prev.filter(e => e.id !== id));
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete lore entry');
       }
-    } catch (error) {
-      console.error('Error deleting lore:', error);
+    } catch (err) {
+      console.error('Error deleting lore:', err);
+      setError('Failed to delete lore entry. Please try again.');
     }
   };
 
@@ -176,6 +197,33 @@ export default function LoreDashboard() {
               </button>
             ))}
           </div>
+
+          {error && (
+            <div className="error-banner" style={{
+              background: 'var(--color-error, #f44336)',
+              color: 'white',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>{error}</span>
+              <button
+                onClick={clearError}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '1.2rem'
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           {isLoading ? (
             <div className={styles.loading}>

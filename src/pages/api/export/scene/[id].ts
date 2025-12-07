@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getProjectById, getSceneById } from '@/utils/storage';
 import { exportSceneAsZip } from '@/utils/export';
+import { requireAuth } from '@/utils/api-auth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,6 +12,10 @@ export default async function handler(
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 
+  // Require authentication
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+
   const { id, projectId } = req.query;
 
   if (typeof id !== 'string' || typeof projectId !== 'string') {
@@ -20,6 +25,11 @@ export default async function handler(
   const project = getProjectById(projectId);
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
+  }
+
+  // Verify user owns this project
+  if (project.userId && project.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   const scene = getSceneById(projectId, id);

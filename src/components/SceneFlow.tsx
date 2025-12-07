@@ -14,8 +14,6 @@ export default function SceneFlow({ scenes, projectName, onClose }: SceneFlowPro
   const [transitionPhase, setTransitionPhase] = useState<'in' | 'out' | 'stable'>('in');
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const totalSlides = scenes.length + 2; // Title + scenes + end card
-
   const nextScene = useCallback(() => {
     setTransitionPhase('out');
     setTimeout(() => {

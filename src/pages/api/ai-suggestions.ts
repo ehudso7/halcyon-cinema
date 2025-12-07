@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
 import { AISuggestion, ApiError } from '@/types';
+import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -13,6 +14,15 @@ export default async function handler(
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
+  }
+
+  // Require authentication
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+
+  // Rate limiting: 30 suggestions per minute per user
+  if (!checkRateLimit(`suggestions:${userId}`, 30, 60000)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Please try again later.' });
   }
 
   const { prompt } = req.body;

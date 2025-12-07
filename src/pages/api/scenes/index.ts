@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { addSceneToProject, getProjectById } from '@/utils/storage';
 import { Scene, ApiError } from '@/types';
+import { requireAuth } from '@/utils/api-auth';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Scene | ApiError>
 ) {
@@ -11,13 +12,17 @@ export default function handler(
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 
+  // Require authentication
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+
   const { projectId, prompt, imageUrl, metadata } = req.body;
 
   if (!projectId || typeof projectId !== 'string') {
     return res.status(400).json({ error: 'Project ID is required' });
   }
 
-  if (!prompt || typeof prompt !== 'string') {
+  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
@@ -26,7 +31,12 @@ export default function handler(
     return res.status(404).json({ error: 'Project not found' });
   }
 
-  const scene = addSceneToProject(projectId, prompt, imageUrl || null, metadata);
+  // Verify user owns this project
+  if (project.userId && project.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  const scene = addSceneToProject(projectId, prompt.trim(), imageUrl || null, metadata);
 
   if (!scene) {
     return res.status(500).json({ error: 'Failed to create scene' });

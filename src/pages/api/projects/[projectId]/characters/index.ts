@@ -2,11 +2,16 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getProjectById, updateProject } from '@/utils/storage';
 import { Character } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { requireAuth } from '@/utils/api-auth';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<Character | Character[] | { error: string }>
 ) {
+  // Require authentication
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+
   const { projectId } = req.query;
 
   if (typeof projectId !== 'string') {
@@ -16,6 +21,11 @@ export default function handler(
   const project = getProjectById(projectId);
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
+  }
+
+  // Verify user owns this project
+  if (project.userId && project.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   switch (req.method) {

@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { LoreType, LoreEntry } from '@/types';
 import styles from './AddLoreModal.module.css';
 
@@ -17,11 +17,22 @@ const LORE_TYPES: { value: LoreType; label: string; icon: string; description: s
 ];
 
 export default function AddLoreModal({ isOpen, onClose, onSave, editEntry }: AddLoreModalProps) {
-  const [type, setType] = useState<LoreType>(editEntry?.type || 'character');
-  const [name, setName] = useState(editEntry?.name || '');
-  const [summary, setSummary] = useState(editEntry?.summary || '');
-  const [description, setDescription] = useState(editEntry?.description || '');
-  const [tagsInput, setTagsInput] = useState(editEntry?.tags?.join(', ') || '');
+  const [type, setType] = useState<LoreType>('character');
+  const [name, setName] = useState('');
+  const [summary, setSummary] = useState('');
+  const [description, setDescription] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
+
+  // Sync form state when editEntry changes or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setType(editEntry?.type || 'character');
+      setName(editEntry?.name || '');
+      setSummary(editEntry?.summary || '');
+      setDescription(editEntry?.description || '');
+      setTagsInput(editEntry?.tags?.join(', ') || '');
+    }
+  }, [isOpen, editEntry]);
 
   if (!isOpen) return null;
 

@@ -1,11 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getProjectById, addLoreToProject, getProjectLore } from '@/utils/storage';
 import { LoreEntry, LoreType } from '@/types';
+import { requireAuth } from '@/utils/api-auth';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<LoreEntry | LoreEntry[] | { error: string }>
 ) {
+  // Require authentication
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+
   const { projectId, type } = req.query;
 
   if (typeof projectId !== 'string') {
@@ -15,6 +20,11 @@ export default function handler(
   const project = getProjectById(projectId);
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
+  }
+
+  // Verify user owns this project
+  if (project.userId && project.userId !== userId) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   switch (req.method) {
