@@ -42,10 +42,11 @@ function sanitizeLogContext(context: Record<string, unknown>): Record<string, un
     };
 
     // Include useful NodeJS error properties for debugging file system issues
+    // Use explicit !== undefined checks to ensure values like 0 or empty strings are logged
     const nodeError = sanitized.error as NodeJS.ErrnoException;
-    if (nodeError.code) errorDetails.code = nodeError.code;
-    if (nodeError.syscall) errorDetails.syscall = nodeError.syscall;
-    if (nodeError.errno) errorDetails.errno = nodeError.errno;
+    if (nodeError.code !== undefined) errorDetails.code = nodeError.code;
+    if (nodeError.syscall !== undefined) errorDetails.syscall = nodeError.syscall;
+    if (nodeError.errno !== undefined) errorDetails.errno = nodeError.errno;
 
     // Don't include stack traces in production logs
     if (!isProduction) {
@@ -99,7 +100,9 @@ function validateProjectsData(data: unknown): data is Project[] {
     typeof item.name === 'string' &&
     Array.isArray(item.scenes) &&
     typeof item.createdAt === 'string' &&
-    typeof item.updatedAt === 'string'
+    typeof item.updatedAt === 'string' &&
+    // userId is optional but must be string if present
+    (item.userId === undefined || typeof item.userId === 'string')
   );
 }
 
