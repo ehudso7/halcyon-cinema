@@ -10,14 +10,8 @@ import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project } from '@/types';
 import { getProjectById } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { PROJECT_TABS, getProjectTabHref } from '@/constants/navigation';
 import styles from '@/styles/Project.module.css';
-
-const PROJECT_TABS = [
-  { id: 'scenes', label: 'Scenes', icon: '🎬' },
-  { id: 'lore', label: 'World Lore', icon: '📚' },
-  { id: 'characters', label: 'Characters', icon: '👤' },
-  { id: 'sequence', label: 'Scene Flow', icon: '🎞️' },
-];
 
 interface ProjectPageProps {
   project: Project;
@@ -177,23 +171,16 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
           </div>
 
           <nav className={styles.projectNav}>
-            {PROJECT_TABS.map(tab => {
-              const href = tab.id === 'scenes'
-                ? `/project/${project.id}`
-                : `/project/${project.id}/${tab.id}`;
-              const isActive = tab.id === 'scenes'; // Current page is scenes
-
-              return (
-                <Link
-                  key={tab.id}
-                  href={href}
-                  className={`${styles.navTab} ${isActive ? styles.active : ''}`}
-                >
-                  <span>{tab.icon}</span>
-                  <span>{tab.label}</span>
-                </Link>
-              );
-            })}
+            {PROJECT_TABS.map(tab => (
+              <Link
+                key={tab.id}
+                href={getProjectTabHref(project.id, tab.id)}
+                className={`${styles.navTab} ${tab.id === 'scenes' ? styles.active : ''}`}
+              >
+                <span>{tab.icon}</span>
+                <span>{tab.label}</span>
+              </Link>
+            ))}
           </nav>
 
           {showPromptBuilder && (
