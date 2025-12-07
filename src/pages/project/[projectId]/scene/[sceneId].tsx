@@ -107,6 +107,10 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
     });
   };
 
+  const handleExport = () => {
+    window.open(`/api/export/scene/${scene.id}?projectId=${project.id}`, '_blank');
+  };
+
   return (
     <>
       <Head>
@@ -150,6 +154,11 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
                       <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
                     </svg>
                     Regenerate
+                  </button>
+                  <button onClick={handleExport} className="btn btn-secondary" title="Export Scene">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
                   </button>
                   <button onClick={handleDelete} className="btn btn-secondary" title="Delete Scene">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

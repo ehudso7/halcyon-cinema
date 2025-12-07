@@ -106,6 +106,10 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
     }
   };
 
+  const handleExport = () => {
+    window.open(`/api/export/project/${project.id}`, '_blank');
+  };
+
   return (
     <>
       <Head>
@@ -136,6 +140,17 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
                   <path d="M12 5v14M5 12h14" />
                 </svg>
                 Add Scene
+              </button>
+              <button
+                onClick={handleExport}
+                className="btn btn-secondary"
+                title="Export Project"
+                disabled={project.scenes.length === 0}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                </svg>
+                Export
               </button>
               <button
                 onClick={handleDeleteProject}
