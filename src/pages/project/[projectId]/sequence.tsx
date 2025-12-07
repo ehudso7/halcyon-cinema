@@ -4,12 +4,12 @@ import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '@/components/Header';
+import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneSequencer from '@/components/SceneSequencer';
 import VoiceoverPanel from '@/components/VoiceoverPanel';
 import { Project, ShotBlock } from '@/types';
 import { getProjectById } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
-import { PROJECT_TABS, getProjectTabHref } from '@/constants/navigation';
 import styles from '@/styles/Sequence.module.css';
 
 interface SequencePageProps {
@@ -83,18 +83,7 @@ export default function SequencePage({ project }: SequencePageProps) {
             </div>
           </div>
 
-          <nav className={styles.projectNav}>
-            {PROJECT_TABS.map(tab => (
-              <Link
-                key={tab.id}
-                href={getProjectTabHref(project.id, tab.id)}
-                className={`${styles.navTab} ${tab.id === 'sequence' ? styles.active : ''}`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </Link>
-            ))}
-          </nav>
+          <ProjectNavigation projectId={project.id} activeTab="sequence" />
 
           {project.scenes.length > 0 ? (
             <div className={styles.content}>

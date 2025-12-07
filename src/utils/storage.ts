@@ -7,14 +7,50 @@ import path from 'path';
 // This is a temporary solution for demo/development purposes.
 // For production, migrate to a persistent database (e.g., Vercel Postgres, PlanetScale, Supabase).
 const isVercel = process.env.VERCEL === '1';
+const isProduction = process.env.NODE_ENV === 'production';
 const DATA_DIR = isVercel
   ? '/tmp/halcyon-data'
   : path.join(process.cwd(), 'src', 'data');
 const DATA_FILE = path.join(DATA_DIR, 'projects.json');
 
-// Log warning on Vercel about ephemeral storage
+// Structured logging helper for internal use only (server-side)
+function logStorageEvent(level: 'info' | 'warn' | 'error', message: string, context?: Record<string, unknown>): void {
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    service: 'halcyon-storage',
+    level,
+    message,
+    ...(context && { context: sanitizeLogContext(context) }),
+  };
+
+  // In production, use structured JSON logging; in dev, use readable format
+  if (isProduction) {
+    console[level](JSON.stringify(logEntry));
+  } else {
+    console[level](`[${logEntry.service}] ${message}`, context ? sanitizeLogContext(context) : '');
+  }
+}
+
+// Sanitize log context to prevent sensitive data leakage
+function sanitizeLogContext(context: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = { ...context };
+  // Remove or mask potentially sensitive fields
+  if (sanitized.error instanceof Error) {
+    sanitized.error = {
+      name: sanitized.error.name,
+      message: sanitized.error.message,
+      // Don't include stack traces in production logs
+      ...(isProduction ? {} : { stack: sanitized.error.stack }),
+    };
+  }
+  return sanitized;
+}
+
+// Log warning on Vercel about ephemeral storage (once on startup)
 if (isVercel) {
-  console.warn('[halcyon-cinema] Using ephemeral /tmp storage for project data. Data will not persist between cold starts. Consider migrating to a database.');
+  logStorageEvent('warn', 'Using ephemeral /tmp storage. Data will not persist between cold starts.', {
+    recommendation: 'Migrate to Vercel Postgres or similar database for production',
+  });
 }
 
 // In-memory storage (with optional file persistence when possible)
@@ -30,35 +66,90 @@ function ensureDataDir(): boolean {
     }
     return true;
   } catch (error) {
-    console.warn('Data directory not available, using in-memory storage only:', error);
+    logStorageEvent('warn', 'Data directory creation failed, using in-memory storage', {
+      dataDir: DATA_DIR,
+      error,
+    });
     fileSystemAvailable = false;
     return false;
   }
 }
 
+// Validate that parsed data is an array of projects with required fields
+function validateProjectsData(data: unknown): data is Project[] {
+  if (!Array.isArray(data)) {
+    return false;
+  }
+  // Validate each project has required fields
+  return data.every(item =>
+    typeof item === 'object' &&
+    item !== null &&
+    typeof item.id === 'string' &&
+    typeof item.name === 'string' &&
+    Array.isArray(item.scenes)
+  );
+}
+
 function loadFromFile(): void {
   const now = Date.now();
 
-  // Always re-read from file in serverless environments to ensure consistency
-  // This handles cases where another instance wrote to the file
+  // Use cached data if very recent and we have data
   if (now - lastFileReadTime < FILE_CACHE_TTL_MS && projects.length > 0) {
-    return; // Use cached data if very recent and we have data
+    return;
   }
 
-  try {
-    if (ensureDataDir() && fs.existsSync(DATA_FILE)) {
-      const data = fs.readFileSync(DATA_FILE, 'utf-8');
-      projects = JSON.parse(data);
-      lastFileReadTime = now;
-    }
-  } catch (error) {
-    console.warn('Failed to load projects from file, using in-memory storage:', error);
-    // Update timestamp even on failure to avoid re-reading a corrupt file repeatedly
+  if (!ensureDataDir() || !fs.existsSync(DATA_FILE)) {
     lastFileReadTime = now;
-    if (projects.length === 0) {
-      projects = [];
-    }
+    return;
   }
+
+  let fileContent: string;
+
+  // Step 1: Read file
+  try {
+    fileContent = fs.readFileSync(DATA_FILE, 'utf-8');
+  } catch (error) {
+    logStorageEvent('error', 'Failed to read projects file', {
+      filePath: DATA_FILE,
+      errorType: 'read',
+      error,
+    });
+    lastFileReadTime = now;
+    return;
+  }
+
+  // Step 2: Parse JSON
+  let parsedData: unknown;
+  try {
+    parsedData = JSON.parse(fileContent);
+  } catch (error) {
+    logStorageEvent('error', 'Failed to parse projects JSON - file may be corrupt', {
+      filePath: DATA_FILE,
+      errorType: 'parse',
+      contentLength: fileContent.length,
+      error,
+    });
+    lastFileReadTime = now;
+    // Keep existing in-memory data rather than corrupting it
+    return;
+  }
+
+  // Step 3: Validate schema
+  if (!validateProjectsData(parsedData)) {
+    logStorageEvent('error', 'Projects data failed schema validation', {
+      filePath: DATA_FILE,
+      errorType: 'validation',
+      dataType: typeof parsedData,
+      isArray: Array.isArray(parsedData),
+    });
+    lastFileReadTime = now;
+    // Keep existing in-memory data rather than corrupting it
+    return;
+  }
+
+  // Success: update projects and timestamp
+  projects = parsedData;
+  lastFileReadTime = now;
 }
 
 function saveToFile(): void {
@@ -68,7 +159,11 @@ function saveToFile(): void {
     ensureDataDir();
     fs.writeFileSync(DATA_FILE, JSON.stringify(projects, null, 2));
   } catch (error) {
-    console.warn('Failed to save projects (using in-memory only):', error);
+    logStorageEvent('error', 'Failed to save projects file, using in-memory only', {
+      filePath: DATA_FILE,
+      projectCount: projects.length,
+      error,
+    });
     fileSystemAvailable = false;
   }
 }

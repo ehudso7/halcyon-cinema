@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
-import Link from 'next/link';
 import Header from '@/components/Header';
+import ProjectNavigation from '@/components/ProjectNavigation';
 import CharacterManager from '@/components/CharacterManager';
 import { Project, Character } from '@/types';
 import { getProjectById } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
-import { PROJECT_TABS, getProjectTabHref } from '@/constants/navigation';
 import styles from '@/styles/Characters.module.css';
 
 interface CharactersPageProps {
@@ -112,18 +111,7 @@ export default function CharactersPage({ project: initialProject }: CharactersPa
             </div>
           </div>
 
-          <nav className={styles.projectNav}>
-            {PROJECT_TABS.map(tab => (
-              <Link
-                key={tab.id}
-                href={getProjectTabHref(project.id, tab.id)}
-                className={`${styles.navTab} ${tab.id === 'characters' ? styles.active : ''}`}
-              >
-                <span>{tab.icon}</span>
-                <span>{tab.label}</span>
-              </Link>
-            ))}
-          </nav>
+          <ProjectNavigation projectId={project.id} activeTab="characters" />
 
           {error && (
             <div className="error-banner" style={{
