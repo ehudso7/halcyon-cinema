@@ -2,10 +2,36 @@ import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType } from '@
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
+import {
+  isPostgresAvailable,
+  dbGetAllProjects,
+  dbGetProjectById,
+  dbCreateProject,
+  dbUpdateProject,
+  dbDeleteProject,
+  dbAddScene,
+  dbGetSceneById,
+  dbUpdateScene,
+  dbDeleteScene,
+  dbAddCharacter,
+  dbGetCharacterById,
+  dbUpdateCharacter,
+  dbDeleteCharacter,
+  dbAddLore,
+  dbGetLoreById,
+  dbUpdateLore,
+  dbDeleteLore,
+  dbGetProjectLore,
+  dbAddSequence,
+  dbUpdateSequence,
+  dbDeleteSequence,
+} from './db';
+
+// Check if we should use Postgres
+const usePostgres = isPostgresAvailable();
 
 // IMPORTANT: /tmp on Vercel is EPHEMERAL - data is lost on cold starts!
-// This is a temporary solution for demo/development purposes.
-// For production, migrate to a persistent database (e.g., Vercel Postgres, PlanetScale, Supabase).
+// This file-based storage is only used for local development when POSTGRES_URL is not set.
 const isVercel = process.env.VERCEL === '1';
 const isProduction = process.env.NODE_ENV === 'production';
 const DATA_DIR = isVercel
@@ -42,7 +68,6 @@ function sanitizeLogContext(context: Record<string, unknown>): Record<string, un
     };
 
     // Include useful NodeJS error properties for debugging file system issues
-    // Use explicit !== undefined checks to ensure values like 0 or empty strings are logged
     const nodeError = sanitized.error as NodeJS.ErrnoException;
     if (nodeError.code !== undefined) errorDetails.code = nodeError.code;
     if (nodeError.syscall !== undefined) errorDetails.syscall = nodeError.syscall;
@@ -58,12 +83,20 @@ function sanitizeLogContext(context: Record<string, unknown>): Record<string, un
   return sanitized;
 }
 
-// Log warning on Vercel about ephemeral storage (once on startup)
-if (isVercel) {
-  logStorageEvent('warn', 'Using ephemeral /tmp storage. Data will not persist between cold starts.', {
-    recommendation: 'Migrate to Vercel Postgres or similar database for production',
+// Log storage mode on startup
+if (usePostgres) {
+  logStorageEvent('info', 'Using Vercel Postgres for persistent storage');
+} else if (isVercel) {
+  logStorageEvent('warn', 'POSTGRES_URL not configured. Using ephemeral /tmp storage. Data will not persist between cold starts.', {
+    recommendation: 'Configure POSTGRES_URL environment variable for persistent storage',
   });
+} else {
+  logStorageEvent('info', 'Using local file storage for development');
 }
+
+// ============================================================================
+// File-based storage for local development (fallback when Postgres unavailable)
+// ============================================================================
 
 // In-memory storage (with optional file persistence when possible)
 let projects: Project[] = [];
@@ -146,7 +179,6 @@ function loadFromFile(): void {
       error,
     });
     lastFileReadTime = now;
-    // Keep existing in-memory data rather than corrupting it
     return;
   }
 
@@ -159,7 +191,6 @@ function loadFromFile(): void {
       isArray: Array.isArray(parsedData),
     });
     lastFileReadTime = now;
-    // Keep existing in-memory data rather than corrupting it
     return;
   }
 
@@ -184,20 +215,88 @@ function saveToFile(): void {
   }
 }
 
-// Project CRUD operations
-export function getAllProjects(): Project[] {
+// ============================================================================
+// Project CRUD operations (with Postgres support)
+// ============================================================================
+
+export function getAllProjects(userId?: string): Project[] {
+  if (usePostgres) {
+    // Note: This is called from server-side code (getServerSideProps)
+    // We can't use async here directly, so we'll handle this in the API routes
+    // For now, return empty and let the API handle it
+    return [];
+  }
+
   loadFromFile();
-  return [...projects].sort((a, b) =>
+  let filteredProjects = userId ? projects.filter(p => p.userId === userId) : projects;
+  return [...filteredProjects].sort((a, b) =>
+    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+}
+
+export async function getAllProjectsAsync(userId?: string): Promise<Project[]> {
+  if (usePostgres) {
+    return dbGetAllProjects(userId);
+  }
+
+  loadFromFile();
+  let filteredProjects = userId ? projects.filter(p => p.userId === userId) : projects;
+  return [...filteredProjects].sort((a, b) =>
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 }
 
 export function getProjectById(id: string): Project | null {
+  if (usePostgres) {
+    // This sync version returns null when using Postgres - use async version
+    return null;
+  }
+
+  loadFromFile();
+  return projects.find(p => p.id === id) || null;
+}
+
+export async function getProjectByIdAsync(id: string): Promise<Project | null> {
+  if (usePostgres) {
+    return dbGetProjectById(id);
+  }
+
   loadFromFile();
   return projects.find(p => p.id === id) || null;
 }
 
 export function createProject(name: string, description?: string, userId?: string): Project {
+  if (usePostgres) {
+    // Use createProjectAsync for Postgres
+    throw new Error('Use createProjectAsync for Postgres storage');
+  }
+
+  loadFromFile();
+
+  const now = new Date().toISOString();
+  const project: Project = {
+    id: uuidv4(),
+    userId,
+    name,
+    description,
+    scenes: [],
+    characters: [],
+    lore: [],
+    sequences: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  projects.push(project);
+  saveToFile();
+  return project;
+}
+
+export async function createProjectAsync(name: string, description?: string, userId?: string): Promise<Project> {
+  if (usePostgres) {
+    return dbCreateProject(name, description, userId);
+  }
+
   loadFromFile();
 
   const now = new Date().toISOString();
@@ -220,6 +319,30 @@ export function createProject(name: string, description?: string, userId?: strin
 }
 
 export function updateProject(id: string, updates: Partial<Pick<Project, 'name' | 'description' | 'characters' | 'lore' | 'sequences' | 'projectType'>>): Project | null {
+  if (usePostgres) {
+    return null; // Use updateProjectAsync
+  }
+
+  loadFromFile();
+
+  const index = projects.findIndex(p => p.id === id);
+  if (index === -1) return null;
+
+  projects[index] = {
+    ...projects[index],
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveToFile();
+  return projects[index];
+}
+
+export async function updateProjectAsync(id: string, updates: Partial<Pick<Project, 'name' | 'description' | 'projectType'>>): Promise<Project | null> {
+  if (usePostgres) {
+    return dbUpdateProject(id, updates);
+  }
+
   loadFromFile();
 
   const index = projects.findIndex(p => p.id === id);
@@ -236,6 +359,10 @@ export function updateProject(id: string, updates: Partial<Pick<Project, 'name' 
 }
 
 export function deleteProject(id: string): boolean {
+  if (usePostgres) {
+    return false; // Use deleteProjectAsync
+  }
+
   loadFromFile();
 
   const index = projects.findIndex(p => p.id === id);
@@ -246,13 +373,68 @@ export function deleteProject(id: string): boolean {
   return true;
 }
 
+export async function deleteProjectAsync(id: string): Promise<boolean> {
+  if (usePostgres) {
+    return dbDeleteProject(id);
+  }
+
+  loadFromFile();
+
+  const index = projects.findIndex(p => p.id === id);
+  if (index === -1) return false;
+
+  projects.splice(index, 1);
+  saveToFile();
+  return true;
+}
+
+// ============================================================================
 // Scene CRUD operations
+// ============================================================================
+
 export function addSceneToProject(
   projectId: string,
   prompt: string,
   imageUrl: string | null,
   metadata?: Scene['metadata']
 ): Scene | null {
+  if (usePostgres) {
+    return null; // Use addSceneToProjectAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  const now = new Date().toISOString();
+  const scene: Scene = {
+    id: uuidv4(),
+    projectId,
+    prompt,
+    imageUrl,
+    metadata,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  project.scenes.push(scene);
+  project.updatedAt = now;
+  saveToFile();
+
+  return scene;
+}
+
+export async function addSceneToProjectAsync(
+  projectId: string,
+  prompt: string,
+  imageUrl: string | null,
+  metadata?: Scene['metadata']
+): Promise<Scene | null> {
+  if (usePostgres) {
+    return dbAddScene(projectId, prompt, imageUrl, metadata);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -277,6 +459,23 @@ export function addSceneToProject(
 }
 
 export function getSceneById(projectId: string, sceneId: string): Scene | null {
+  if (usePostgres) {
+    return null; // Use getSceneByIdAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  return project.scenes.find(s => s.id === sceneId) || null;
+}
+
+export async function getSceneByIdAsync(projectId: string, sceneId: string): Promise<Scene | null> {
+  if (usePostgres) {
+    return dbGetSceneById(projectId, sceneId);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -290,6 +489,39 @@ export function updateScene(
   sceneId: string,
   updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata'>>
 ): Scene | null {
+  if (usePostgres) {
+    return null; // Use updateSceneAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  const sceneIndex = project.scenes.findIndex(s => s.id === sceneId);
+  if (sceneIndex === -1) return null;
+
+  const now = new Date().toISOString();
+  project.scenes[sceneIndex] = {
+    ...project.scenes[sceneIndex],
+    ...updates,
+    updatedAt: now,
+  };
+  project.updatedAt = now;
+
+  saveToFile();
+  return project.scenes[sceneIndex];
+}
+
+export async function updateSceneAsync(
+  projectId: string,
+  sceneId: string,
+  updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata'>>
+): Promise<Scene | null> {
+  if (usePostgres) {
+    return dbUpdateScene(projectId, sceneId, updates);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -311,6 +543,10 @@ export function updateScene(
 }
 
 export function deleteScene(projectId: string, sceneId: string): boolean {
+  if (usePostgres) {
+    return false; // Use deleteSceneAsync
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -326,7 +562,30 @@ export function deleteScene(projectId: string, sceneId: string): boolean {
   return true;
 }
 
+export async function deleteSceneAsync(projectId: string, sceneId: string): Promise<boolean> {
+  if (usePostgres) {
+    return dbDeleteScene(projectId, sceneId);
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return false;
+
+  const sceneIndex = project.scenes.findIndex(s => s.id === sceneId);
+  if (sceneIndex === -1) return false;
+
+  project.scenes.splice(sceneIndex, 1);
+  project.updatedAt = new Date().toISOString();
+  saveToFile();
+
+  return true;
+}
+
+// ============================================================================
 // Utility functions
+// ============================================================================
+
 export function getProjectSceneCount(projectId: string): number {
   const project = getProjectById(projectId);
   return project?.scenes.length || 0;
@@ -338,7 +597,10 @@ export function clearAllData(): void {
   saveToFile();
 }
 
+// ============================================================================
 // Lore CRUD operations
+// ============================================================================
+
 export function addLoreToProject(
   projectId: string,
   type: LoreType,
@@ -347,6 +609,52 @@ export function addLoreToProject(
   description?: string,
   tags?: string[]
 ): LoreEntry | null {
+  if (usePostgres) {
+    return null; // Use addLoreToProjectAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  if (!project.lore) {
+    project.lore = [];
+  }
+
+  const now = new Date().toISOString();
+  const loreEntry: LoreEntry = {
+    id: uuidv4(),
+    projectId,
+    type,
+    name,
+    summary,
+    description,
+    tags: tags || [],
+    associatedScenes: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  project.lore.push(loreEntry);
+  project.updatedAt = now;
+  saveToFile();
+
+  return loreEntry;
+}
+
+export async function addLoreToProjectAsync(
+  projectId: string,
+  type: LoreType,
+  name: string,
+  summary: string,
+  description?: string,
+  tags?: string[]
+): Promise<LoreEntry | null> {
+  if (usePostgres) {
+    return dbAddLore(projectId, type, name, summary, description, tags);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -378,6 +686,23 @@ export function addLoreToProject(
 }
 
 export function getLoreById(projectId: string, loreId: string): LoreEntry | null {
+  if (usePostgres) {
+    return null; // Use getLoreByIdAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return null;
+
+  return project.lore.find(l => l.id === loreId) || null;
+}
+
+export async function getLoreByIdAsync(projectId: string, loreId: string): Promise<LoreEntry | null> {
+  if (usePostgres) {
+    return dbGetLoreById(projectId, loreId);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -391,6 +716,39 @@ export function updateLore(
   loreId: string,
   updates: Partial<Pick<LoreEntry, 'name' | 'summary' | 'description' | 'tags' | 'associatedScenes' | 'imageUrl'>>
 ): LoreEntry | null {
+  if (usePostgres) {
+    return null; // Use updateLoreAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return null;
+
+  const loreIndex = project.lore.findIndex(l => l.id === loreId);
+  if (loreIndex === -1) return null;
+
+  const now = new Date().toISOString();
+  project.lore[loreIndex] = {
+    ...project.lore[loreIndex],
+    ...updates,
+    updatedAt: now,
+  };
+  project.updatedAt = now;
+
+  saveToFile();
+  return project.lore[loreIndex];
+}
+
+export async function updateLoreAsync(
+  projectId: string,
+  loreId: string,
+  updates: Partial<Pick<LoreEntry, 'name' | 'summary' | 'description' | 'tags' | 'associatedScenes' | 'imageUrl'>>
+): Promise<LoreEntry | null> {
+  if (usePostgres) {
+    return dbUpdateLore(projectId, loreId, updates);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -412,6 +770,30 @@ export function updateLore(
 }
 
 export function deleteLore(projectId: string, loreId: string): boolean {
+  if (usePostgres) {
+    return false; // Use deleteLoreAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return false;
+
+  const loreIndex = project.lore.findIndex(l => l.id === loreId);
+  if (loreIndex === -1) return false;
+
+  project.lore.splice(loreIndex, 1);
+  project.updatedAt = new Date().toISOString();
+  saveToFile();
+
+  return true;
+}
+
+export async function deleteLoreAsync(projectId: string, loreId: string): Promise<boolean> {
+  if (usePostgres) {
+    return dbDeleteLore(projectId, loreId);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -428,6 +810,10 @@ export function deleteLore(projectId: string, loreId: string): boolean {
 }
 
 export function getProjectLore(projectId: string, type?: LoreType): LoreEntry[] {
+  if (usePostgres) {
+    return []; // Use getProjectLoreAsync
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -439,12 +825,71 @@ export function getProjectLore(projectId: string, type?: LoreType): LoreEntry[] 
   return project.lore;
 }
 
+export async function getProjectLoreAsync(projectId: string, type?: LoreType): Promise<LoreEntry[]> {
+  if (usePostgres) {
+    return dbGetProjectLore(projectId, type);
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return [];
+
+  if (type) {
+    return project.lore.filter(l => l.type === type);
+  }
+  return project.lore;
+}
+
+// ============================================================================
 // Scene Sequence CRUD operations
+// ============================================================================
+
 export function addSequenceToProject(
   projectId: string,
   name: string,
   description?: string
 ): SceneSequence | null {
+  if (usePostgres) {
+    return null; // Use addSequenceToProjectAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  if (!project.sequences) {
+    project.sequences = [];
+  }
+
+  const now = new Date().toISOString();
+  const sequence: SceneSequence = {
+    id: uuidv4(),
+    projectId,
+    name,
+    description,
+    shots: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  project.sequences.push(sequence);
+  project.updatedAt = now;
+  saveToFile();
+
+  return sequence;
+}
+
+export async function addSequenceToProjectAsync(
+  projectId: string,
+  name: string,
+  description?: string
+): Promise<SceneSequence | null> {
+  if (usePostgres) {
+    return dbAddSequence(projectId, name, description);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -473,6 +918,10 @@ export function addSequenceToProject(
 }
 
 export function getSequenceById(projectId: string, sequenceId: string): SceneSequence | null {
+  if (usePostgres) {
+    return null; // Use database async version
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -486,6 +935,39 @@ export function updateSequence(
   sequenceId: string,
   updates: Partial<Pick<SceneSequence, 'name' | 'description' | 'shots'>>
 ): SceneSequence | null {
+  if (usePostgres) {
+    return null; // Use updateSequenceAsync
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.sequences) return null;
+
+  const seqIndex = project.sequences.findIndex(s => s.id === sequenceId);
+  if (seqIndex === -1) return null;
+
+  const now = new Date().toISOString();
+  project.sequences[seqIndex] = {
+    ...project.sequences[seqIndex],
+    ...updates,
+    updatedAt: now,
+  };
+  project.updatedAt = now;
+
+  saveToFile();
+  return project.sequences[seqIndex];
+}
+
+export async function updateSequenceAsync(
+  projectId: string,
+  sequenceId: string,
+  updates: Partial<Pick<SceneSequence, 'name' | 'description' | 'shots'>>
+): Promise<SceneSequence | null> {
+  if (usePostgres) {
+    return dbUpdateSequence(projectId, sequenceId, updates);
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -507,6 +989,10 @@ export function updateSequence(
 }
 
 export function deleteSequence(projectId: string, sequenceId: string): boolean {
+  if (usePostgres) {
+    return false; // Use deleteSequenceAsync
+  }
+
   loadFromFile();
 
   const project = projects.find(p => p.id === projectId);
@@ -520,4 +1006,135 @@ export function deleteSequence(projectId: string, sequenceId: string): boolean {
   saveToFile();
 
   return true;
+}
+
+export async function deleteSequenceAsync(projectId: string, sequenceId: string): Promise<boolean> {
+  if (usePostgres) {
+    return dbDeleteSequence(projectId, sequenceId);
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.sequences) return false;
+
+  const seqIndex = project.sequences.findIndex(s => s.id === sequenceId);
+  if (seqIndex === -1) return false;
+
+  project.sequences.splice(seqIndex, 1);
+  project.updatedAt = new Date().toISOString();
+  saveToFile();
+
+  return true;
+}
+
+// ============================================================================
+// Character CRUD operations
+// ============================================================================
+
+export async function addCharacterToProjectAsync(
+  projectId: string,
+  name: string,
+  description: string,
+  traits: string[] = [],
+  imageUrl?: string
+): Promise<Character | null> {
+  if (usePostgres) {
+    return dbAddCharacter(projectId, name, description, traits, imageUrl);
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  if (!project.characters) {
+    project.characters = [];
+  }
+
+  const now = new Date().toISOString();
+  const character: Character = {
+    id: uuidv4(),
+    projectId,
+    name,
+    description,
+    imageUrl,
+    traits,
+    appearances: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  project.characters.push(character);
+  project.updatedAt = now;
+  saveToFile();
+
+  return character;
+}
+
+export async function getCharacterByIdAsync(projectId: string, characterId: string): Promise<Character | null> {
+  if (usePostgres) {
+    return dbGetCharacterById(projectId, characterId);
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.characters) return null;
+
+  return project.characters.find(c => c.id === characterId) || null;
+}
+
+export async function updateCharacterAsync(
+  projectId: string,
+  characterId: string,
+  updates: Partial<Pick<Character, 'name' | 'description' | 'traits' | 'imageUrl' | 'appearances'>>
+): Promise<Character | null> {
+  if (usePostgres) {
+    return dbUpdateCharacter(projectId, characterId, updates);
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.characters) return null;
+
+  const charIndex = project.characters.findIndex(c => c.id === characterId);
+  if (charIndex === -1) return null;
+
+  const now = new Date().toISOString();
+  project.characters[charIndex] = {
+    ...project.characters[charIndex],
+    ...updates,
+    updatedAt: now,
+  };
+  project.updatedAt = now;
+
+  saveToFile();
+  return project.characters[charIndex];
+}
+
+export async function deleteCharacterAsync(projectId: string, characterId: string): Promise<boolean> {
+  if (usePostgres) {
+    return dbDeleteCharacter(projectId, characterId);
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.characters) return false;
+
+  const charIndex = project.characters.findIndex(c => c.id === characterId);
+  if (charIndex === -1) return false;
+
+  project.characters.splice(charIndex, 1);
+  project.updatedAt = new Date().toISOString();
+  saveToFile();
+
+  return true;
+}
+
+// Export helper to check if using Postgres
+export function isUsingPostgres(): boolean {
+  return usePostgres;
 }

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getAllProjects, createProject } from '@/utils/storage';
+import { getAllProjectsAsync, createProjectAsync } from '@/utils/storage';
 import { Project, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 
@@ -12,10 +12,14 @@ export default async function handler(
   if (!userId) return;
 
   if (req.method === 'GET') {
-    // Filter projects by user
-    const allProjects = getAllProjects();
-    const userProjects = allProjects.filter(p => p.userId === userId);
-    return res.status(200).json(userProjects);
+    try {
+      // Filter projects by user
+      const userProjects = await getAllProjectsAsync(userId);
+      return res.status(200).json(userProjects);
+    } catch (error) {
+      console.error('Failed to get projects:', error);
+      return res.status(500).json({ error: 'Failed to load projects' });
+    }
   }
 
   if (req.method === 'POST') {
@@ -25,8 +29,13 @@ export default async function handler(
       return res.status(400).json({ error: 'Project name is required' });
     }
 
-    const project = createProject(name.trim(), description?.trim(), userId);
-    return res.status(201).json(project);
+    try {
+      const project = await createProjectAsync(name.trim(), description?.trim(), userId);
+      return res.status(201).json(project);
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      return res.status(500).json({ error: 'Failed to create project' });
+    }
   }
 
   res.setHeader('Allow', ['GET', 'POST']);
