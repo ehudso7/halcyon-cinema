@@ -4,15 +4,27 @@ import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
 
-const USERS_FILE = path.join(process.cwd(), 'src', 'data', 'users.json');
+// Use /tmp on Vercel (writable), fallback to src/data locally
+const isVercel = process.env.VERCEL === '1';
+const DATA_DIR = isVercel
+  ? '/tmp/halcyon-data'
+  : path.join(process.cwd(), 'src', 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 let users: User[] = [];
 let initialized = false;
+let fileSystemAvailable = true;
 
-function ensureDataDir(): void {
-  const dir = path.dirname(USERS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+function ensureDataDir(): boolean {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    return true;
+  } catch (error) {
+    console.warn('Data directory not available, using in-memory storage only:', error);
+    fileSystemAvailable = false;
+    return false;
   }
 }
 
@@ -20,23 +32,26 @@ function loadFromFile(): void {
   if (initialized) return;
 
   try {
-    ensureDataDir();
-    if (fs.existsSync(USERS_FILE)) {
+    if (ensureDataDir() && fs.existsSync(USERS_FILE)) {
       const data = fs.readFileSync(USERS_FILE, 'utf-8');
       users = JSON.parse(data);
     }
-  } catch {
+  } catch (error) {
+    console.warn('Failed to load users from file, using in-memory storage:', error);
     users = [];
   }
   initialized = true;
 }
 
 function saveToFile(): void {
+  if (!fileSystemAvailable) return;
+
   try {
     ensureDataDir();
     fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
   } catch (error) {
-    console.error('Failed to save users:', error);
+    console.warn('Failed to save users (using in-memory only):', error);
+    fileSystemAvailable = false;
   }
 }
 
