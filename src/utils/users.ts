@@ -13,6 +13,11 @@ const DATA_DIR = isVercel
   : path.join(process.cwd(), 'src', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
+// Log warning on Vercel about ephemeral storage
+if (isVercel) {
+  console.warn('[halcyon-cinema] Using ephemeral /tmp storage for user data. Data will not persist between cold starts. Consider migrating to a database.');
+}
+
 let users: User[] = [];
 let initialized = false;
 let fileSystemAvailable = true;
