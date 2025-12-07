@@ -3,9 +3,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  margin-bottom: 32px;
-  padding-bottom: 32px;
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
 }
 
 .headerInfo {
@@ -18,19 +16,9 @@
   margin-bottom: 8px;
 }
 
-.description {
-  color: var(--color-text-secondary);
-  margin-bottom: 8px;
-}
-
 .meta {
   font-size: 0.9rem;
   color: var(--color-text-secondary);
-}
-
-.headerActions {
-  display: flex;
-  gap: 12px;
 }
 
 .projectNav {
@@ -68,32 +56,8 @@
   color: white;
 }
 
-.promptBuilderWrapper {
-  margin-bottom: 32px;
-}
-
-.error {
-  color: var(--color-error);
-  margin-top: 16px;
-  padding: 12px;
-  background-color: rgba(239, 68, 68, 0.1);
-  border-radius: var(--border-radius);
-}
-
-.gallery {
-  margin-bottom: 48px;
-}
-
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
-  }
-
-  .headerActions {
-    width: 100%;
-  }
-
-  .headerActions button {
-    flex: 1;
   }
 }

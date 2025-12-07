@@ -3,9 +3,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  margin-bottom: 32px;
-  padding-bottom: 32px;
-  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
 }
 
 .headerInfo {
@@ -18,19 +16,9 @@
   margin-bottom: 8px;
 }
 
-.description {
-  color: var(--color-text-secondary);
-  margin-bottom: 8px;
-}
-
 .meta {
   font-size: 0.9rem;
   color: var(--color-text-secondary);
-}
-
-.headerActions {
-  display: flex;
-  gap: 12px;
 }
 
 .projectNav {
@@ -68,32 +56,64 @@
   color: white;
 }
 
-.promptBuilderWrapper {
-  margin-bottom: 32px;
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
 
-.error {
-  color: var(--color-error);
+.voiceoverSection {
   margin-top: 16px;
-  padding: 12px;
-  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.voiceoverToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+}
+
+.voiceoverToggle:hover {
+  border-color: var(--color-primary);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 64px 24px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--color-border);
   border-radius: var(--border-radius);
 }
 
-.gallery {
-  margin-bottom: 48px;
+.emptyIcon {
+  font-size: 4rem;
+  margin-bottom: 16px;
+}
+
+.emptyState h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.emptyState p {
+  color: var(--color-text-secondary);
+  font-size: 1rem;
+  max-width: 400px;
+  margin: 0 auto 24px;
+  line-height: 1.6;
 }
 
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
-  }
-
-  .headerActions {
-    width: 100%;
-  }
-
-  .headerActions button {
-    flex: 1;
   }
 }

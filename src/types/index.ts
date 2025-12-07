@@ -54,8 +54,11 @@ export interface Project {
   userId?: string;
   name: string;
   description?: string;
+  projectType?: ProjectType;
   scenes: Scene[];
   characters?: Character[];
+  lore?: LoreEntry[];
+  sequences?: SceneSequence[];
   createdAt: string;
   updatedAt: string;
 }
@@ -95,4 +98,55 @@ export interface GenerateImageResponse {
 export interface ApiError {
   error: string;
   details?: string;
+}
+
+// Lore Engine types
+export type LoreType = 'character' | 'location' | 'event' | 'system';
+
+export interface LoreEntry {
+  id: string;
+  projectId: string;
+  type: LoreType;
+  name: string;
+  summary: string;
+  description?: string;
+  associatedScenes?: string[];
+  tags?: string[];
+  imageUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Scene Sequencer types
+export interface ShotBlock {
+  sceneId: string;
+  order: number;
+  title?: string;
+  duration?: number; // seconds
+  transitionType?: 'cut' | 'fade' | 'dissolve' | 'wipe';
+  notes?: string;
+}
+
+export interface SceneSequence {
+  id: string;
+  projectId: string;
+  name: string;
+  description?: string;
+  shots: ShotBlock[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Project types (extended)
+export type ProjectType = 'film' | 'series' | 'visual-novel' | 'storyboard';
+
+// Voiceover types
+export interface VoiceoverClip {
+  id: string;
+  sceneId: string;
+  text: string;
+  voiceId?: string;
+  audioUrl?: string;
+  duration?: number;
+  createdAt: string;
 }

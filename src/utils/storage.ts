@@ -1,4 +1,4 @@
-import { Project, Scene, Character } from '@/types';
+import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
@@ -63,6 +63,8 @@ export function createProject(name: string, description?: string): Project {
     description,
     scenes: [],
     characters: [],
+    lore: [],
+    sequences: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -72,7 +74,7 @@ export function createProject(name: string, description?: string): Project {
   return project;
 }
 
-export function updateProject(id: string, updates: Partial<Pick<Project, 'name' | 'description' | 'characters'>>): Project | null {
+export function updateProject(id: string, updates: Partial<Pick<Project, 'name' | 'description' | 'characters' | 'lore' | 'sequences' | 'projectType'>>): Project | null {
   loadFromFile();
 
   const index = projects.findIndex(p => p.id === id);
@@ -188,4 +190,188 @@ export function getProjectSceneCount(projectId: string): number {
 export function clearAllData(): void {
   projects = [];
   saveToFile();
+}
+
+// Lore CRUD operations
+export function addLoreToProject(
+  projectId: string,
+  type: LoreType,
+  name: string,
+  summary: string,
+  description?: string,
+  tags?: string[]
+): LoreEntry | null {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  if (!project.lore) {
+    project.lore = [];
+  }
+
+  const now = new Date().toISOString();
+  const loreEntry: LoreEntry = {
+    id: uuidv4(),
+    projectId,
+    type,
+    name,
+    summary,
+    description,
+    tags: tags || [],
+    associatedScenes: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  project.lore.push(loreEntry);
+  project.updatedAt = now;
+  saveToFile();
+
+  return loreEntry;
+}
+
+export function getLoreById(projectId: string, loreId: string): LoreEntry | null {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return null;
+
+  return project.lore.find(l => l.id === loreId) || null;
+}
+
+export function updateLore(
+  projectId: string,
+  loreId: string,
+  updates: Partial<Pick<LoreEntry, 'name' | 'summary' | 'description' | 'tags' | 'associatedScenes' | 'imageUrl'>>
+): LoreEntry | null {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return null;
+
+  const loreIndex = project.lore.findIndex(l => l.id === loreId);
+  if (loreIndex === -1) return null;
+
+  const now = new Date().toISOString();
+  project.lore[loreIndex] = {
+    ...project.lore[loreIndex],
+    ...updates,
+    updatedAt: now,
+  };
+  project.updatedAt = now;
+
+  saveToFile();
+  return project.lore[loreIndex];
+}
+
+export function deleteLore(projectId: string, loreId: string): boolean {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return false;
+
+  const loreIndex = project.lore.findIndex(l => l.id === loreId);
+  if (loreIndex === -1) return false;
+
+  project.lore.splice(loreIndex, 1);
+  project.updatedAt = new Date().toISOString();
+  saveToFile();
+
+  return true;
+}
+
+export function getProjectLore(projectId: string, type?: LoreType): LoreEntry[] {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.lore) return [];
+
+  if (type) {
+    return project.lore.filter(l => l.type === type);
+  }
+  return project.lore;
+}
+
+// Scene Sequence CRUD operations
+export function addSequenceToProject(
+  projectId: string,
+  name: string,
+  description?: string
+): SceneSequence | null {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) return null;
+
+  if (!project.sequences) {
+    project.sequences = [];
+  }
+
+  const now = new Date().toISOString();
+  const sequence: SceneSequence = {
+    id: uuidv4(),
+    projectId,
+    name,
+    description,
+    shots: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  project.sequences.push(sequence);
+  project.updatedAt = now;
+  saveToFile();
+
+  return sequence;
+}
+
+export function getSequenceById(projectId: string, sequenceId: string): SceneSequence | null {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.sequences) return null;
+
+  return project.sequences.find(s => s.id === sequenceId) || null;
+}
+
+export function updateSequence(
+  projectId: string,
+  sequenceId: string,
+  updates: Partial<Pick<SceneSequence, 'name' | 'description' | 'shots'>>
+): SceneSequence | null {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.sequences) return null;
+
+  const seqIndex = project.sequences.findIndex(s => s.id === sequenceId);
+  if (seqIndex === -1) return null;
+
+  const now = new Date().toISOString();
+  project.sequences[seqIndex] = {
+    ...project.sequences[seqIndex],
+    ...updates,
+    updatedAt: now,
+  };
+  project.updatedAt = now;
+
+  saveToFile();
+  return project.sequences[seqIndex];
+}
+
+export function deleteSequence(projectId: string, sequenceId: string): boolean {
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project || !project.sequences) return false;
+
+  const seqIndex = project.sequences.findIndex(s => s.id === sequenceId);
+  if (seqIndex === -1) return false;
+
+  project.sequences.splice(seqIndex, 1);
+  project.updatedAt = new Date().toISOString();
+  saveToFile();
+
+  return true;
 }

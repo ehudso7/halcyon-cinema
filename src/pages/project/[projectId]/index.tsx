@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import SceneCard from '@/components/SceneCard';
@@ -8,6 +9,13 @@ import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project } from '@/types';
 import { getProjectById } from '@/utils/storage';
 import styles from '@/styles/Project.module.css';
+
+const PROJECT_TABS = [
+  { id: 'scenes', label: 'Scenes', icon: '🎬' },
+  { id: 'lore', label: 'World Lore', icon: '📚' },
+  { id: 'characters', label: 'Characters', icon: '👤' },
+  { id: 'sequence', label: 'Scene Flow', icon: '🎞️' },
+];
 
 interface ProjectPageProps {
   project: Project;
@@ -129,6 +137,8 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
               )}
               <p className={styles.meta}>
                 {project.scenes.length} {project.scenes.length === 1 ? 'scene' : 'scenes'}
+                {project.lore && project.lore.length > 0 && ` • ${project.lore.length} lore entries`}
+                {project.characters && project.characters.length > 0 && ` • ${project.characters.length} characters`}
               </p>
             </div>
             <div className={styles.headerActions}>
@@ -163,6 +173,26 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
               </button>
             </div>
           </div>
+
+          <nav className={styles.projectNav}>
+            {PROJECT_TABS.map(tab => {
+              const href = tab.id === 'scenes'
+                ? `/project/${project.id}`
+                : `/project/${project.id}/${tab.id}`;
+              const isActive = tab.id === 'scenes'; // Current page is scenes
+
+              return (
+                <Link
+                  key={tab.id}
+                  href={href}
+                  className={`${styles.navTab} ${isActive ? styles.active : ''}`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </Link>
+              );
+            })}
+          </nav>
 
           {showPromptBuilder && (
             <div className={styles.promptBuilderWrapper}>
