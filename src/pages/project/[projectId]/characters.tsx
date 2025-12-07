@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { GetServerSideProps } from 'next';
+import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import CharacterManager from '@/components/CharacterManager';
 import { Project, Character } from '@/types';
 import { getProjectById } from '@/utils/storage';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Characters.module.css';
 
 const PROJECT_TABS = [
@@ -175,11 +177,26 @@ export default function CharactersPage({ project: initialProject }: CharactersPa
   );
 }
 
-export const getServerSideProps: GetServerSideProps<CharactersPageProps> = async ({ params }) => {
-  const projectId = params?.projectId as string;
+export const getServerSideProps: GetServerSideProps<CharactersPageProps> = async (context) => {
+  const session = await getServerSession(context.req, context.res, authOptions);
+
+  if (!session?.user?.id) {
+    return {
+      redirect: {
+        destination: '/auth/signin',
+        permanent: false,
+      },
+    };
+  }
+
+  const projectId = context.params?.projectId as string;
   const project = getProjectById(projectId);
 
   if (!project) {
+    return { notFound: true };
+  }
+
+  if (project.userId && project.userId !== session.user.id) {
     return { notFound: true };
   }
 
