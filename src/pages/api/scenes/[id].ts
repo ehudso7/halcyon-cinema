@@ -22,7 +22,8 @@ export default async function handler(
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
   }
-  if (project.userId && project.userId !== userId) {
+  // Verify user owns this project (strict check - projects must have userId)
+  if (project.userId !== userId) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
