@@ -1,4 +1,4 @@
-import { Project, Scene } from '@/types';
+import { Project, Scene, Character } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
@@ -62,6 +62,7 @@ export function createProject(name: string, description?: string): Project {
     name,
     description,
     scenes: [],
+    characters: [],
     createdAt: now,
     updatedAt: now,
   };
@@ -71,7 +72,7 @@ export function createProject(name: string, description?: string): Project {
   return project;
 }
 
-export function updateProject(id: string, updates: Partial<Pick<Project, 'name' | 'description'>>): Project | null {
+export function updateProject(id: string, updates: Partial<Pick<Project, 'name' | 'description' | 'characters'>>): Project | null {
   loadFromFile();
 
   const index = projects.findIndex(p => p.id === id);
