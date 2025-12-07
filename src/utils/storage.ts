@@ -36,12 +36,23 @@ function sanitizeLogContext(context: Record<string, unknown>): Record<string, un
   const sanitized = { ...context };
   // Remove or mask potentially sensitive fields
   if (sanitized.error instanceof Error) {
-    sanitized.error = {
+    const errorDetails: Record<string, unknown> = {
       name: sanitized.error.name,
       message: sanitized.error.message,
-      // Don't include stack traces in production logs
-      ...(isProduction ? {} : { stack: sanitized.error.stack }),
     };
+
+    // Include useful NodeJS error properties for debugging file system issues
+    const nodeError = sanitized.error as NodeJS.ErrnoException;
+    if (nodeError.code) errorDetails.code = nodeError.code;
+    if (nodeError.syscall) errorDetails.syscall = nodeError.syscall;
+    if (nodeError.errno) errorDetails.errno = nodeError.errno;
+
+    // Don't include stack traces in production logs
+    if (!isProduction) {
+      errorDetails.stack = sanitized.error.stack;
+    }
+
+    sanitized.error = errorDetails;
   }
   return sanitized;
 }
@@ -80,13 +91,15 @@ function validateProjectsData(data: unknown): data is Project[] {
   if (!Array.isArray(data)) {
     return false;
   }
-  // Validate each project has required fields
+  // Validate each project has required fields matching Project interface
   return data.every(item =>
     typeof item === 'object' &&
     item !== null &&
     typeof item.id === 'string' &&
     typeof item.name === 'string' &&
-    Array.isArray(item.scenes)
+    Array.isArray(item.scenes) &&
+    typeof item.createdAt === 'string' &&
+    typeof item.updatedAt === 'string'
   );
 }
 
