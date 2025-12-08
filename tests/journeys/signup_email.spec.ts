@@ -272,6 +272,7 @@ describe('Journey: signup_email - User Registration with Email', () => {
     expect(mockRes.statusCode).toBe(503);
     const data = mockRes.data as { error: string; code?: string };
     expect(data.code).toBe('DB_UNAVAILABLE');
+    expect(data.error).toBe('Database service unavailable. Please try again later or contact support.');
   });
 
   it('should detect ECONNREFUSED errors', async () => {
@@ -291,5 +292,6 @@ describe('Journey: signup_email - User Registration with Email', () => {
     expect(mockRes.statusCode).toBe(503);
     const data = mockRes.data as { error: string; code?: string };
     expect(data.code).toBe('DB_UNAVAILABLE');
+    expect(data.error).toBe('Database service unavailable. Please try again later or contact support.');
   });
 });
