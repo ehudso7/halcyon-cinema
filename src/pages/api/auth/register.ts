@@ -46,8 +46,8 @@ export default async function handler(
     if (error instanceof Error) {
       const errorMsg = error.message.toLowerCase();
 
-      // Check for database connection issues (more specific patterns)
-      const dbConnectionPatterns = [
+      // Literal string patterns for database connection issues
+      const dbLiteralPatterns = [
         'database not available',
         'connection refused',
         'econnrefused',
@@ -65,15 +65,19 @@ export default async function handler(
         'connection failed',
         'no pg_hba.conf entry',
         'password authentication failed',
-        'role .* does not exist',
-        'database .* does not exist',
         'ssl required',
         'ssl connection',
       ];
 
-      const isDbConnectionError = dbConnectionPatterns.some(pattern =>
-        errorMsg.includes(pattern) || new RegExp(pattern).test(errorMsg)
-      );
+      // Regex patterns for dynamic error messages (e.g., "role xyz does not exist")
+      const dbRegexPatterns = [
+        /role .* does not exist/i,
+        /database .* does not exist/i,
+      ];
+
+      const isDbConnectionError =
+        dbLiteralPatterns.some(p => errorMsg.includes(p)) ||
+        dbRegexPatterns.some(r => r.test(errorMsg));
 
       if (isDbConnectionError) {
         console.error('[register] Database connection error:', error.message);
