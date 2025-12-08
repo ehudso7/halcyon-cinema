@@ -30,7 +30,7 @@ export default function Footer() {
               <h4 className={styles.linkTitle}>Resources</h4>
               <Link href="/api/health" className={styles.link}>API Status</Link>
               <a
-                href="https://github.com"
+                href="https://github.com/ehudso7/halcyon-cinema"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles.link}

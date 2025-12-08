@@ -74,30 +74,36 @@ function saveToFile(): void {
 }
 
 export async function createUser(email: string, password: string, name: string): Promise<User> {
-  const passwordHash = await bcrypt.hash(password, 12);
+  const normalizedEmail = email.toLowerCase().trim();
 
   // Use Postgres if available
   if (usePostgres) {
-    // Check if user already exists
-    const existingUser = await dbGetUserByEmail(email);
+    // Check if user already exists before expensive password hashing
+    const existingUser = await dbGetUserByEmail(normalizedEmail);
     if (existingUser) {
       throw new Error('User already exists');
     }
 
-    const dbUser = await dbCreateUser(email.toLowerCase(), name, passwordHash);
+    // Hash password after existence check to avoid wasted computation
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const dbUser = await dbCreateUser(normalizedEmail, name, passwordHash);
     return {
       id: dbUser.id,
       email: dbUser.email,
       name: dbUser.name,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.updatedAt,
     };
   }
+
+  // Hash password for file storage
+  const passwordHash = await bcrypt.hash(password, 12);
 
   // Fallback to file storage for local development
   loadFromFile();
 
-  const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  const existingUser = users.find(u => u.email.toLowerCase() === normalizedEmail);
   if (existingUser) {
     throw new Error('User already exists');
   }
@@ -106,7 +112,7 @@ export async function createUser(email: string, password: string, name: string):
 
   const user: User = {
     id: uuidv4(),
-    email: email.toLowerCase(),
+    email: normalizedEmail,
     name,
     passwordHash,
     createdAt: now,
@@ -122,9 +128,11 @@ export async function createUser(email: string, password: string, name: string):
 }
 
 export async function validateUser(email: string, password: string): Promise<User | null> {
+  const normalizedEmail = email.toLowerCase().trim();
+
   // Use Postgres if available
   if (usePostgres) {
-    const dbUser = await dbGetUserByEmail(email);
+    const dbUser = await dbGetUserByEmail(normalizedEmail);
     if (!dbUser || !dbUser.passwordHash) {
       return null;
     }
@@ -139,15 +147,15 @@ export async function validateUser(email: string, password: string): Promise<Use
       email: dbUser.email,
       name: dbUser.name,
       image: dbUser.image || undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.updatedAt,
     };
   }
 
   // Fallback to file storage
   loadFromFile();
 
-  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  const user = users.find(u => u.email.toLowerCase() === normalizedEmail);
   if (!user || !user.passwordHash) {
     return null;
   }
@@ -173,8 +181,8 @@ export async function getUserById(id: string): Promise<User | null> {
       email: dbUser.email,
       name: dbUser.name,
       image: dbUser.image || undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.updatedAt,
     };
   }
 
@@ -188,9 +196,11 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
+  const normalizedEmail = email.toLowerCase().trim();
+
   // Use Postgres if available
   if (usePostgres) {
-    const dbUser = await dbGetUserByEmail(email);
+    const dbUser = await dbGetUserByEmail(normalizedEmail);
     if (!dbUser) return null;
 
     return {
@@ -198,14 +208,14 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       email: dbUser.email,
       name: dbUser.name,
       image: dbUser.image || undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.updatedAt,
     };
   }
 
   // Fallback to file storage
   loadFromFile();
-  const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+  const user = users.find(u => u.email.toLowerCase() === normalizedEmail);
   if (!user) return null;
 
   const { passwordHash: _, ...safeUser } = user;
@@ -213,10 +223,9 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 }
 
 export function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'>>): User | null {
-  // Note: Postgres update not implemented yet - only works with file storage
+  // Postgres update not implemented - throw error to make failure explicit
   if (usePostgres) {
-    console.warn('updateUser not yet implemented for Postgres');
-    return null;
+    throw new Error('updateUser not yet implemented for Postgres storage');
   }
 
   loadFromFile();

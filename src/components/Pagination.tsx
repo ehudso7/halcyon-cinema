@@ -71,7 +71,7 @@ export default function Pagination({
       {getPageNumbers().map((page, index) =>
         typeof page === 'number' ? (
           <button
-            key={index}
+            key={`page-${page}`}
             className={`pagination-btn ${page === currentPage ? 'active' : ''}`}
             onClick={() => onPageChange(page)}
             aria-label={`Go to page ${page}`}
@@ -80,7 +80,7 @@ export default function Pagination({
             {page}
           </button>
         ) : (
-          <span key={index} className="pagination-info">
+          <span key={`ellipsis-${index}`} className="pagination-info">
             {page}
           </span>
         )
