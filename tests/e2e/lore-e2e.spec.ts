@@ -131,7 +131,7 @@ describe('E2E Journey: Lore Management', () => {
 
       expect(response.status).toBe(400);
       const data = await response.json();
-      expect(data.error.toLowerCase()).toMatch(/type|name|summary/);
+      expect(data.error.toLowerCase()).toContain('type');
     });
 
     it('should reject lore without name', async () => {

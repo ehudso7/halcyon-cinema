@@ -84,8 +84,9 @@ export async function loginUser(
 export async function createAuthenticatedSession(
   emailPrefix: string = 'e2e-test'
 ): Promise<AuthSession> {
-  const timestamp = Date.now();
-  const email = `${emailPrefix}-${timestamp}@example.com`;
+  // Use timestamp + random string to prevent race conditions in parallel tests
+  const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  const email = `${emailPrefix}-${uniqueId}@example.com`;
   const password = 'SecurePassword123!';
   const name = 'E2E Test User';
 
