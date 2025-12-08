@@ -67,10 +67,12 @@ export default async function handler(
       overallStatus = 'unhealthy';
       // In production, show generic error to avoid leaking infrastructure details
       // In development, show full error message for debugging
-      if (error instanceof Error) {
-        dbError = process.env.NODE_ENV === 'production'
-          ? 'Connection failed'
-          : error.message;
+      if (process.env.NODE_ENV === 'production') {
+        dbError = 'Connection failed';
+      } else if (error instanceof Error) {
+        dbError = error.message;
+      } else {
+        dbError = 'Unknown error';
       }
     }
   } else if (process.env.NODE_ENV === 'production') {

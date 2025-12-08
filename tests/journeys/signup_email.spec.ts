@@ -234,4 +234,62 @@ describe('Journey: signup_email - User Registration with Email', () => {
     expect(mockRes.statusCode).toBe(405);
     expect(mockRes.headers['Allow']).toContain('POST');
   });
+
+  it('should detect database role errors via regex pattern', async () => {
+    vi.mocked(createUser).mockRejectedValue(new Error('role "myuser" does not exist'));
+
+    mockReq.body = {
+      email: 'user@example.com',
+      password: 'securePassword123',
+      name: 'Test User',
+    };
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    expect(mockRes.statusCode).toBe(503);
+    const data = mockRes.data as { error: string; code?: string };
+    expect(data.code).toBe('DB_UNAVAILABLE');
+    expect(data.error).toBe('Database service unavailable. Please try again later or contact support.');
+  });
+
+  it('should detect database name errors via regex pattern', async () => {
+    vi.mocked(createUser).mockRejectedValue(new Error('database "mydb" does not exist'));
+
+    mockReq.body = {
+      email: 'user@example.com',
+      password: 'securePassword123',
+      name: 'Test User',
+    };
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    expect(mockRes.statusCode).toBe(503);
+    const data = mockRes.data as { error: string; code?: string };
+    expect(data.code).toBe('DB_UNAVAILABLE');
+  });
+
+  it('should detect ECONNREFUSED errors', async () => {
+    vi.mocked(createUser).mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:5432'));
+
+    mockReq.body = {
+      email: 'user@example.com',
+      password: 'securePassword123',
+      name: 'Test User',
+    };
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    expect(mockRes.statusCode).toBe(503);
+    const data = mockRes.data as { error: string; code?: string };
+    expect(data.code).toBe('DB_UNAVAILABLE');
+  });
 });

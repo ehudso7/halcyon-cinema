@@ -2,6 +2,46 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { createUser } from '@/utils/users';
 import { ApiError, User } from '@/types';
 
+// Literal string patterns for database connection issues (all lowercase for comparison)
+const DB_LITERAL_PATTERNS = [
+  'database not available',
+  'connection refused',
+  'econnrefused',
+  'connection terminated',
+  'connection timeout',
+  'connection reset',
+  'socket hang up',
+  'etimedout',
+  'enotfound',
+  'getaddrinfo',
+  'connect etimedout',
+  'cannot connect',
+  'failed to connect',
+  'connection error',
+  'connection failed',
+  'no pg_hba.conf entry',
+  'password authentication failed',
+  'ssl required',
+  'ssl connection',
+] as const;
+
+// Pre-compiled regex patterns for dynamic error messages (e.g., "role xyz does not exist")
+// Note: These are matched against lowercase error messages, so no /i flag needed
+const DB_REGEX_PATTERNS = [
+  /role .* does not exist/,
+  /database .* does not exist/,
+] as const;
+
+/**
+ * Check if an error message indicates a database connection issue
+ */
+function isDbConnectionError(errorMsg: string): boolean {
+  return (
+    DB_LITERAL_PATTERNS.some(p => errorMsg.includes(p)) ||
+    DB_REGEX_PATTERNS.some(r => r.test(errorMsg))
+  );
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<{ user: Omit<User, 'passwordHash'> } | ApiError>
@@ -46,40 +86,7 @@ export default async function handler(
     if (error instanceof Error) {
       const errorMsg = error.message.toLowerCase();
 
-      // Literal string patterns for database connection issues
-      const dbLiteralPatterns = [
-        'database not available',
-        'connection refused',
-        'econnrefused',
-        'connection terminated',
-        'connection timeout',
-        'connection reset',
-        'socket hang up',
-        'etimedout',
-        'enotfound',
-        'getaddrinfo',
-        'connect etimedout',
-        'cannot connect',
-        'failed to connect',
-        'connection error',
-        'connection failed',
-        'no pg_hba.conf entry',
-        'password authentication failed',
-        'ssl required',
-        'ssl connection',
-      ];
-
-      // Regex patterns for dynamic error messages (e.g., "role xyz does not exist")
-      const dbRegexPatterns = [
-        /role .* does not exist/i,
-        /database .* does not exist/i,
-      ];
-
-      const isDbConnectionError =
-        dbLiteralPatterns.some(p => errorMsg.includes(p)) ||
-        dbRegexPatterns.some(r => r.test(errorMsg));
-
-      if (isDbConnectionError) {
+      if (isDbConnectionError(errorMsg)) {
         console.error('[register] Database connection error:', error.message);
         return res.status(503).json({
           error: 'Database service unavailable. Please try again later or contact support.',

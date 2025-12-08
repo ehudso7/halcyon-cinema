@@ -210,4 +210,58 @@ describe('Journey: health_check - Health Check Endpoint', () => {
 
     expect(mockRes.headers['Cache-Control']).toBe('no-store, max-age=0');
   });
+
+  it('should filter error details in production', async () => {
+    vi.mocked(isPostgresAvailable).mockReturnValue(true);
+    vi.mocked(sql).mockRejectedValue(new Error('password authentication failed for user "postgres"'));
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    const data = mockRes.data as Record<string, unknown>;
+    const checks = data.checks as Record<string, unknown>;
+    const dbCheck = checks.database as Record<string, unknown>;
+    // In production, we should get a generic error message
+    expect(dbCheck.error).toBe('Connection failed');
+  });
+
+  it('should show full error details in development', async () => {
+    vi.mocked(isPostgresAvailable).mockReturnValue(true);
+    vi.mocked(sql).mockRejectedValue(new Error('password authentication failed for user "postgres"'));
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    const data = mockRes.data as Record<string, unknown>;
+    const checks = data.checks as Record<string, unknown>;
+    const dbCheck = checks.database as Record<string, unknown>;
+    // In development, we should see the full error message
+    expect(dbCheck.error).toBe('password authentication failed for user "postgres"');
+  });
+
+  it('should handle non-Error thrown values', async () => {
+    vi.mocked(isPostgresAvailable).mockReturnValue(true);
+    vi.mocked(sql).mockRejectedValue('string error'); // Non-Error thrown value
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    const data = mockRes.data as Record<string, unknown>;
+    const checks = data.checks as Record<string, unknown>;
+    const dbCheck = checks.database as Record<string, unknown>;
+    expect(dbCheck.status).toBe('down');
+    expect(dbCheck.error).toBe('Unknown error');
+  });
 });
