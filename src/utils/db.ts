@@ -2,9 +2,10 @@ import { sql } from '@vercel/postgres';
 import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType } from '@/types';
 
 /**
- * UUID v4 regex pattern for validation
+ * UUID regex pattern for validation (accepts standard UUID format)
+ * More permissive than strict version/variant checking to handle all valid PostgreSQL UUIDs
  */
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Validate that a string is a valid UUID
@@ -33,11 +34,16 @@ function toPostgresArray(arr: string[]): string {
 /**
  * Safely convert a UUID array to PostgreSQL array literal format.
  * Validates that all values are valid UUIDs to prevent injection.
+ * Logs a warning if invalid UUIDs are filtered out.
  */
 function toPostgresUUIDArray(arr: string[]): string {
   if (!arr || arr.length === 0) return '{}';
-  // Only include valid UUIDs to prevent injection
   const validUUIDs = arr.filter(isValidUUID);
+  // Warn about filtered invalid UUIDs to aid debugging
+  if (validUUIDs.length !== arr.length) {
+    const invalidUUIDs = arr.filter(id => !isValidUUID(id));
+    console.warn('[db] Filtered invalid UUIDs from array:', invalidUUIDs);
+  }
   return `{${validUUIDs.join(',')}}`;
 }
 
