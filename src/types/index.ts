@@ -98,6 +98,7 @@ export interface GenerateImageResponse {
 export interface ApiError {
   error: string;
   details?: string;
+  code?: string;
 }
 
 // Lore Engine types
