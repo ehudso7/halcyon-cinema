@@ -10,8 +10,8 @@ import {
   createUser as dbCreateUser,
 } from './db';
 
-// Check if we should use Postgres (production) or file storage (development)
-const usePostgres = isPostgresAvailable();
+// Note: isPostgresAvailable() is now a runtime check, not a module-level constant
+// This ensures environment variables are evaluated fresh in serverless environments
 
 // For local development fallback only
 const isVercel = process.env.VERCEL === '1';
@@ -20,13 +20,19 @@ const DATA_DIR = isVercel
   : path.join(process.cwd(), 'src', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
-// Log storage mode
-if (usePostgres) {
-  console.log('[halcyon-users] Using Vercel Postgres for persistent user storage');
-} else if (isVercel) {
-  console.warn('[halcyon-users] POSTGRES_URL not configured. Using ephemeral /tmp storage. Users will not persist between cold starts.');
-} else {
-  console.log('[halcyon-users] Using local file storage for development');
+// Log storage mode on first use (will be logged when a user operation happens)
+let storageLogged = false;
+function logStorageMode() {
+  if (storageLogged) return;
+  storageLogged = true;
+
+  if (isPostgresAvailable()) {
+    console.log('[halcyon-users] Using Vercel Postgres for persistent user storage');
+  } else if (isVercel) {
+    console.warn('[halcyon-users] POSTGRES_URL not configured. Using ephemeral /tmp storage. Users will not persist between cold starts.');
+  } else {
+    console.log('[halcyon-users] Using local file storage for development');
+  }
 }
 
 let users: User[] = [];
@@ -47,7 +53,7 @@ function ensureDataDir(): boolean {
 }
 
 function loadFromFile(): void {
-  if (initialized || usePostgres) return;
+  if (initialized || isPostgresAvailable()) return;
 
   try {
     if (ensureDataDir() && fs.existsSync(USERS_FILE)) {
@@ -62,7 +68,7 @@ function loadFromFile(): void {
 }
 
 function saveToFile(): void {
-  if (!fileSystemAvailable || usePostgres) return;
+  if (!fileSystemAvailable || isPostgresAvailable()) return;
 
   try {
     ensureDataDir();
@@ -74,10 +80,11 @@ function saveToFile(): void {
 }
 
 export async function createUser(email: string, password: string, name: string): Promise<User> {
+  logStorageMode();  // Log which storage mode is being used
   const normalizedEmail = email.toLowerCase().trim();
 
   // Use Postgres if available
-  if (usePostgres) {
+  if (isPostgresAvailable()) {
     // Check if user already exists before expensive password hashing
     const existingUser = await dbGetUserByEmail(normalizedEmail);
     if (existingUser) {
@@ -131,7 +138,7 @@ export async function validateUser(email: string, password: string): Promise<Use
   const normalizedEmail = email.toLowerCase().trim();
 
   // Use Postgres if available
-  if (usePostgres) {
+  if (isPostgresAvailable()) {
     const dbUser = await dbGetUserByEmail(normalizedEmail);
     if (!dbUser || !dbUser.passwordHash) {
       return null;
@@ -172,7 +179,7 @@ export async function validateUser(email: string, password: string): Promise<Use
 
 export async function getUserById(id: string): Promise<User | null> {
   // Use Postgres if available
-  if (usePostgres) {
+  if (isPostgresAvailable()) {
     const dbUser = await dbGetUserById(id);
     if (!dbUser) return null;
 
@@ -199,7 +206,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   const normalizedEmail = email.toLowerCase().trim();
 
   // Use Postgres if available
-  if (usePostgres) {
+  if (isPostgresAvailable()) {
     const dbUser = await dbGetUserByEmail(normalizedEmail);
     if (!dbUser) return null;
 
@@ -224,7 +231,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
 
 export function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'>>): User | null {
   // Postgres update not implemented - throw error to make failure explicit
-  if (usePostgres) {
+  if (isPostgresAvailable()) {
     throw new Error('updateUser not yet implemented for Postgres storage');
   }
 

@@ -47,8 +47,14 @@ function toPostgresUUIDArray(arr: string[]): string {
   return `{${validUUIDs.join(',')}}`;
 }
 
-// Check if we're using Vercel Postgres (production) or file storage (development)
-const usePostgres = !!process.env.POSTGRES_URL;
+/**
+ * Check if Postgres is available - evaluated at runtime, not module load time.
+ * This is important for serverless environments where env vars might not be
+ * available during module initialization.
+ */
+function checkPostgresAvailable(): boolean {
+  return !!process.env.POSTGRES_URL;
+}
 
 // Promise-based singleton to prevent race conditions during initialization
 let initPromise: Promise<void> | null = null;
@@ -58,7 +64,7 @@ let initPromise: Promise<void> | null = null;
  * Uses promise-based singleton to prevent race conditions
  */
 export async function initializeTables(): Promise<void> {
-  if (!usePostgres) return;
+  if (!checkPostgresAvailable()) return;
   if (initPromise) return initPromise;
 
   initPromise = doInitializeTables();
@@ -66,8 +72,15 @@ export async function initializeTables(): Promise<void> {
 }
 
 async function doInitializeTables(): Promise<void> {
+  console.log('[db] Initializing database tables...');
+  console.log('[db] POSTGRES_URL configured:', !!process.env.POSTGRES_URL);
 
   try {
+    // Test basic connectivity first
+    console.log('[db] Testing database connectivity...');
+    await sql`SELECT 1`;
+    console.log('[db] Database connectivity confirmed');
+
     // Create users table
     await sql`
       CREATE TABLE IF NOT EXISTS users (
@@ -168,16 +181,32 @@ async function doInitializeTables(): Promise<void> {
   } catch (error) {
     // Reset promise to allow retry on next request
     initPromise = null;
-    console.error('[db] Failed to initialize tables:', error);
+
+    // Log detailed error information for debugging
+    console.error('[db] Failed to initialize tables');
+    if (error instanceof Error) {
+      console.error('[db] Error name:', error.name);
+      console.error('[db] Error message:', error.message);
+      if ('code' in error) {
+        console.error('[db] Error code:', (error as { code: string }).code);
+      }
+      if ('detail' in error) {
+        console.error('[db] Error detail:', (error as { detail: string }).detail);
+      }
+    } else {
+      console.error('[db] Unknown error type:', error);
+    }
+
     throw error;
   }
 }
 
 /**
  * Check if Postgres is available
+ * Uses runtime check to ensure environment variables are evaluated fresh
  */
 export function isPostgresAvailable(): boolean {
-  return usePostgres;
+  return checkPostgresAvailable();
 }
 
 // ============================================================================
@@ -193,7 +222,7 @@ export async function getUserByEmail(email: string): Promise<{
   createdAt: string;
   updatedAt: string;
 } | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -224,7 +253,7 @@ export async function getUserById(id: string): Promise<{
   createdAt: string;
   updatedAt: string;
 } | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -250,7 +279,7 @@ export async function createUser(
   name: string,
   passwordHash: string
 ): Promise<{ id: string; email: string; name: string; createdAt: string; updatedAt: string }> {
-  if (!usePostgres) {
+  if (!checkPostgresAvailable()) {
     throw new Error('Database not available');
   }
 
@@ -277,7 +306,7 @@ export async function createUser(
 // ============================================================================
 
 export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
-  if (!usePostgres) return [];
+  if (!checkPostgresAvailable()) return [];
 
   await initializeTables();
 
@@ -393,7 +422,7 @@ export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
 }
 
 export async function dbGetProjectById(id: string): Promise<Project | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -483,7 +512,7 @@ export async function dbCreateProject(
   description?: string,
   userId?: string
 ): Promise<Project> {
-  if (!usePostgres) {
+  if (!checkPostgresAvailable()) {
     throw new Error('Database not available');
   }
 
@@ -514,7 +543,7 @@ export async function dbUpdateProject(
   id: string,
   updates: Partial<Pick<Project, 'name' | 'description' | 'projectType'>>
 ): Promise<Project | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -531,7 +560,7 @@ export async function dbUpdateProject(
 }
 
 export async function dbDeleteProject(id: string): Promise<boolean> {
-  if (!usePostgres) return false;
+  if (!checkPostgresAvailable()) return false;
 
   await initializeTables();
 
@@ -549,7 +578,7 @@ export async function dbAddScene(
   imageUrl: string | null,
   metadata?: Scene['metadata']
 ): Promise<Scene | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -590,7 +619,7 @@ export async function dbAddScene(
 }
 
 export async function dbGetSceneById(projectId: string, sceneId: string): Promise<Scene | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -624,7 +653,7 @@ export async function dbUpdateScene(
   sceneId: string,
   updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata'>>
 ): Promise<Scene | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -647,7 +676,7 @@ export async function dbUpdateScene(
 }
 
 export async function dbDeleteScene(projectId: string, sceneId: string): Promise<boolean> {
-  if (!usePostgres) return false;
+  if (!checkPostgresAvailable()) return false;
 
   await initializeTables();
 
@@ -674,7 +703,7 @@ export async function dbAddCharacter(
   traits: string[] = [],
   imageUrl?: string
 ): Promise<Character | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -702,7 +731,7 @@ export async function dbAddCharacter(
 }
 
 export async function dbGetCharacterById(projectId: string, characterId: string): Promise<Character | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -731,7 +760,7 @@ export async function dbUpdateCharacter(
   characterId: string,
   updates: Partial<Pick<Character, 'name' | 'description' | 'traits' | 'imageUrl' | 'appearances'>>
 ): Promise<Character | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -756,7 +785,7 @@ export async function dbUpdateCharacter(
 }
 
 export async function dbDeleteCharacter(projectId: string, characterId: string): Promise<boolean> {
-  if (!usePostgres) return false;
+  if (!checkPostgresAvailable()) return false;
 
   await initializeTables();
 
@@ -784,7 +813,7 @@ export async function dbAddLore(
   description?: string,
   tags?: string[]
 ): Promise<LoreEntry | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -814,7 +843,7 @@ export async function dbAddLore(
 }
 
 export async function dbGetLoreById(projectId: string, loreId: string): Promise<LoreEntry | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -845,7 +874,7 @@ export async function dbUpdateLore(
   loreId: string,
   updates: Partial<Pick<LoreEntry, 'name' | 'summary' | 'description' | 'tags' | 'associatedScenes' | 'imageUrl'>>
 ): Promise<LoreEntry | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -874,7 +903,7 @@ export async function dbUpdateLore(
 }
 
 export async function dbDeleteLore(projectId: string, loreId: string): Promise<boolean> {
-  if (!usePostgres) return false;
+  if (!checkPostgresAvailable()) return false;
 
   await initializeTables();
 
@@ -891,7 +920,7 @@ export async function dbDeleteLore(projectId: string, loreId: string): Promise<b
 }
 
 export async function dbGetProjectLore(projectId: string, type?: LoreType): Promise<LoreEntry[]> {
-  if (!usePostgres) return [];
+  if (!checkPostgresAvailable()) return [];
 
   await initializeTables();
 
@@ -931,7 +960,7 @@ export async function dbAddSequence(
   name: string,
   description?: string
 ): Promise<SceneSequence | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -960,7 +989,7 @@ export async function dbUpdateSequence(
   sequenceId: string,
   updates: Partial<Pick<SceneSequence, 'name' | 'description' | 'shots'>>
 ): Promise<SceneSequence | null> {
-  if (!usePostgres) return null;
+  if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
@@ -994,7 +1023,7 @@ export async function dbUpdateSequence(
 }
 
 export async function dbDeleteSequence(projectId: string, sequenceId: string): Promise<boolean> {
-  if (!usePostgres) return false;
+  if (!checkPostgresAvailable()) return false;
 
   await initializeTables();
 
