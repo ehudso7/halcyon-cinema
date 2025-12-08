@@ -44,10 +44,39 @@ export default async function handler(
 
     // Provide helpful error message based on error type
     if (error instanceof Error) {
-      // Check for database connection issues
-      if (error.message.includes('Database not available') ||
-          error.message.includes('connect') ||
-          error.message.includes('ECONNREFUSED')) {
+      const errorMsg = error.message.toLowerCase();
+
+      // Check for database connection issues (more specific patterns)
+      const dbConnectionPatterns = [
+        'database not available',
+        'connection refused',
+        'econnrefused',
+        'connection terminated',
+        'connection timeout',
+        'connection reset',
+        'socket hang up',
+        'etimedout',
+        'enotfound',
+        'getaddrinfo',
+        'connect etimedout',
+        'cannot connect',
+        'failed to connect',
+        'connection error',
+        'connection failed',
+        'no pg_hba.conf entry',
+        'password authentication failed',
+        'role .* does not exist',
+        'database .* does not exist',
+        'ssl required',
+        'ssl connection',
+      ];
+
+      const isDbConnectionError = dbConnectionPatterns.some(pattern =>
+        errorMsg.includes(pattern) || new RegExp(pattern).test(errorMsg)
+      );
+
+      if (isDbConnectionError) {
+        console.error('[register] Database connection error:', error.message);
         return res.status(503).json({
           error: 'Database service unavailable. Please try again later or contact support.',
           code: 'DB_UNAVAILABLE'
@@ -56,6 +85,7 @@ export default async function handler(
 
       // Check for configuration issues
       if (error.message.includes('POSTGRES_URL')) {
+        console.error('[register] Database configuration error:', error.message);
         return res.status(503).json({
           error: 'Database not configured. Please check server configuration.',
           code: 'DB_NOT_CONFIGURED'
@@ -63,6 +93,7 @@ export default async function handler(
       }
     }
 
+    console.error('[register] Unexpected error:', error);
     return res.status(500).json({ error: 'Failed to create account' });
   }
 }
