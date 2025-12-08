@@ -1,0 +1,224 @@
+# User Journeys for Halcyon Cinema
+# Each journey represents a critical user flow that must be tested
+
+journeys:
+  # ============================================================================
+  # AUTHENTICATION JOURNEYS (Critical)
+  # ============================================================================
+  - id: signup_email
+    name: User Registration with Email
+    tags: [auth, critical]
+    preconditions:
+      - User is not logged in
+      - Email is not already registered
+    steps:
+      - Navigate to /auth/signup
+      - Enter valid email address
+      - Enter valid password (min 8 characters)
+      - Enter display name
+      - Submit registration form
+    expected_results:
+      - User account is created in database
+      - User is redirected to sign-in page or dashboard
+      - User can subsequently log in with credentials
+      - Password is hashed (not stored in plain text)
+
+  - id: login_email
+    name: User Login with Email/Password
+    tags: [auth, critical]
+    preconditions:
+      - User account exists with known email/password
+    steps:
+      - Navigate to /auth/signin
+      - Enter registered email address
+      - Enter correct password
+      - Submit login form
+    expected_results:
+      - User is authenticated
+      - Session is created
+      - User is redirected to dashboard (/)
+      - Protected routes become accessible
+
+  - id: login_invalid_credentials
+    name: Login with Invalid Credentials
+    tags: [auth, critical, negative]
+    preconditions:
+      - User attempts login with wrong password
+    steps:
+      - Navigate to /auth/signin
+      - Enter registered email
+      - Enter incorrect password
+      - Submit login form
+    expected_results:
+      - Authentication fails
+      - Appropriate error message is shown
+      - User remains on signin page
+      - No session is created
+
+  # ============================================================================
+  # PROJECT JOURNEYS (Critical - Main Value)
+  # ============================================================================
+  - id: create_project
+    name: Create New Project
+    tags: [project, critical]
+    preconditions:
+      - User is authenticated
+    steps:
+      - Navigate to dashboard (/)
+      - Click create new project
+      - Enter project name
+      - Optionally enter description
+      - Submit project creation
+    expected_results:
+      - Project is created in database
+      - Project appears in user's project list
+      - User can navigate to project detail page
+      - Project has unique ID
+
+  - id: view_project
+    name: View Project Details
+    tags: [project, critical]
+    preconditions:
+      - User is authenticated
+      - Project exists for user
+    steps:
+      - Navigate to /project/[projectId]
+    expected_results:
+      - Project details are displayed
+      - Scenes list is shown (paginated if > 12)
+      - Navigation to characters/lore/sequence is available
+
+  - id: delete_project
+    name: Delete Project
+    tags: [project]
+    preconditions:
+      - User is authenticated
+      - Project exists for user
+    steps:
+      - Navigate to project
+      - Click delete project
+      - Confirm deletion
+    expected_results:
+      - Project is removed from database
+      - Associated scenes/characters/lore are deleted (cascade)
+      - User is redirected to dashboard
+
+  # ============================================================================
+  # SCENE JOURNEYS (Critical - Main Value)
+  # ============================================================================
+  - id: create_scene
+    name: Create Scene in Project
+    tags: [scene, critical]
+    preconditions:
+      - User is authenticated
+      - Project exists
+    steps:
+      - Navigate to project detail page
+      - Click create new scene
+      - Enter scene prompt
+      - Optionally set metadata (shot type, style, lighting, mood)
+      - Submit scene creation
+    expected_results:
+      - Scene is created with prompt
+      - Scene is associated with project
+      - Scene appears in project's scene list
+
+  - id: generate_scene_image
+    name: Generate AI Image for Scene
+    tags: [scene, ai, critical]
+    preconditions:
+      - User is authenticated
+      - Scene exists without image
+      - OpenAI API key is configured
+    steps:
+      - Navigate to scene detail page
+      - Click generate image
+      - Wait for AI generation
+    expected_results:
+      - Image is generated via OpenAI DALL-E
+      - Image URL is stored with scene
+      - Image is displayed on scene page
+
+  # ============================================================================
+  # API HEALTH JOURNEYS
+  # ============================================================================
+  - id: health_check
+    name: Health Check Endpoint
+    tags: [api, monitoring]
+    preconditions:
+      - API server is running
+    steps:
+      - Send GET request to /api/health
+    expected_results:
+      - Response status is 200 (healthy) or appropriate status
+      - Response includes status, timestamp, version
+      - Database connectivity status is reported
+      - Uptime is reported
+
+  - id: health_check_db_status
+    name: Health Check Reports Database Status
+    tags: [api, monitoring, database]
+    preconditions:
+      - API server is running
+    steps:
+      - Send GET request to /api/health
+    expected_results:
+      - Database check status is 'up', 'down', or 'not_configured'
+      - If Postgres configured, latency is reported
+      - Overall status reflects database health
+
+  # ============================================================================
+  # EXPORT JOURNEYS
+  # ============================================================================
+  - id: export_project
+    name: Export Project Data
+    tags: [export]
+    preconditions:
+      - User is authenticated
+      - Project exists with scenes
+    steps:
+      - Navigate to project
+      - Click export project
+    expected_results:
+      - Project data is exported (JSON/ZIP format)
+      - All scenes included in export
+      - Download is initiated
+
+  # ============================================================================
+  # CHARACTER JOURNEYS
+  # ============================================================================
+  - id: create_character
+    name: Create Character in Project
+    tags: [character]
+    preconditions:
+      - User is authenticated
+      - Project exists
+    steps:
+      - Navigate to project characters page
+      - Click create character
+      - Enter character name and description
+      - Optionally add traits
+      - Submit
+    expected_results:
+      - Character is created
+      - Character appears in project's character list
+      - Character can be associated with scenes
+
+  # ============================================================================
+  # LORE JOURNEYS
+  # ============================================================================
+  - id: create_lore
+    name: Create Lore Entry in Project
+    tags: [lore]
+    preconditions:
+      - User is authenticated
+      - Project exists
+    steps:
+      - Navigate to project lore page
+      - Click create lore entry
+      - Select lore type
+      - Enter name and summary
+      - Submit
+    expected_results:
+      - Lore entry is created
+      - Lore appears in project's lore list
