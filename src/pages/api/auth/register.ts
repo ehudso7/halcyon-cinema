@@ -38,7 +38,31 @@ export default async function handler(
     if (error instanceof Error && error.message === 'User already exists') {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
+
+    // Log detailed error for debugging (server-side only)
     console.error('Registration error:', error);
+
+    // Provide helpful error message based on error type
+    if (error instanceof Error) {
+      // Check for database connection issues
+      if (error.message.includes('Database not available') ||
+          error.message.includes('connect') ||
+          error.message.includes('ECONNREFUSED')) {
+        return res.status(503).json({
+          error: 'Database service unavailable. Please try again later or contact support.',
+          code: 'DB_UNAVAILABLE'
+        });
+      }
+
+      // Check for configuration issues
+      if (error.message.includes('POSTGRES_URL')) {
+        return res.status(503).json({
+          error: 'Database not configured. Please check server configuration.',
+          code: 'DB_NOT_CONFIGURED'
+        });
+      }
+    }
+
     return res.status(500).json({ error: 'Failed to create account' });
   }
 }

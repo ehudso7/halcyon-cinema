@@ -12,6 +12,9 @@ interface HealthCheckResponse {
       type: 'postgres' | 'file';
       latencyMs?: number;
     };
+    auth: {
+      status: 'configured' | 'not_configured';
+    };
     api: {
       status: 'up';
     };
@@ -31,6 +34,7 @@ export default async function handler(
   }
 
   const usePostgres = isPostgresAvailable();
+  const authConfigured = !!process.env.NEXTAUTH_SECRET;
   let dbStatus: 'up' | 'down' | 'not_configured' = 'not_configured';
   let dbLatencyMs: number | undefined;
   let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
@@ -52,6 +56,11 @@ export default async function handler(
     overallStatus = 'degraded';
   }
 
+  // Auth is critical for user operations
+  if (!authConfigured) {
+    overallStatus = process.env.NODE_ENV === 'production' ? 'unhealthy' : 'degraded';
+  }
+
   const healthCheck: HealthCheckResponse = {
     status: overallStatus,
     timestamp: new Date().toISOString(),
@@ -61,6 +70,9 @@ export default async function handler(
         status: dbStatus,
         type: usePostgres ? 'postgres' : 'file',
         ...(dbLatencyMs !== undefined && { latencyMs: dbLatencyMs }),
+      },
+      auth: {
+        status: authConfigured ? 'configured' : 'not_configured',
       },
       api: {
         status: 'up',

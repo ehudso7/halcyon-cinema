@@ -184,8 +184,28 @@ describe('Journey: signup_email - User Registration with Email', () => {
     expect(data.error).toBe('An account with this email already exists');
   });
 
-  it('should return 500 for unexpected errors', async () => {
+  it('should return 503 for database connection errors', async () => {
     vi.mocked(createUser).mockRejectedValue(new Error('Database connection failed'));
+
+    mockReq.body = {
+      email: 'user@example.com',
+      password: 'securePassword123',
+      name: 'Test User',
+    };
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    expect(mockRes.statusCode).toBe(503);
+    const data = mockRes.data as { error: string; code?: string };
+    expect(data.error).toBe('Database service unavailable. Please try again later or contact support.');
+    expect(data.code).toBe('DB_UNAVAILABLE');
+  });
+
+  it('should return 500 for unexpected errors', async () => {
+    vi.mocked(createUser).mockRejectedValue(new Error('Unexpected internal error'));
 
     mockReq.body = {
       email: 'user@example.com',

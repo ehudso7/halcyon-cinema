@@ -72,6 +72,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
     // Step: Send GET request to /api/health
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
     vi.mocked(sql).mockResolvedValue({ rows: [{ '?column?': 1 }], command: 'SELECT', rowCount: 1, oid: 0, fields: [] });
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
     await handler(
       mockReq as NextApiRequest,
@@ -99,6 +100,11 @@ describe('Journey: health_check - Health Check Endpoint', () => {
     expect(dbCheck.latencyMs).toBeDefined();
     expect(typeof dbCheck.latencyMs).toBe('number');
 
+    // Expected: Auth status is reported
+    expect(checks.auth).toBeDefined();
+    const authCheck = checks.auth as Record<string, unknown>;
+    expect(authCheck.status).toBe('configured');
+
     // Expected: Uptime is reported
     expect(data.uptime).toBeDefined();
     expect(typeof data.uptime).toBe('number');
@@ -108,6 +114,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
   it('should return healthy status when Postgres is not configured (development)', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(false);
     vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
     await handler(
       mockReq as NextApiRequest,
@@ -128,6 +135,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
   it('should return degraded status when Postgres is not configured in production', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(false);
     vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
     await handler(
       mockReq as NextApiRequest,
@@ -140,9 +148,30 @@ describe('Journey: health_check - Health Check Endpoint', () => {
     expect(data.status).toBe('degraded');
   });
 
+  it('should report auth not configured when NEXTAUTH_SECRET is missing', async () => {
+    vi.mocked(isPostgresAvailable).mockReturnValue(false);
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.stubEnv('NEXTAUTH_SECRET', ''); // Explicitly clear the secret
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    // Auth status should be reported as not_configured
+    const data = mockRes.data as Record<string, unknown>;
+    const checks = data.checks as Record<string, unknown>;
+    const authCheck = checks.auth as Record<string, unknown>;
+    expect(authCheck.status).toBe('not_configured');
+
+    // In development without auth, should be degraded (not unhealthy)
+    expect(data.status).toBe('degraded');
+  });
+
   it('should return unhealthy status (503) when database connection fails', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
     vi.mocked(sql).mockRejectedValue(new Error('Connection refused'));
+    vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
     await handler(
       mockReq as NextApiRequest,
