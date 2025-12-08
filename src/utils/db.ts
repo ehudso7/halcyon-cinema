@@ -190,14 +190,16 @@ export async function getUserByEmail(email: string): Promise<{
   name: string;
   image: string | null;
   passwordHash: string | null;
+  createdAt: string;
+  updatedAt: string;
 } | null> {
   if (!usePostgres) return null;
 
   await initializeTables();
 
   const result = await sql`
-    SELECT id, email, name, image, password_hash
-    FROM users WHERE email = ${email}
+    SELECT id, email, name, image, password_hash, created_at, updated_at
+    FROM users WHERE LOWER(email) = LOWER(${email})
   `;
 
   if (result.rows.length === 0) return null;
@@ -209,6 +211,8 @@ export async function getUserByEmail(email: string): Promise<{
     name: row.name,
     image: row.image,
     passwordHash: row.password_hash,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
   };
 }
 
@@ -217,13 +221,15 @@ export async function getUserById(id: string): Promise<{
   email: string;
   name: string;
   image: string | null;
+  createdAt: string;
+  updatedAt: string;
 } | null> {
   if (!usePostgres) return null;
 
   await initializeTables();
 
   const result = await sql`
-    SELECT id, email, name, image FROM users WHERE id = ${id}::uuid
+    SELECT id, email, name, image, created_at, updated_at FROM users WHERE id = ${id}::uuid
   `;
 
   if (result.rows.length === 0) return null;
@@ -234,6 +240,8 @@ export async function getUserById(id: string): Promise<{
     email: row.email,
     name: row.name,
     image: row.image,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
   };
 }
 
@@ -241,7 +249,7 @@ export async function createUser(
   email: string,
   name: string,
   passwordHash: string
-): Promise<{ id: string; email: string; name: string }> {
+): Promise<{ id: string; email: string; name: string; createdAt: string; updatedAt: string }> {
   if (!usePostgres) {
     throw new Error('Database not available');
   }
@@ -251,10 +259,17 @@ export async function createUser(
   const result = await sql`
     INSERT INTO users (email, name, password_hash)
     VALUES (${email}, ${name}, ${passwordHash})
-    RETURNING id, email, name
+    RETURNING id, email, name, created_at, updated_at
   `;
 
-  return result.rows[0] as { id: string; email: string; name: string };
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    email: row.email,
+    name: row.name,
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  };
 }
 
 // ============================================================================
