@@ -3,19 +3,30 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
+import {
+  isPostgresAvailable,
+  getUserByEmail as dbGetUserByEmail,
+  getUserById as dbGetUserById,
+  createUser as dbCreateUser,
+} from './db';
 
-// IMPORTANT: /tmp on Vercel is EPHEMERAL - data is lost on cold starts!
-// This is a temporary solution for demo/development purposes.
-// For production, migrate to a persistent database (e.g., Vercel Postgres, PlanetScale, Supabase).
+// Check if we should use Postgres (production) or file storage (development)
+const usePostgres = isPostgresAvailable();
+
+// For local development fallback only
 const isVercel = process.env.VERCEL === '1';
 const DATA_DIR = isVercel
   ? '/tmp/halcyon-data'
   : path.join(process.cwd(), 'src', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
-// Log warning on Vercel about ephemeral storage
-if (isVercel) {
-  console.warn('[halcyon-cinema] Using ephemeral /tmp storage for user data. Data will not persist between cold starts. Consider migrating to a database.');
+// Log storage mode
+if (usePostgres) {
+  console.log('[halcyon-users] Using Vercel Postgres for persistent user storage');
+} else if (isVercel) {
+  console.warn('[halcyon-users] POSTGRES_URL not configured. Using ephemeral /tmp storage. Users will not persist between cold starts.');
+} else {
+  console.log('[halcyon-users] Using local file storage for development');
 }
 
 let users: User[] = [];
@@ -36,7 +47,7 @@ function ensureDataDir(): boolean {
 }
 
 function loadFromFile(): void {
-  if (initialized) return;
+  if (initialized || usePostgres) return;
 
   try {
     if (ensureDataDir() && fs.existsSync(USERS_FILE)) {
@@ -51,7 +62,7 @@ function loadFromFile(): void {
 }
 
 function saveToFile(): void {
-  if (!fileSystemAvailable) return;
+  if (!fileSystemAvailable || usePostgres) return;
 
   try {
     ensureDataDir();
@@ -63,6 +74,27 @@ function saveToFile(): void {
 }
 
 export async function createUser(email: string, password: string, name: string): Promise<User> {
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  // Use Postgres if available
+  if (usePostgres) {
+    // Check if user already exists
+    const existingUser = await dbGetUserByEmail(email);
+    if (existingUser) {
+      throw new Error('User already exists');
+    }
+
+    const dbUser = await dbCreateUser(email.toLowerCase(), name, passwordHash);
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  // Fallback to file storage for local development
   loadFromFile();
 
   const existingUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -70,7 +102,6 @@ export async function createUser(email: string, password: string, name: string):
     throw new Error('User already exists');
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
   const now = new Date().toISOString();
 
   const user: User = {
@@ -91,6 +122,29 @@ export async function createUser(email: string, password: string, name: string):
 }
 
 export async function validateUser(email: string, password: string): Promise<User | null> {
+  // Use Postgres if available
+  if (usePostgres) {
+    const dbUser = await dbGetUserByEmail(email);
+    if (!dbUser || !dbUser.passwordHash) {
+      return null;
+    }
+
+    const isValid = await bcrypt.compare(password, dbUser.passwordHash);
+    if (!isValid) {
+      return null;
+    }
+
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      image: dbUser.image || undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  // Fallback to file storage
   loadFromFile();
 
   const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -108,7 +162,23 @@ export async function validateUser(email: string, password: string): Promise<Use
   return safeUser as User;
 }
 
-export function getUserById(id: string): User | null {
+export async function getUserById(id: string): Promise<User | null> {
+  // Use Postgres if available
+  if (usePostgres) {
+    const dbUser = await dbGetUserById(id);
+    if (!dbUser) return null;
+
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      image: dbUser.image || undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  // Fallback to file storage
   loadFromFile();
   const user = users.find(u => u.id === id);
   if (!user) return null;
@@ -117,7 +187,23 @@ export function getUserById(id: string): User | null {
   return safeUser as User;
 }
 
-export function getUserByEmail(email: string): User | null {
+export async function getUserByEmail(email: string): Promise<User | null> {
+  // Use Postgres if available
+  if (usePostgres) {
+    const dbUser = await dbGetUserByEmail(email);
+    if (!dbUser) return null;
+
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      image: dbUser.image || undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  // Fallback to file storage
   loadFromFile();
   const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
   if (!user) return null;
@@ -127,6 +213,12 @@ export function getUserByEmail(email: string): User | null {
 }
 
 export function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'>>): User | null {
+  // Note: Postgres update not implemented yet - only works with file storage
+  if (usePostgres) {
+    console.warn('updateUser not yet implemented for Postgres');
+    return null;
+  }
+
   loadFromFile();
 
   const index = users.findIndex(u => u.id === id);

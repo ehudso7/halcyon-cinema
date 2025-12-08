@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
@@ -6,11 +6,14 @@ import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneCard from '@/components/SceneCard';
+import Pagination from '@/components/Pagination';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Project.module.css';
+
+const SCENES_PER_PAGE = 12;
 
 interface ProjectPageProps {
   project: Project;
@@ -22,6 +25,15 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPromptBuilder, setShowPromptBuilder] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Paginated scenes
+  const paginatedScenes = useMemo(() => {
+    const startIndex = (currentPage - 1) * SCENES_PER_PAGE;
+    return project.scenes.slice(startIndex, startIndex + SCENES_PER_PAGE);
+  }, [project.scenes, currentPage]);
+
+  const totalPages = Math.ceil(project.scenes.length / SCENES_PER_PAGE);
 
   const handleGenerateScene = async (data: PromptData) => {
     setIsGenerating(true);
@@ -180,11 +192,24 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
           <section className={styles.gallery}>
             {project.scenes.length > 0 ? (
-              <div className="grid grid-3">
-                {project.scenes.map((scene, index) => (
-                  <SceneCard key={scene.id} scene={scene} index={index} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-3">
+                  {paginatedScenes.map((scene, index) => (
+                    <SceneCard
+                      key={scene.id}
+                      scene={scene}
+                      index={(currentPage - 1) * SCENES_PER_PAGE + index}
+                    />
+                  ))}
+                </div>
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={project.scenes.length}
+                  itemsPerPage={SCENES_PER_PAGE}
+                />
+              </>
             ) : (
               <div className="empty-state">
                 <h3>No scenes yet</h3>
