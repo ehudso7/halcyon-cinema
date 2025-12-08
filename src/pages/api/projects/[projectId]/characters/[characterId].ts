@@ -40,6 +40,11 @@ export default async function handler(
       case 'PUT': {
         const { name, description, traits, imageUrl, appearances } = req.body;
 
+        // Validate name if provided
+        if (name !== undefined && (!name || typeof name !== 'string' || !name.trim())) {
+          return res.status(400).json({ error: 'Character name must be a non-empty string' });
+        }
+
         const updatedCharacter = await updateCharacterAsync(projectId, characterId, {
           ...(name !== undefined && { name }),
           ...(description !== undefined && { description }),
