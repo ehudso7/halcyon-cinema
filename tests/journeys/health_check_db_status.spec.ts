@@ -12,16 +12,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 // Mock the db module
 vi.mock('@/utils/db', () => ({
   isPostgresAvailable: vi.fn(),
-}));
-
-// Mock @vercel/postgres
-vi.mock('@vercel/postgres', () => ({
-  sql: vi.fn(),
+  testConnection: vi.fn(),
 }));
 
 import handler from '@/pages/api/health';
-import { isPostgresAvailable } from '@/utils/db';
-import { sql } from '@vercel/postgres';
+import { isPostgresAvailable, testConnection } from '@/utils/db';
 
 describe('Journey: health_check_db_status - Health Check Reports Database Status', () => {
   let mockReq: Partial<NextApiRequest>;
@@ -66,7 +61,7 @@ describe('Journey: health_check_db_status - Health Check Reports Database Status
 
   it('should report database status as "up" when Postgres is available and responds', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockResolvedValue({ rows: [{}], command: 'SELECT', rowCount: 1, oid: 0, fields: [] });
+    vi.mocked(testConnection).mockResolvedValue(undefined);
 
     await handler(
       mockReq as NextApiRequest,
@@ -89,7 +84,7 @@ describe('Journey: health_check_db_status - Health Check Reports Database Status
 
   it('should report database status as "down" when Postgres query fails', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockRejectedValue(new Error('ECONNREFUSED'));
+    vi.mocked(testConnection).mockRejectedValue(new Error('ECONNREFUSED'));
 
     await handler(
       mockReq as NextApiRequest,
@@ -128,7 +123,7 @@ describe('Journey: health_check_db_status - Health Check Reports Database Status
 
   it('should not include latency when database is down', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockRejectedValue(new Error('Connection timeout'));
+    vi.mocked(testConnection).mockRejectedValue(new Error('Connection timeout'));
 
     await handler(
       mockReq as NextApiRequest,

@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { isPostgresAvailable } from '@/utils/db';
-import { sql } from '@vercel/postgres';
+import { isPostgresAvailable, testConnection } from '@/utils/db';
 
 interface HealthCheckResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -58,7 +57,7 @@ export default async function handler(
   if (usePostgres) {
     const dbStartTime = Date.now();
     try {
-      await sql`SELECT 1`;
+      await testConnection();
       dbStatus = 'up';
       dbLatencyMs = Date.now() - dbStartTime;
     } catch (error) {
