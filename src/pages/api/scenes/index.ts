@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { addSceneToProject, getProjectById } from '@/utils/storage';
+import { addSceneToProjectAsync, getProjectByIdAsync } from '@/utils/storage';
 import { Scene, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 
@@ -26,21 +26,26 @@ export default async function handler(
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
-  const project = getProjectById(projectId);
-  if (!project) {
-    return res.status(404).json({ error: 'Project not found' });
-  }
+  try {
+    const project = await getProjectByIdAsync(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found' });
+    }
 
-  // Verify user owns this project (strict check - projects must have userId)
-  if (project.userId !== userId) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
+    // Verify user owns this project (strict check - projects must have userId)
+    if (project.userId !== userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
 
-  const scene = addSceneToProject(projectId, prompt.trim(), imageUrl || null, metadata);
+    const scene = await addSceneToProjectAsync(projectId, prompt.trim(), imageUrl || null, metadata);
 
-  if (!scene) {
+    if (!scene) {
+      return res.status(500).json({ error: 'Failed to create scene' });
+    }
+
+    return res.status(201).json(scene);
+  } catch (error) {
+    console.error('Scene creation error:', error);
     return res.status(500).json({ error: 'Failed to create scene' });
   }
-
-  return res.status(201).json(scene);
 }

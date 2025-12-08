@@ -7,7 +7,7 @@ import ProjectNavigation from '@/components/ProjectNavigation';
 import LoreCard from '@/components/LoreCard';
 import AddLoreModal from '@/components/AddLoreModal';
 import { LoreEntry, LoreType, Project } from '@/types';
-import { getProjectById, getProjectLore } from '@/utils/storage';
+import { getProjectByIdAsync, getProjectLoreAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Lore.module.css';
 
@@ -266,23 +266,29 @@ export const getServerSideProps: GetServerSideProps<LorePageProps> = async (cont
   }
 
   const projectId = context.params?.projectId as string;
-  const project = getProjectById(projectId);
 
-  if (!project) {
+  try {
+    const project = await getProjectByIdAsync(projectId);
+
+    if (!project) {
+      return { notFound: true };
+    }
+
+    // Verify user owns this project (strict check - projects must have userId)
+    if (project.userId !== session.user.id) {
+      return { notFound: true };
+    }
+
+    const initialEntries = await getProjectLoreAsync(projectId);
+
+    return {
+      props: {
+        project,
+        initialEntries,
+      },
+    };
+  } catch (error) {
+    console.error('Failed to load project:', error);
     return { notFound: true };
   }
-
-  // Verify user owns this project (strict check - projects must have userId)
-  if (project.userId !== session.user.id) {
-    return { notFound: true };
-  }
-
-  const initialEntries = getProjectLore(projectId);
-
-  return {
-    props: {
-      project,
-      initialEntries,
-    },
-  };
 };

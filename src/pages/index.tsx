@@ -9,7 +9,7 @@ import Header from '@/components/Header';
 import ProjectCard from '@/components/ProjectCard';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import { Project } from '@/types';
-import { getAllProjects } from '@/utils/storage';
+import { getAllProjectsAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Home.module.css';
 
@@ -170,13 +170,21 @@ export const getServerSideProps: GetServerSideProps<HomeProps> = async (context)
     };
   }
 
-  // Get only the user's projects
-  const allProjects = getAllProjects();
-  const userProjects = allProjects.filter(p => p.userId === session.user.id);
+  try {
+    // Get only the user's projects
+    const userProjects = await getAllProjectsAsync(session.user.id);
 
-  return {
-    props: {
-      projects: userProjects,
-    },
-  };
+    return {
+      props: {
+        projects: userProjects,
+      },
+    };
+  } catch (error) {
+    console.error('Failed to load projects:', error);
+    return {
+      props: {
+        projects: [],
+      },
+    };
+  }
 };

@@ -8,7 +8,7 @@ import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneCard from '@/components/SceneCard';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project } from '@/types';
-import { getProjectById } from '@/utils/storage';
+import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Project.module.css';
 
@@ -212,24 +212,32 @@ export const getServerSideProps: GetServerSideProps<ProjectPageProps> = async (c
   }
 
   const projectId = context.params?.projectId as string;
-  const project = getProjectById(projectId);
 
-  if (!project) {
+  try {
+    const project = await getProjectByIdAsync(projectId);
+
+    if (!project) {
+      return {
+        notFound: true,
+      };
+    }
+
+    // Verify user owns this project (strict check - projects must have userId)
+    if (project.userId !== session.user.id) {
+      return {
+        notFound: true,
+      };
+    }
+
+    return {
+      props: {
+        project,
+      },
+    };
+  } catch (error) {
+    console.error('Failed to load project:', error);
     return {
       notFound: true,
     };
   }
-
-  // Verify user owns this project (strict check - projects must have userId)
-  if (project.userId !== session.user.id) {
-    return {
-      notFound: true,
-    };
-  }
-
-  return {
-    props: {
-      project,
-    },
-  };
 };

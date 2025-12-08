@@ -6,7 +6,7 @@ import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project, Scene } from '@/types';
-import { getProjectById, getSceneById } from '@/utils/storage';
+import { getProjectByIdAsync, getSceneByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Scene.module.css';
 
@@ -255,28 +255,33 @@ export const getServerSideProps: GetServerSideProps<ScenePageProps> = async (con
   const projectId = context.params?.projectId as string;
   const sceneId = context.params?.sceneId as string;
 
-  const project = getProjectById(projectId);
-  if (!project) {
+  try {
+    const project = await getProjectByIdAsync(projectId);
+    if (!project) {
+      return { notFound: true };
+    }
+
+    // Verify user owns this project (strict check - projects must have userId)
+    if (project.userId !== session.user.id) {
+      return { notFound: true };
+    }
+
+    const scene = await getSceneByIdAsync(projectId, sceneId);
+    if (!scene) {
+      return { notFound: true };
+    }
+
+    const sceneIndex = project.scenes.findIndex(s => s.id === sceneId);
+
+    return {
+      props: {
+        project,
+        scene,
+        sceneIndex,
+      },
+    };
+  } catch (error) {
+    console.error('Failed to load scene:', error);
     return { notFound: true };
   }
-
-  // Verify user owns this project (strict check - projects must have userId)
-  if (project.userId !== session.user.id) {
-    return { notFound: true };
-  }
-
-  const scene = getSceneById(projectId, sceneId);
-  if (!scene) {
-    return { notFound: true };
-  }
-
-  const sceneIndex = project.scenes.findIndex(s => s.id === sceneId);
-
-  return {
-    props: {
-      project,
-      scene,
-      sceneIndex,
-    },
-  };
 };
