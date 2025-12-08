@@ -272,6 +272,9 @@ export const getServerSideProps: GetServerSideProps<ScenePageProps> = async (con
     }
 
     const sceneIndex = project.scenes.findIndex(s => s.id === sceneId);
+    if (sceneIndex === -1) {
+      return { notFound: true };
+    }
 
     return {
       props: {

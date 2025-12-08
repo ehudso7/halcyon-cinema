@@ -1,18 +1,39 @@
 import { sql } from '@vercel/postgres';
 import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Safely convert a string array to PostgreSQL array literal format.
+ * Properly escapes backslashes and quotes to prevent injection.
+ */
+function toPostgresArray(arr: string[]): string {
+  if (!arr || arr.length === 0) return '{}';
+  const escaped = arr.map(s => {
+    // Escape backslashes first, then quotes
+    const safe = s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    return `"${safe}"`;
+  });
+  return `{${escaped.join(',')}}`;
+}
 
 // Check if we're using Vercel Postgres (production) or file storage (development)
 const usePostgres = !!process.env.POSTGRES_URL;
 
-// Flag to track if tables have been initialized
-let tablesInitialized = false;
+// Promise-based singleton to prevent race conditions during initialization
+let initPromise: Promise<void> | null = null;
 
 /**
  * Initialize database tables if they don't exist
+ * Uses promise-based singleton to prevent race conditions
  */
 export async function initializeTables(): Promise<void> {
-  if (!usePostgres || tablesInitialized) return;
+  if (!usePostgres) return;
+  if (initPromise) return initPromise;
+
+  initPromise = doInitializeTables();
+  return initPromise;
+}
+
+async function doInitializeTables(): Promise<void> {
 
   try {
     // Create users table
@@ -111,9 +132,10 @@ export async function initializeTables(): Promise<void> {
     await sql`CREATE INDEX IF NOT EXISTS idx_lore_project_id ON lore(project_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id)`;
 
-    tablesInitialized = true;
     console.log('[db] Database tables initialized successfully');
   } catch (error) {
+    // Reset promise to allow retry on next request
+    initPromise = null;
     console.error('[db] Failed to initialize tables:', error);
     throw error;
   }
@@ -212,26 +234,115 @@ export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
 
   await initializeTables();
 
-  let result;
-  if (userId) {
-    result = await sql`
-      SELECT * FROM projects WHERE user_id = ${userId}::uuid
-      ORDER BY updated_at DESC
-    `;
-  } else {
-    result = await sql`SELECT * FROM projects ORDER BY updated_at DESC`;
+  // Fetch projects
+  const projectsResult = userId
+    ? await sql`SELECT * FROM projects WHERE user_id = ${userId}::uuid ORDER BY updated_at DESC`
+    : await sql`SELECT * FROM projects ORDER BY updated_at DESC`;
+
+  if (projectsResult.rows.length === 0) {
+    return [];
   }
 
-  const projects: Project[] = [];
+  // Create a PostgreSQL array literal for use in queries
+  const projectIds = projectsResult.rows.map(p => p.id);
+  const projectIdsArray = `{${projectIds.join(',')}}`;
 
-  for (const row of result.rows) {
-    const project = await dbGetProjectById(row.id);
-    if (project) {
-      projects.push(project);
-    }
+  // Fetch all related data in parallel to avoid N+1 queries
+  const [scenesResult, charactersResult, loreResult, sequencesResult] = await Promise.all([
+    sql`SELECT * FROM scenes WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
+    sql`SELECT * FROM characters WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
+    sql`SELECT * FROM lore WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
+    sql`SELECT * FROM sequences WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
+  ]);
+
+  // Group related data by project_id
+  const scenesByProject = new Map<string, Scene[]>();
+  for (const s of scenesResult.rows) {
+    const scenes = scenesByProject.get(s.project_id) || [];
+    scenes.push({
+      id: s.id,
+      projectId: s.project_id,
+      prompt: s.prompt,
+      imageUrl: s.image_url,
+      metadata: {
+        shotType: s.shot_type,
+        style: s.style,
+        lighting: s.lighting,
+        mood: s.mood,
+        aspectRatio: s.aspect_ratio,
+      },
+      characterIds: s.character_ids,
+      createdAt: s.created_at.toISOString(),
+      updatedAt: s.updated_at.toISOString(),
+    });
+    scenesByProject.set(s.project_id, scenes);
   }
 
-  return projects;
+  const charactersByProject = new Map<string, Character[]>();
+  for (const c of charactersResult.rows) {
+    const characters = charactersByProject.get(c.project_id) || [];
+    characters.push({
+      id: c.id,
+      projectId: c.project_id,
+      name: c.name,
+      description: c.description || '',
+      imageUrl: c.image_url,
+      traits: c.traits || [],
+      appearances: c.appearances || [],
+      createdAt: c.created_at.toISOString(),
+      updatedAt: c.updated_at.toISOString(),
+    });
+    charactersByProject.set(c.project_id, characters);
+  }
+
+  const loreByProject = new Map<string, LoreEntry[]>();
+  for (const l of loreResult.rows) {
+    const lore = loreByProject.get(l.project_id) || [];
+    lore.push({
+      id: l.id,
+      projectId: l.project_id,
+      type: l.type as LoreType,
+      name: l.name,
+      summary: l.summary,
+      description: l.description,
+      tags: l.tags || [],
+      associatedScenes: l.associated_scenes || [],
+      imageUrl: l.image_url,
+      createdAt: l.created_at.toISOString(),
+      updatedAt: l.updated_at.toISOString(),
+    });
+    loreByProject.set(l.project_id, lore);
+  }
+
+  const sequencesByProject = new Map<string, SceneSequence[]>();
+  for (const seq of sequencesResult.rows) {
+    const sequences = sequencesByProject.get(seq.project_id) || [];
+    sequences.push({
+      id: seq.id,
+      projectId: seq.project_id,
+      name: seq.name,
+      description: seq.description,
+      shots: seq.shots || [],
+      createdAt: seq.created_at.toISOString(),
+      updatedAt: seq.updated_at.toISOString(),
+    });
+    sequencesByProject.set(seq.project_id, sequences);
+  }
+
+  // Assemble projects with their related data
+  return projectsResult.rows.map(row => ({
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    description: row.description,
+    projectType: row.project_type,
+    scenes: scenesByProject.get(row.id) || [],
+    characters: charactersByProject.get(row.id) || [],
+    lore: loreByProject.get(row.id) || [],
+    sequences: sequencesByProject.get(row.id) || [],
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString(),
+  }));
 }
 
 export async function dbGetProjectById(id: string): Promise<Project | null> {
@@ -497,9 +608,12 @@ export async function dbDeleteScene(projectId: string, sceneId: string): Promise
     DELETE FROM scenes WHERE id = ${sceneId}::uuid AND project_id = ${projectId}::uuid
   `;
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  const deleted = (result.rowCount ?? 0) > 0;
+  if (deleted) {
+    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  }
 
-  return (result.rowCount ?? 0) > 0;
+  return deleted;
 }
 
 // ============================================================================
@@ -517,9 +631,7 @@ export async function dbAddCharacter(
 
   await initializeTables();
 
-  // Convert traits array to PostgreSQL array format
-  const traitsArray = traits.length > 0 ? `{${traits.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : '{}';
-
+  const traitsArray = toPostgresArray(traits);
   const result = await sql`
     INSERT INTO characters (project_id, name, description, traits, image_url)
     VALUES (${projectId}::uuid, ${name}, ${description}, ${traitsArray}::text[], ${imageUrl || null})
@@ -576,10 +688,9 @@ export async function dbUpdateCharacter(
 
   await initializeTables();
 
-  // Convert traits array to PostgreSQL array format if provided
-  const traitsValue = updates.traits
-    ? `{${updates.traits.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}`
-    : null;
+  // Use properly escaped array format for traits
+  const traitsValue = updates.traits !== undefined ? toPostgresArray(updates.traits) : null;
+  const appearancesValue = updates.appearances !== undefined ? JSON.stringify(updates.appearances) : null;
 
   await sql`
     UPDATE characters SET
@@ -587,7 +698,7 @@ export async function dbUpdateCharacter(
       description = COALESCE(${updates.description || null}, description),
       traits = COALESCE(${traitsValue}::text[], traits),
       image_url = COALESCE(${updates.imageUrl || null}, image_url),
-      appearances = COALESCE(${updates.appearances ? JSON.stringify(updates.appearances) : null}::jsonb, appearances),
+      appearances = COALESCE(${appearancesValue}::jsonb, appearances),
       updated_at = NOW()
     WHERE id = ${characterId}::uuid AND project_id = ${projectId}::uuid
   `;
@@ -606,9 +717,12 @@ export async function dbDeleteCharacter(projectId: string, characterId: string):
     DELETE FROM characters WHERE id = ${characterId}::uuid AND project_id = ${projectId}::uuid
   `;
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  const deleted = (result.rowCount ?? 0) > 0;
+  if (deleted) {
+    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  }
 
-  return (result.rowCount ?? 0) > 0;
+  return deleted;
 }
 
 // ============================================================================
@@ -627,9 +741,7 @@ export async function dbAddLore(
 
   await initializeTables();
 
-  // Convert tags array to PostgreSQL array format
-  const tagsArray = tags && tags.length > 0 ? `{${tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}` : '{}';
-
+  const tagsArray = toPostgresArray(tags || []);
   const result = await sql`
     INSERT INTO lore (project_id, type, name, summary, description, tags)
     VALUES (${projectId}::uuid, ${type}, ${name}, ${summary}, ${description || null}, ${tagsArray}::text[])
@@ -690,12 +802,11 @@ export async function dbUpdateLore(
 
   await initializeTables();
 
-  // Convert arrays to PostgreSQL array format if provided
-  const tagsValue = updates.tags
-    ? `{${updates.tags.map(t => `"${t.replace(/"/g, '\\"')}"`).join(',')}}`
-    : null;
-  const scenesValue = updates.associatedScenes
-    ? `{${updates.associatedScenes.map(s => `"${s}"`).join(',')}}`
+  // Use properly escaped array format for tags and scenes
+  const tagsValue = updates.tags !== undefined ? toPostgresArray(updates.tags) : null;
+  // associatedScenes are UUIDs, so we create a simple array literal without extra escaping
+  const scenesValue = updates.associatedScenes !== undefined
+    ? `{${updates.associatedScenes.join(',')}}`
     : null;
 
   await sql`
@@ -724,9 +835,12 @@ export async function dbDeleteLore(projectId: string, loreId: string): Promise<b
     DELETE FROM lore WHERE id = ${loreId}::uuid AND project_id = ${projectId}::uuid
   `;
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  const deleted = (result.rowCount ?? 0) > 0;
+  if (deleted) {
+    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  }
 
-  return (result.rowCount ?? 0) > 0;
+  return deleted;
 }
 
 export async function dbGetProjectLore(projectId: string, type?: LoreType): Promise<LoreEntry[]> {
@@ -841,7 +955,10 @@ export async function dbDeleteSequence(projectId: string, sequenceId: string): P
     DELETE FROM sequences WHERE id = ${sequenceId}::uuid AND project_id = ${projectId}::uuid
   `;
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  const deleted = (result.rowCount ?? 0) > 0;
+  if (deleted) {
+    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  }
 
-  return (result.rowCount ?? 0) > 0;
+  return deleted;
 }

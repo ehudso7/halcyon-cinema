@@ -30,7 +30,10 @@ export default async function handler(
 
     switch (req.method) {
       case 'GET': {
-        const loreType = typeof type === 'string' ? type as LoreType : undefined;
+        const validTypes: LoreType[] = ['character', 'location', 'event', 'system'];
+        const loreType = typeof type === 'string' && validTypes.includes(type as LoreType)
+          ? type as LoreType
+          : undefined;
         const lore = await getProjectLoreAsync(projectId, loreType);
         return res.status(200).json(lore);
       }
