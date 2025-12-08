@@ -6,7 +6,7 @@
  * including database connectivity, uptime, and version.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 // Mock the db module
@@ -64,6 +64,10 @@ describe('Journey: health_check - Health Check Endpoint', () => {
     };
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('should return 200 and healthy status when Postgres is available and connected', async () => {
     // Step: Send GET request to /api/health
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
@@ -103,8 +107,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
 
   it('should return healthy status when Postgres is not configured (development)', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(false);
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+    vi.stubEnv('NODE_ENV', 'development');
 
     await handler(
       mockReq as NextApiRequest,
@@ -120,14 +123,11 @@ describe('Journey: health_check - Health Check Endpoint', () => {
     const dbCheck = checks.database as Record<string, unknown>;
     expect(dbCheck.status).toBe('not_configured');
     expect(dbCheck.type).toBe('file');
-
-    process.env.NODE_ENV = originalEnv;
   });
 
   it('should return degraded status when Postgres is not configured in production', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(false);
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'production';
+    vi.stubEnv('NODE_ENV', 'production');
 
     await handler(
       mockReq as NextApiRequest,
@@ -138,8 +138,6 @@ describe('Journey: health_check - Health Check Endpoint', () => {
     expect(mockRes.statusCode).toBe(200);
     const data = mockRes.data as Record<string, unknown>;
     expect(data.status).toBe('degraded');
-
-    process.env.NODE_ENV = originalEnv;
   });
 
   it('should return unhealthy status (503) when database connection fails', async () => {
