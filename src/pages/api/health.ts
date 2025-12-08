@@ -27,6 +27,9 @@ interface HealthCheckResponse {
 
 const startTime = Date.now();
 
+// Log configuration only once per cold start to avoid log noise
+let configLoggedOnce = false;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<HealthCheckResponse>
@@ -43,10 +46,13 @@ export default async function handler(
   let dbError: string | undefined;
   let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
 
-  // Log environment check for debugging
-  console.log('[health] POSTGRES_URL configured:', usePostgres);
-  console.log('[health] NEXTAUTH_SECRET configured:', authConfigured);
-  console.log('[health] NODE_ENV:', process.env.NODE_ENV);
+  // Log environment check only once per cold start to reduce log noise
+  if (!configLoggedOnce) {
+    console.log('[health] POSTGRES_URL configured:', usePostgres);
+    console.log('[health] NEXTAUTH_SECRET configured:', authConfigured);
+    console.log('[health] NODE_ENV:', process.env.NODE_ENV);
+    configLoggedOnce = true;
+  }
 
   // Actually test database connectivity if Postgres is configured
   if (usePostgres) {
@@ -55,20 +61,21 @@ export default async function handler(
       await sql`SELECT 1`;
       dbStatus = 'up';
       dbLatencyMs = Date.now() - dbStartTime;
-      console.log('[health] Database connection successful, latency:', dbLatencyMs, 'ms');
     } catch (error) {
       console.error('[health] Database connection check failed:', error);
       dbStatus = 'down';
       overallStatus = 'unhealthy';
-      // Capture error message for diagnostics (safe to expose since it's server-side config issue)
+      // In production, show generic error to avoid leaking infrastructure details
+      // In development, show full error message for debugging
       if (error instanceof Error) {
-        dbError = error.message;
+        dbError = process.env.NODE_ENV === 'production'
+          ? 'Connection failed'
+          : error.message;
       }
     }
   } else if (process.env.NODE_ENV === 'production') {
     // Degraded if no Postgres configured in production
     overallStatus = 'degraded';
-    console.warn('[health] POSTGRES_URL not configured in production environment');
   }
 
   // Auth is critical for user operations
