@@ -2,17 +2,43 @@ import { sql } from '@vercel/postgres';
 import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType } from '@/types';
 
 /**
+ * UUID v4 regex pattern for validation
+ */
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Validate that a string is a valid UUID
+ */
+function isValidUUID(value: string): boolean {
+  return typeof value === 'string' && UUID_REGEX.test(value);
+}
+
+/**
  * Safely convert a string array to PostgreSQL array literal format.
  * Properly escapes backslashes and quotes to prevent injection.
+ * Filters out null/undefined values.
  */
 function toPostgresArray(arr: string[]): string {
   if (!arr || arr.length === 0) return '{}';
-  const escaped = arr.map(s => {
-    // Escape backslashes first, then quotes
-    const safe = s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    return `"${safe}"`;
-  });
+  const escaped = arr
+    .filter((s): s is string => s != null)
+    .map(s => {
+      // Escape backslashes first, then quotes
+      const safe = s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      return `"${safe}"`;
+    });
   return `{${escaped.join(',')}}`;
+}
+
+/**
+ * Safely convert a UUID array to PostgreSQL array literal format.
+ * Validates that all values are valid UUIDs to prevent injection.
+ */
+function toPostgresUUIDArray(arr: string[]): string {
+  if (!arr || arr.length === 0) return '{}';
+  // Only include valid UUIDs to prevent injection
+  const validUUIDs = arr.filter(isValidUUID);
+  return `{${validUUIDs.join(',')}}`;
 }
 
 // Check if we're using Vercel Postgres (production) or file storage (development)
@@ -243,9 +269,9 @@ export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
     return [];
   }
 
-  // Create a PostgreSQL array literal for use in queries
+  // Create a validated PostgreSQL UUID array literal for use in queries
   const projectIds = projectsResult.rows.map(p => p.id);
-  const projectIdsArray = `{${projectIds.join(',')}}`;
+  const projectIdsArray = toPostgresUUIDArray(projectIds);
 
   // Fetch all related data in parallel to avoid N+1 queries
   const [scenesResult, charactersResult, loreResult, sequencesResult] = await Promise.all([
@@ -802,11 +828,11 @@ export async function dbUpdateLore(
 
   await initializeTables();
 
-  // Use properly escaped array format for tags and scenes
+  // Use properly escaped array format for tags
   const tagsValue = updates.tags !== undefined ? toPostgresArray(updates.tags) : null;
-  // associatedScenes are UUIDs, so we create a simple array literal without extra escaping
+  // Use UUID-validated array format for associatedScenes to prevent injection
   const scenesValue = updates.associatedScenes !== undefined
-    ? `{${updates.associatedScenes.join(',')}}`
+    ? toPostgresUUIDArray(updates.associatedScenes)
     : null;
 
   await sql`
