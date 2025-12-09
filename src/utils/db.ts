@@ -45,7 +45,7 @@ let pool: Pool | null = null;
  * - DB_SSL=false: Disable SSL entirely (not recommended for production)
  * - DB_SSL=true: Enable SSL in development
  * - DB_SSL_REJECT_UNAUTHORIZED=false: Disable strict certificate validation (not recommended)
- * - DB_SSL_REJECT_UNAUTHORIZED=true: Enable strict certificate validation (Vercel deployments)
+ * - DB_SSL_REJECT_UNAUTHORIZED=true: Enable strict certificate validation (overrides defaults)
  * - DB_SSL_CA: Provide a custom CA certificate for validation
  */
 function getSslConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } | undefined {
@@ -82,7 +82,8 @@ function getSslConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
 
   if (explicitRejectUnauthorized !== undefined) {
     // User explicitly configured the setting - use their value
-    rejectUnauthorized = explicitRejectUnauthorized === 'true';
+    // Using !== 'false' ensures typos like 'yes' or 'TRUE' default to secure behavior
+    rejectUnauthorized = explicitRejectUnauthorized !== 'false';
   } else if (isVercel) {
     // Vercel: default to false since connections are secured at infrastructure level
     rejectUnauthorized = false;
@@ -91,8 +92,9 @@ function getSslConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
     rejectUnauthorized = true;
   }
 
-  // Warn when certificate validation is disabled in production
-  if (!rejectUnauthorized) {
+  // Warn when certificate validation is explicitly disabled in non-Vercel production
+  // Skip warning for Vercel since disabled validation is the expected default there
+  if (!rejectUnauthorized && explicitRejectUnauthorized !== undefined) {
     console.warn(
       '[db] SSL certificate validation is disabled. ' +
       'Set DB_SSL_REJECT_UNAUTHORIZED=true to enable strict validation.'
