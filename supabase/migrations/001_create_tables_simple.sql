@@ -30,6 +30,15 @@ $$ LANGUAGE plpgsql;
 
 -- Users table
 -- Stores application profile data with NextAuth-managed authentication.
+-- Note: This table stores application profile data. If using Supabase Auth,
+-- consider referencing auth.users(id) instead of storing password_hash here.
+-- Halcyon Cinema Database Schema (Simple Version)
+-- Run this SQL in the Supabase SQL Editor to create all required tables
+-- This version uses permissive RLS policies suitable for service-role connections
+
+-- ============================================================================
+-- Users table
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -47,6 +56,15 @@ CREATE TABLE IF NOT EXISTS projects (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   project_type VARCHAR(50) CHECK (project_type IN ('film', 'series', 'visual-novel', 'storyboard')),
+-- ============================================================================
+-- Projects table
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS projects (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  project_type VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -55,6 +73,9 @@ CREATE TABLE IF NOT EXISTS projects (
 -- Note: character_ids is an array of UUIDs referencing characters(id).
 -- PostgreSQL does not support foreign key constraints on array columns,
 -- so referential integrity must be enforced at the application level.
+-- ============================================================================
+-- Scenes table
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS scenes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -71,6 +92,9 @@ CREATE TABLE IF NOT EXISTS scenes (
 );
 
 -- Characters table
+-- ============================================================================
+-- Characters table
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS characters (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -91,6 +115,13 @@ CREATE TABLE IF NOT EXISTS lore (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   type VARCHAR(50) NOT NULL CHECK (type IN ('character', 'location', 'event', 'system')),
+-- ============================================================================
+-- Lore table
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS lore (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  type VARCHAR(50) NOT NULL,
   name VARCHAR(255) NOT NULL,
   summary TEXT NOT NULL,
   description TEXT,
@@ -102,6 +133,9 @@ CREATE TABLE IF NOT EXISTS lore (
 );
 
 -- Sequences table
+-- ============================================================================
+-- Sequences table
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS sequences (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -117,6 +151,8 @@ CREATE TABLE IF NOT EXISTS sequences (
 -- ============================================================================
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(LOWER(email));
+-- Indexes for better query performance
+-- ============================================================================
 CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_scenes_project_id ON scenes(project_id);
 CREATE INDEX IF NOT EXISTS idx_characters_project_id ON characters(project_id);
@@ -166,3 +202,4 @@ CREATE TRIGGER update_sequences_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 COMMIT;
+CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id);
