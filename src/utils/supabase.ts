@@ -150,11 +150,13 @@ export function createSupabaseClient(
 }
 
 /**
- * Verify a Supabase JWT token.
+ * Get the Supabase JWT secret for use in token verification.
  * Requires SUPABASE_JWT_SECRET to be configured.
  *
- * Note: For production, consider using Supabase's built-in auth verification
- * or a proper JWT library with full validation.
+ * Note: This only returns the secret. For actual JWT verification,
+ * use Supabase's built-in auth verification or a proper JWT library.
+ *
+ * @throws Error if SUPABASE_JWT_SECRET is not configured
  */
 export function getJwtSecret(): string {
   const secret = getSupabaseJwtSecret();
