@@ -1,5 +1,5 @@
-import { sql } from '@vercel/postgres';
-import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType } from '@/types';
+import { Pool, QueryResult, QueryResultRow } from 'pg';
+import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType, ShotBlock, CharacterAppearance, ProjectType } from '@/types';
 
 /**
  * UUID regex pattern for validation (accepts standard UUID format)
@@ -53,7 +53,52 @@ function toPostgresUUIDArray(arr: string[]): string {
  * available during module initialization.
  */
 function checkPostgresAvailable(): boolean {
-  return !!process.env.POSTGRES_URL;
+  return !!process.env.POSTGRES_URL || !!process.env.DATABASE_URL;
+}
+
+/**
+ * Get the database connection URL
+ */
+function getDatabaseUrl(): string | undefined {
+  return process.env.POSTGRES_URL || process.env.DATABASE_URL;
+}
+
+// Lazy-initialized connection pool
+let pool: Pool | null = null;
+
+/**
+ * Get or create the database connection pool
+ */
+function getPool(): Pool {
+  if (!pool) {
+    const connectionString = getDatabaseUrl();
+    if (!connectionString) {
+      throw new Error('Database not available - POSTGRES_URL or DATABASE_URL not configured');
+    }
+    pool = new Pool({
+      connectionString,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+    });
+  }
+  return pool;
+}
+
+/**
+ * Execute a query with parameters
+ */
+async function query<T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
+  const client = getPool();
+  return client.query<T>(text, params);
+}
+
+/**
+ * Execute a simple query (like SELECT 1)
+ */
+export async function testConnection(): Promise<void> {
+  await query('SELECT 1');
 }
 
 // Promise-based singleton to prevent race conditions during initialization
@@ -74,15 +119,16 @@ export async function initializeTables(): Promise<void> {
 async function doInitializeTables(): Promise<void> {
   console.log('[db] Initializing database tables...');
   console.log('[db] POSTGRES_URL configured:', !!process.env.POSTGRES_URL);
+  console.log('[db] DATABASE_URL configured:', !!process.env.DATABASE_URL);
 
   try {
     // Test basic connectivity first
     console.log('[db] Testing database connectivity...');
-    await sql`SELECT 1`;
+    await query('SELECT 1');
     console.log('[db] Database connectivity confirmed');
 
     // Create users table
-    await sql`
+    await query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         email VARCHAR(255) UNIQUE NOT NULL,
@@ -92,10 +138,10 @@ async function doInitializeTables(): Promise<void> {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
-    `;
+    `);
 
     // Create projects table
-    await sql`
+    await query(`
       CREATE TABLE IF NOT EXISTS projects (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -105,10 +151,10 @@ async function doInitializeTables(): Promise<void> {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
-    `;
+    `);
 
     // Create scenes table
-    await sql`
+    await query(`
       CREATE TABLE IF NOT EXISTS scenes (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -123,10 +169,10 @@ async function doInitializeTables(): Promise<void> {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
-    `;
+    `);
 
     // Create characters table
-    await sql`
+    await query(`
       CREATE TABLE IF NOT EXISTS characters (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -138,10 +184,10 @@ async function doInitializeTables(): Promise<void> {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
-    `;
+    `);
 
     // Create lore table
-    await sql`
+    await query(`
       CREATE TABLE IF NOT EXISTS lore (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -155,10 +201,10 @@ async function doInitializeTables(): Promise<void> {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
-    `;
+    `);
 
     // Create sequences table
-    await sql`
+    await query(`
       CREATE TABLE IF NOT EXISTS sequences (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -168,14 +214,14 @@ async function doInitializeTables(): Promise<void> {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
-    `;
+    `);
 
     // Create indexes for better query performance
-    await sql`CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id)`;
-    await sql`CREATE INDEX IF NOT EXISTS idx_scenes_project_id ON scenes(project_id)`;
-    await sql`CREATE INDEX IF NOT EXISTS idx_characters_project_id ON characters(project_id)`;
-    await sql`CREATE INDEX IF NOT EXISTS idx_lore_project_id ON lore(project_id)`;
-    await sql`CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id)`;
+    await query('CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_scenes_project_id ON scenes(project_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_characters_project_id ON characters(project_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_lore_project_id ON lore(project_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id)');
 
     console.log('[db] Database tables initialized successfully');
   } catch (error) {
@@ -226,22 +272,22 @@ export async function getUserByEmail(email: string): Promise<{
 
   await initializeTables();
 
-  const result = await sql`
-    SELECT id, email, name, image, password_hash, created_at, updated_at
-    FROM users WHERE LOWER(email) = LOWER(${email})
-  `;
+  const result = await query(
+    'SELECT id, email, name, image, password_hash, created_at, updated_at FROM users WHERE LOWER(email) = LOWER($1)',
+    [email]
+  );
 
   if (result.rows.length === 0) return null;
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    image: row.image,
-    passwordHash: row.password_hash,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    id: row.id as string,
+    email: row.email as string,
+    name: row.name as string,
+    image: row.image as string | null,
+    passwordHash: row.password_hash as string | null,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -257,20 +303,21 @@ export async function getUserById(id: string): Promise<{
 
   await initializeTables();
 
-  const result = await sql`
-    SELECT id, email, name, image, created_at, updated_at FROM users WHERE id = ${id}::uuid
-  `;
+  const result = await query(
+    'SELECT id, email, name, image, created_at, updated_at FROM users WHERE id = $1::uuid',
+    [id]
+  );
 
   if (result.rows.length === 0) return null;
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    image: row.image,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    id: row.id as string,
+    email: row.email as string,
+    name: row.name as string,
+    image: row.image as string | null,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -285,19 +332,18 @@ export async function createUser(
 
   await initializeTables();
 
-  const result = await sql`
-    INSERT INTO users (email, name, password_hash)
-    VALUES (${email}, ${name}, ${passwordHash})
-    RETURNING id, email, name, created_at, updated_at
-  `;
+  const result = await query(
+    'INSERT INTO users (email, name, password_hash) VALUES ($1, $2, $3) RETURNING id, email, name, created_at, updated_at',
+    [email, name, passwordHash]
+  );
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    email: row.email,
-    name: row.name,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    id: row.id as string,
+    email: row.email as string,
+    name: row.name as string,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -312,113 +358,120 @@ export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
 
   // Fetch projects
   const projectsResult = userId
-    ? await sql`SELECT * FROM projects WHERE user_id = ${userId}::uuid ORDER BY updated_at DESC`
-    : await sql`SELECT * FROM projects ORDER BY updated_at DESC`;
+    ? await query('SELECT * FROM projects WHERE user_id = $1::uuid ORDER BY updated_at DESC', [userId])
+    : await query('SELECT * FROM projects ORDER BY updated_at DESC');
 
   if (projectsResult.rows.length === 0) {
     return [];
   }
 
   // Create a validated PostgreSQL UUID array literal for use in queries
-  const projectIds = projectsResult.rows.map(p => p.id);
+  const projectIds = projectsResult.rows.map(p => (p as Record<string, unknown>).id as string);
   const projectIdsArray = toPostgresUUIDArray(projectIds);
 
   // Fetch all related data in parallel to avoid N+1 queries
   const [scenesResult, charactersResult, loreResult, sequencesResult] = await Promise.all([
-    sql`SELECT * FROM scenes WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
-    sql`SELECT * FROM characters WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
-    sql`SELECT * FROM lore WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
-    sql`SELECT * FROM sequences WHERE project_id = ANY(${projectIdsArray}::uuid[]) ORDER BY created_at ASC`,
+    query(`SELECT * FROM scenes WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
+    query(`SELECT * FROM characters WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
+    query(`SELECT * FROM lore WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
+    query(`SELECT * FROM sequences WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
   ]);
 
   // Group related data by project_id
   const scenesByProject = new Map<string, Scene[]>();
-  for (const s of scenesResult.rows) {
-    const scenes = scenesByProject.get(s.project_id) || [];
+  for (const row of scenesResult.rows) {
+    const s = row as Record<string, unknown>;
+    const scenes = scenesByProject.get(s.project_id as string) || [];
     scenes.push({
-      id: s.id,
-      projectId: s.project_id,
-      prompt: s.prompt,
-      imageUrl: s.image_url,
+      id: s.id as string,
+      projectId: s.project_id as string,
+      prompt: s.prompt as string,
+      imageUrl: (s.image_url as string | null) ?? null,
       metadata: {
-        shotType: s.shot_type,
-        style: s.style,
-        lighting: s.lighting,
-        mood: s.mood,
-        aspectRatio: s.aspect_ratio,
+        shotType: s.shot_type as string | undefined,
+        style: s.style as string | undefined,
+        lighting: s.lighting as string | undefined,
+        mood: s.mood as string | undefined,
+        aspectRatio: s.aspect_ratio as string | undefined,
       },
-      characterIds: s.character_ids,
-      createdAt: s.created_at.toISOString(),
-      updatedAt: s.updated_at.toISOString(),
+      characterIds: s.character_ids as string[] | undefined,
+      createdAt: (s.created_at as Date).toISOString(),
+      updatedAt: (s.updated_at as Date).toISOString(),
     });
-    scenesByProject.set(s.project_id, scenes);
+    scenesByProject.set(s.project_id as string, scenes);
   }
 
   const charactersByProject = new Map<string, Character[]>();
-  for (const c of charactersResult.rows) {
-    const characters = charactersByProject.get(c.project_id) || [];
+  for (const row of charactersResult.rows) {
+    const c = row as Record<string, unknown>;
+    const characters = charactersByProject.get(c.project_id as string) || [];
     characters.push({
-      id: c.id,
-      projectId: c.project_id,
-      name: c.name,
-      description: c.description || '',
-      imageUrl: c.image_url,
-      traits: c.traits || [],
-      appearances: c.appearances || [],
-      createdAt: c.created_at.toISOString(),
-      updatedAt: c.updated_at.toISOString(),
+      id: c.id as string,
+      projectId: c.project_id as string,
+      name: c.name as string,
+      description: (c.description as string) || '',
+      imageUrl: c.image_url as string | undefined,
+      traits: (c.traits as string[]) || [],
+      appearances: (c.appearances as CharacterAppearance[]) || [],
+      createdAt: (c.created_at as Date).toISOString(),
+      updatedAt: (c.updated_at as Date).toISOString(),
     });
-    charactersByProject.set(c.project_id, characters);
+    charactersByProject.set(c.project_id as string, characters);
   }
 
   const loreByProject = new Map<string, LoreEntry[]>();
-  for (const l of loreResult.rows) {
-    const lore = loreByProject.get(l.project_id) || [];
+  for (const row of loreResult.rows) {
+    const l = row as Record<string, unknown>;
+    const lore = loreByProject.get(l.project_id as string) || [];
     lore.push({
-      id: l.id,
-      projectId: l.project_id,
+      id: l.id as string,
+      projectId: l.project_id as string,
       type: l.type as LoreType,
-      name: l.name,
-      summary: l.summary,
-      description: l.description,
-      tags: l.tags || [],
-      associatedScenes: l.associated_scenes || [],
-      imageUrl: l.image_url,
-      createdAt: l.created_at.toISOString(),
-      updatedAt: l.updated_at.toISOString(),
+      name: l.name as string,
+      summary: l.summary as string,
+      description: l.description as string | undefined,
+      tags: (l.tags as string[]) || [],
+      associatedScenes: (l.associated_scenes as string[]) || [],
+      imageUrl: l.image_url as string | undefined,
+      createdAt: (l.created_at as Date).toISOString(),
+      updatedAt: (l.updated_at as Date).toISOString(),
     });
-    loreByProject.set(l.project_id, lore);
+    loreByProject.set(l.project_id as string, lore);
   }
 
   const sequencesByProject = new Map<string, SceneSequence[]>();
-  for (const seq of sequencesResult.rows) {
-    const sequences = sequencesByProject.get(seq.project_id) || [];
+  for (const row of sequencesResult.rows) {
+    const seq = row as Record<string, unknown>;
+    const sequences = sequencesByProject.get(seq.project_id as string) || [];
     sequences.push({
-      id: seq.id,
-      projectId: seq.project_id,
-      name: seq.name,
-      description: seq.description,
-      shots: seq.shots || [],
-      createdAt: seq.created_at.toISOString(),
-      updatedAt: seq.updated_at.toISOString(),
+      id: seq.id as string,
+      projectId: seq.project_id as string,
+      name: seq.name as string,
+      description: seq.description as string | undefined,
+      shots: (seq.shots as ShotBlock[]) || [],
+      createdAt: (seq.created_at as Date).toISOString(),
+      updatedAt: (seq.updated_at as Date).toISOString(),
     });
-    sequencesByProject.set(seq.project_id, sequences);
+    sequencesByProject.set(seq.project_id as string, sequences);
   }
 
   // Assemble projects with their related data
-  return projectsResult.rows.map(row => ({
-    id: row.id,
-    userId: row.user_id,
-    name: row.name,
-    description: row.description,
-    projectType: row.project_type,
-    scenes: scenesByProject.get(row.id) || [],
-    characters: charactersByProject.get(row.id) || [],
-    lore: loreByProject.get(row.id) || [],
-    sequences: sequencesByProject.get(row.id) || [],
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
-  }));
+  return projectsResult.rows.map(row => {
+    const p = row as Record<string, unknown>;
+    return {
+      id: p.id as string,
+      userId: p.user_id as string | undefined,
+      name: p.name as string,
+      description: p.description as string | undefined,
+      projectType: p.project_type as ProjectType | undefined,
+      scenes: scenesByProject.get(p.id as string) || [],
+      characters: charactersByProject.get(p.id as string) || [],
+      lore: loreByProject.get(p.id as string) || [],
+      sequences: sequencesByProject.get(p.id as string) || [],
+      createdAt: (p.created_at as Date).toISOString(),
+      updatedAt: (p.updated_at as Date).toISOString(),
+    };
+  });
 }
 
 export async function dbGetProjectById(id: string): Promise<Project | null> {
@@ -426,84 +479,96 @@ export async function dbGetProjectById(id: string): Promise<Project | null> {
 
   await initializeTables();
 
-  const projectResult = await sql`SELECT * FROM projects WHERE id = ${id}::uuid`;
+  const projectResult = await query('SELECT * FROM projects WHERE id = $1::uuid', [id]);
   if (projectResult.rows.length === 0) return null;
 
-  const row = projectResult.rows[0];
+  const row = projectResult.rows[0] as Record<string, unknown>;
 
   // Fetch related data
   const [scenesResult, charactersResult, loreResult, sequencesResult] = await Promise.all([
-    sql`SELECT * FROM scenes WHERE project_id = ${id}::uuid ORDER BY created_at ASC`,
-    sql`SELECT * FROM characters WHERE project_id = ${id}::uuid ORDER BY created_at ASC`,
-    sql`SELECT * FROM lore WHERE project_id = ${id}::uuid ORDER BY created_at ASC`,
-    sql`SELECT * FROM sequences WHERE project_id = ${id}::uuid ORDER BY created_at ASC`,
+    query('SELECT * FROM scenes WHERE project_id = $1::uuid ORDER BY created_at ASC', [id]),
+    query('SELECT * FROM characters WHERE project_id = $1::uuid ORDER BY created_at ASC', [id]),
+    query('SELECT * FROM lore WHERE project_id = $1::uuid ORDER BY created_at ASC', [id]),
+    query('SELECT * FROM sequences WHERE project_id = $1::uuid ORDER BY created_at ASC', [id]),
   ]);
 
-  const scenes: Scene[] = scenesResult.rows.map(s => ({
-    id: s.id,
-    projectId: s.project_id,
-    prompt: s.prompt,
-    imageUrl: s.image_url,
-    metadata: {
-      shotType: s.shot_type,
-      style: s.style,
-      lighting: s.lighting,
-      mood: s.mood,
-      aspectRatio: s.aspect_ratio,
-    },
-    characterIds: s.character_ids,
-    createdAt: s.created_at.toISOString(),
-    updatedAt: s.updated_at.toISOString(),
-  }));
+  const scenes: Scene[] = scenesResult.rows.map(r => {
+    const s = r as Record<string, unknown>;
+    return {
+      id: s.id as string,
+      projectId: s.project_id as string,
+      prompt: s.prompt as string,
+      imageUrl: (s.image_url as string | null) ?? null,
+      metadata: {
+        shotType: s.shot_type as string | undefined,
+        style: s.style as string | undefined,
+        lighting: s.lighting as string | undefined,
+        mood: s.mood as string | undefined,
+        aspectRatio: s.aspect_ratio as string | undefined,
+      },
+      characterIds: s.character_ids as string[] | undefined,
+      createdAt: (s.created_at as Date).toISOString(),
+      updatedAt: (s.updated_at as Date).toISOString(),
+    };
+  });
 
-  const characters: Character[] = charactersResult.rows.map(c => ({
-    id: c.id,
-    projectId: c.project_id,
-    name: c.name,
-    description: c.description || '',
-    imageUrl: c.image_url,
-    traits: c.traits || [],
-    appearances: c.appearances || [],
-    createdAt: c.created_at.toISOString(),
-    updatedAt: c.updated_at.toISOString(),
-  }));
+  const characters: Character[] = charactersResult.rows.map(r => {
+    const c = r as Record<string, unknown>;
+    return {
+      id: c.id as string,
+      projectId: c.project_id as string,
+      name: c.name as string,
+      description: (c.description as string) || '',
+      imageUrl: c.image_url as string | undefined,
+      traits: (c.traits as string[]) || [],
+      appearances: (c.appearances as CharacterAppearance[]) || [],
+      createdAt: (c.created_at as Date).toISOString(),
+      updatedAt: (c.updated_at as Date).toISOString(),
+    };
+  });
 
-  const lore: LoreEntry[] = loreResult.rows.map(l => ({
-    id: l.id,
-    projectId: l.project_id,
-    type: l.type as LoreType,
-    name: l.name,
-    summary: l.summary,
-    description: l.description,
-    tags: l.tags || [],
-    associatedScenes: l.associated_scenes || [],
-    imageUrl: l.image_url,
-    createdAt: l.created_at.toISOString(),
-    updatedAt: l.updated_at.toISOString(),
-  }));
+  const lore: LoreEntry[] = loreResult.rows.map(r => {
+    const l = r as Record<string, unknown>;
+    return {
+      id: l.id as string,
+      projectId: l.project_id as string,
+      type: l.type as LoreType,
+      name: l.name as string,
+      summary: l.summary as string,
+      description: l.description as string | undefined,
+      tags: (l.tags as string[]) || [],
+      associatedScenes: (l.associated_scenes as string[]) || [],
+      imageUrl: l.image_url as string | undefined,
+      createdAt: (l.created_at as Date).toISOString(),
+      updatedAt: (l.updated_at as Date).toISOString(),
+    };
+  });
 
-  const sequences: SceneSequence[] = sequencesResult.rows.map(seq => ({
-    id: seq.id,
-    projectId: seq.project_id,
-    name: seq.name,
-    description: seq.description,
-    shots: seq.shots || [],
-    createdAt: seq.created_at.toISOString(),
-    updatedAt: seq.updated_at.toISOString(),
-  }));
+  const sequences: SceneSequence[] = sequencesResult.rows.map(r => {
+    const seq = r as Record<string, unknown>;
+    return {
+      id: seq.id as string,
+      projectId: seq.project_id as string,
+      name: seq.name as string,
+      description: seq.description as string | undefined,
+      shots: (seq.shots as ShotBlock[]) || [],
+      createdAt: (seq.created_at as Date).toISOString(),
+      updatedAt: (seq.updated_at as Date).toISOString(),
+    };
+  });
 
   return {
-    id: row.id,
-    userId: row.user_id,
-    name: row.name,
-    description: row.description,
-    projectType: row.project_type,
+    id: row.id as string,
+    userId: row.user_id as string | undefined,
+    name: row.name as string,
+    description: row.description as string | undefined,
+    projectType: row.project_type as ProjectType | undefined,
     scenes,
     characters,
     lore,
     sequences,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -518,24 +583,23 @@ export async function dbCreateProject(
 
   await initializeTables();
 
-  const result = await sql`
-    INSERT INTO projects (name, description, user_id)
-    VALUES (${name}, ${description || null}, ${userId ? userId : null}::uuid)
-    RETURNING *
-  `;
+  const result = await query(
+    'INSERT INTO projects (name, description, user_id) VALUES ($1, $2, $3::uuid) RETURNING *',
+    [name, description || null, userId || null]
+  );
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    userId: row.user_id,
-    name: row.name,
-    description: row.description,
+    id: row.id as string,
+    userId: row.user_id as string | undefined,
+    name: row.name as string,
+    description: row.description as string | undefined,
     scenes: [],
     characters: [],
     lore: [],
     sequences: [],
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -547,14 +611,15 @@ export async function dbUpdateProject(
 
   await initializeTables();
 
-  await sql`
-    UPDATE projects SET
-      name = COALESCE(${updates.name || null}, name),
-      description = COALESCE(${updates.description || null}, description),
-      project_type = COALESCE(${updates.projectType || null}, project_type),
+  await query(
+    `UPDATE projects SET
+      name = COALESCE($1, name),
+      description = COALESCE($2, description),
+      project_type = COALESCE($3, project_type),
       updated_at = NOW()
-    WHERE id = ${id}::uuid
-  `;
+    WHERE id = $4::uuid`,
+    [updates.name || null, updates.description || null, updates.projectType || null, id]
+  );
 
   return dbGetProjectById(id);
 }
@@ -564,7 +629,7 @@ export async function dbDeleteProject(id: string): Promise<boolean> {
 
   await initializeTables();
 
-  const result = await sql`DELETE FROM projects WHERE id = ${id}::uuid`;
+  const result = await query('DELETE FROM projects WHERE id = $1::uuid', [id]);
   return (result.rowCount ?? 0) > 0;
 }
 
@@ -582,39 +647,40 @@ export async function dbAddScene(
 
   await initializeTables();
 
-  const result = await sql`
-    INSERT INTO scenes (project_id, prompt, image_url, shot_type, style, lighting, mood, aspect_ratio)
-    VALUES (
-      ${projectId}::uuid,
-      ${prompt},
-      ${imageUrl},
-      ${metadata?.shotType || null},
-      ${metadata?.style || null},
-      ${metadata?.lighting || null},
-      ${metadata?.mood || null},
-      ${metadata?.aspectRatio || null}
-    )
-    RETURNING *
-  `;
+  const result = await query(
+    `INSERT INTO scenes (project_id, prompt, image_url, shot_type, style, lighting, mood, aspect_ratio)
+    VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *`,
+    [
+      projectId,
+      prompt,
+      imageUrl,
+      metadata?.shotType || null,
+      metadata?.style || null,
+      metadata?.lighting || null,
+      metadata?.mood || null,
+      metadata?.aspectRatio || null,
+    ]
+  );
 
   // Update project's updated_at
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
-    prompt: row.prompt,
-    imageUrl: row.image_url,
+    id: row.id as string,
+    projectId: row.project_id as string,
+    prompt: row.prompt as string,
+    imageUrl: (row.image_url as string | null) ?? null,
     metadata: {
-      shotType: row.shot_type,
-      style: row.style,
-      lighting: row.lighting,
-      mood: row.mood,
-      aspectRatio: row.aspect_ratio,
+      shotType: row.shot_type as string | undefined,
+      style: row.style as string | undefined,
+      lighting: row.lighting as string | undefined,
+      mood: row.mood as string | undefined,
+      aspectRatio: row.aspect_ratio as string | undefined,
     },
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -623,28 +689,29 @@ export async function dbGetSceneById(projectId: string, sceneId: string): Promis
 
   await initializeTables();
 
-  const result = await sql`
-    SELECT * FROM scenes WHERE id = ${sceneId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'SELECT * FROM scenes WHERE id = $1::uuid AND project_id = $2::uuid',
+    [sceneId, projectId]
+  );
 
   if (result.rows.length === 0) return null;
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
-    prompt: row.prompt,
-    imageUrl: row.image_url,
+    id: row.id as string,
+    projectId: row.project_id as string,
+    prompt: row.prompt as string,
+    imageUrl: (row.image_url as string | null) ?? null,
     metadata: {
-      shotType: row.shot_type,
-      style: row.style,
-      lighting: row.lighting,
-      mood: row.mood,
-      aspectRatio: row.aspect_ratio,
+      shotType: row.shot_type as string | undefined,
+      style: row.style as string | undefined,
+      lighting: row.lighting as string | undefined,
+      mood: row.mood as string | undefined,
+      aspectRatio: row.aspect_ratio as string | undefined,
     },
-    characterIds: row.character_ids,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    characterIds: row.character_ids as string[] | undefined,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -657,20 +724,31 @@ export async function dbUpdateScene(
 
   await initializeTables();
 
-  await sql`
-    UPDATE scenes SET
-      prompt = COALESCE(${updates.prompt || null}, prompt),
-      image_url = COALESCE(${updates.imageUrl || null}, image_url),
-      shot_type = COALESCE(${updates.metadata?.shotType || null}, shot_type),
-      style = COALESCE(${updates.metadata?.style || null}, style),
-      lighting = COALESCE(${updates.metadata?.lighting || null}, lighting),
-      mood = COALESCE(${updates.metadata?.mood || null}, mood),
-      aspect_ratio = COALESCE(${updates.metadata?.aspectRatio || null}, aspect_ratio),
+  await query(
+    `UPDATE scenes SET
+      prompt = COALESCE($1, prompt),
+      image_url = COALESCE($2, image_url),
+      shot_type = COALESCE($3, shot_type),
+      style = COALESCE($4, style),
+      lighting = COALESCE($5, lighting),
+      mood = COALESCE($6, mood),
+      aspect_ratio = COALESCE($7, aspect_ratio),
       updated_at = NOW()
-    WHERE id = ${sceneId}::uuid AND project_id = ${projectId}::uuid
-  `;
+    WHERE id = $8::uuid AND project_id = $9::uuid`,
+    [
+      updates.prompt || null,
+      updates.imageUrl || null,
+      updates.metadata?.shotType || null,
+      updates.metadata?.style || null,
+      updates.metadata?.lighting || null,
+      updates.metadata?.mood || null,
+      updates.metadata?.aspectRatio || null,
+      sceneId,
+      projectId,
+    ]
+  );
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
   return dbGetSceneById(projectId, sceneId);
 }
@@ -680,13 +758,14 @@ export async function dbDeleteScene(projectId: string, sceneId: string): Promise
 
   await initializeTables();
 
-  const result = await sql`
-    DELETE FROM scenes WHERE id = ${sceneId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'DELETE FROM scenes WHERE id = $1::uuid AND project_id = $2::uuid',
+    [sceneId, projectId]
+  );
 
   const deleted = (result.rowCount ?? 0) > 0;
   if (deleted) {
-    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+    await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
   }
 
   return deleted;
@@ -708,25 +787,26 @@ export async function dbAddCharacter(
   await initializeTables();
 
   const traitsArray = toPostgresArray(traits);
-  const result = await sql`
-    INSERT INTO characters (project_id, name, description, traits, image_url)
-    VALUES (${projectId}::uuid, ${name}, ${description}, ${traitsArray}::text[], ${imageUrl || null})
-    RETURNING *
-  `;
+  const result = await query(
+    `INSERT INTO characters (project_id, name, description, traits, image_url)
+    VALUES ($1::uuid, $2, $3, $4::text[], $5)
+    RETURNING *`,
+    [projectId, name, description, traitsArray, imageUrl || null]
+  );
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
-    name: row.name,
-    description: row.description || '',
-    imageUrl: row.image_url,
-    traits: row.traits || [],
-    appearances: row.appearances || [],
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    id: row.id as string,
+    projectId: row.project_id as string,
+    name: row.name as string,
+    description: (row.description as string) || '',
+    imageUrl: row.image_url as string | undefined,
+    traits: (row.traits as string[]) || [],
+    appearances: (row.appearances as CharacterAppearance[]) || [],
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -735,23 +815,24 @@ export async function dbGetCharacterById(projectId: string, characterId: string)
 
   await initializeTables();
 
-  const result = await sql`
-    SELECT * FROM characters WHERE id = ${characterId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'SELECT * FROM characters WHERE id = $1::uuid AND project_id = $2::uuid',
+    [characterId, projectId]
+  );
 
   if (result.rows.length === 0) return null;
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
-    name: row.name,
-    description: row.description || '',
-    imageUrl: row.image_url,
-    traits: row.traits || [],
-    appearances: row.appearances || [],
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    id: row.id as string,
+    projectId: row.project_id as string,
+    name: row.name as string,
+    description: (row.description as string) || '',
+    imageUrl: row.image_url as string | undefined,
+    traits: (row.traits as string[]) || [],
+    appearances: (row.appearances as CharacterAppearance[]) || [],
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -768,18 +849,27 @@ export async function dbUpdateCharacter(
   const traitsValue = updates.traits !== undefined ? toPostgresArray(updates.traits) : null;
   const appearancesValue = updates.appearances !== undefined ? JSON.stringify(updates.appearances) : null;
 
-  await sql`
-    UPDATE characters SET
-      name = COALESCE(${updates.name || null}, name),
-      description = COALESCE(${updates.description || null}, description),
-      traits = COALESCE(${traitsValue}::text[], traits),
-      image_url = COALESCE(${updates.imageUrl || null}, image_url),
-      appearances = COALESCE(${appearancesValue}::jsonb, appearances),
+  await query(
+    `UPDATE characters SET
+      name = COALESCE($1, name),
+      description = COALESCE($2, description),
+      traits = COALESCE($3::text[], traits),
+      image_url = COALESCE($4, image_url),
+      appearances = COALESCE($5::jsonb, appearances),
       updated_at = NOW()
-    WHERE id = ${characterId}::uuid AND project_id = ${projectId}::uuid
-  `;
+    WHERE id = $6::uuid AND project_id = $7::uuid`,
+    [
+      updates.name || null,
+      updates.description || null,
+      traitsValue,
+      updates.imageUrl || null,
+      appearancesValue,
+      characterId,
+      projectId,
+    ]
+  );
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
   return dbGetCharacterById(projectId, characterId);
 }
@@ -789,13 +879,14 @@ export async function dbDeleteCharacter(projectId: string, characterId: string):
 
   await initializeTables();
 
-  const result = await sql`
-    DELETE FROM characters WHERE id = ${characterId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'DELETE FROM characters WHERE id = $1::uuid AND project_id = $2::uuid',
+    [characterId, projectId]
+  );
 
   const deleted = (result.rowCount ?? 0) > 0;
   if (deleted) {
-    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+    await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
   }
 
   return deleted;
@@ -818,27 +909,28 @@ export async function dbAddLore(
   await initializeTables();
 
   const tagsArray = toPostgresArray(tags || []);
-  const result = await sql`
-    INSERT INTO lore (project_id, type, name, summary, description, tags)
-    VALUES (${projectId}::uuid, ${type}, ${name}, ${summary}, ${description || null}, ${tagsArray}::text[])
-    RETURNING *
-  `;
+  const result = await query(
+    `INSERT INTO lore (project_id, type, name, summary, description, tags)
+    VALUES ($1::uuid, $2, $3, $4, $5, $6::text[])
+    RETURNING *`,
+    [projectId, type, name, summary, description || null, tagsArray]
+  );
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
+    id: row.id as string,
+    projectId: row.project_id as string,
     type: row.type as LoreType,
-    name: row.name,
-    summary: row.summary,
-    description: row.description,
-    tags: row.tags || [],
-    associatedScenes: row.associated_scenes || [],
-    imageUrl: row.image_url,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    name: row.name as string,
+    summary: row.summary as string,
+    description: row.description as string | undefined,
+    tags: (row.tags as string[]) || [],
+    associatedScenes: (row.associated_scenes as string[]) || [],
+    imageUrl: row.image_url as string | undefined,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -847,25 +939,26 @@ export async function dbGetLoreById(projectId: string, loreId: string): Promise<
 
   await initializeTables();
 
-  const result = await sql`
-    SELECT * FROM lore WHERE id = ${loreId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'SELECT * FROM lore WHERE id = $1::uuid AND project_id = $2::uuid',
+    [loreId, projectId]
+  );
 
   if (result.rows.length === 0) return null;
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
+    id: row.id as string,
+    projectId: row.project_id as string,
     type: row.type as LoreType,
-    name: row.name,
-    summary: row.summary,
-    description: row.description,
-    tags: row.tags || [],
-    associatedScenes: row.associated_scenes || [],
-    imageUrl: row.image_url,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    name: row.name as string,
+    summary: row.summary as string,
+    description: row.description as string | undefined,
+    tags: (row.tags as string[]) || [],
+    associatedScenes: (row.associated_scenes as string[]) || [],
+    imageUrl: row.image_url as string | undefined,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -885,19 +978,29 @@ export async function dbUpdateLore(
     ? toPostgresUUIDArray(updates.associatedScenes)
     : null;
 
-  await sql`
-    UPDATE lore SET
-      name = COALESCE(${updates.name || null}, name),
-      summary = COALESCE(${updates.summary || null}, summary),
-      description = COALESCE(${updates.description || null}, description),
-      tags = COALESCE(${tagsValue}::text[], tags),
-      associated_scenes = COALESCE(${scenesValue}::uuid[], associated_scenes),
-      image_url = COALESCE(${updates.imageUrl || null}, image_url),
+  await query(
+    `UPDATE lore SET
+      name = COALESCE($1, name),
+      summary = COALESCE($2, summary),
+      description = COALESCE($3, description),
+      tags = COALESCE($4::text[], tags),
+      associated_scenes = COALESCE($5::uuid[], associated_scenes),
+      image_url = COALESCE($6, image_url),
       updated_at = NOW()
-    WHERE id = ${loreId}::uuid AND project_id = ${projectId}::uuid
-  `;
+    WHERE id = $7::uuid AND project_id = $8::uuid`,
+    [
+      updates.name || null,
+      updates.summary || null,
+      updates.description || null,
+      tagsValue,
+      scenesValue,
+      updates.imageUrl || null,
+      loreId,
+      projectId,
+    ]
+  );
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
   return dbGetLoreById(projectId, loreId);
 }
@@ -907,13 +1010,14 @@ export async function dbDeleteLore(projectId: string, loreId: string): Promise<b
 
   await initializeTables();
 
-  const result = await sql`
-    DELETE FROM lore WHERE id = ${loreId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'DELETE FROM lore WHERE id = $1::uuid AND project_id = $2::uuid',
+    [loreId, projectId]
+  );
 
   const deleted = (result.rowCount ?? 0) > 0;
   if (deleted) {
-    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+    await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
   }
 
   return deleted;
@@ -926,29 +1030,33 @@ export async function dbGetProjectLore(projectId: string, type?: LoreType): Prom
 
   let result;
   if (type) {
-    result = await sql`
-      SELECT * FROM lore WHERE project_id = ${projectId}::uuid AND type = ${type}
-      ORDER BY created_at ASC
-    `;
+    result = await query(
+      'SELECT * FROM lore WHERE project_id = $1::uuid AND type = $2 ORDER BY created_at ASC',
+      [projectId, type]
+    );
   } else {
-    result = await sql`
-      SELECT * FROM lore WHERE project_id = ${projectId}::uuid ORDER BY created_at ASC
-    `;
+    result = await query(
+      'SELECT * FROM lore WHERE project_id = $1::uuid ORDER BY created_at ASC',
+      [projectId]
+    );
   }
 
-  return result.rows.map(row => ({
-    id: row.id,
-    projectId: row.project_id,
-    type: row.type as LoreType,
-    name: row.name,
-    summary: row.summary,
-    description: row.description,
-    tags: row.tags || [],
-    associatedScenes: row.associated_scenes || [],
-    imageUrl: row.image_url,
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
-  }));
+  return result.rows.map(r => {
+    const row = r as Record<string, unknown>;
+    return {
+      id: row.id as string,
+      projectId: row.project_id as string,
+      type: row.type as LoreType,
+      name: row.name as string,
+      summary: row.summary as string,
+      description: row.description as string | undefined,
+      tags: (row.tags as string[]) || [],
+      associatedScenes: (row.associated_scenes as string[]) || [],
+      imageUrl: row.image_url as string | undefined,
+      createdAt: (row.created_at as Date).toISOString(),
+      updatedAt: (row.updated_at as Date).toISOString(),
+    };
+  });
 }
 
 // ============================================================================
@@ -964,23 +1072,24 @@ export async function dbAddSequence(
 
   await initializeTables();
 
-  const result = await sql`
-    INSERT INTO sequences (project_id, name, description)
-    VALUES (${projectId}::uuid, ${name}, ${description || null})
-    RETURNING *
-  `;
+  const result = await query(
+    `INSERT INTO sequences (project_id, name, description)
+    VALUES ($1::uuid, $2, $3)
+    RETURNING *`,
+    [projectId, name, description || null]
+  );
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
-    name: row.name,
-    description: row.description,
-    shots: row.shots || [],
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    id: row.id as string,
+    projectId: row.project_id as string,
+    name: row.name as string,
+    description: row.description as string | undefined,
+    shots: (row.shots as ShotBlock[]) || [],
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -993,32 +1102,40 @@ export async function dbUpdateSequence(
 
   await initializeTables();
 
-  await sql`
-    UPDATE sequences SET
-      name = COALESCE(${updates.name || null}, name),
-      description = COALESCE(${updates.description || null}, description),
-      shots = COALESCE(${updates.shots ? JSON.stringify(updates.shots) : null}::jsonb, shots),
+  await query(
+    `UPDATE sequences SET
+      name = COALESCE($1, name),
+      description = COALESCE($2, description),
+      shots = COALESCE($3::jsonb, shots),
       updated_at = NOW()
-    WHERE id = ${sequenceId}::uuid AND project_id = ${projectId}::uuid
-  `;
+    WHERE id = $4::uuid AND project_id = $5::uuid`,
+    [
+      updates.name || null,
+      updates.description || null,
+      updates.shots ? JSON.stringify(updates.shots) : null,
+      sequenceId,
+      projectId,
+    ]
+  );
 
-  await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+  await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
 
-  const result = await sql`
-    SELECT * FROM sequences WHERE id = ${sequenceId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'SELECT * FROM sequences WHERE id = $1::uuid AND project_id = $2::uuid',
+    [sequenceId, projectId]
+  );
 
   if (result.rows.length === 0) return null;
 
-  const row = result.rows[0];
+  const row = result.rows[0] as Record<string, unknown>;
   return {
-    id: row.id,
-    projectId: row.project_id,
-    name: row.name,
-    description: row.description,
-    shots: row.shots || [],
-    createdAt: row.created_at.toISOString(),
-    updatedAt: row.updated_at.toISOString(),
+    id: row.id as string,
+    projectId: row.project_id as string,
+    name: row.name as string,
+    description: row.description as string | undefined,
+    shots: (row.shots as ShotBlock[]) || [],
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
@@ -1027,13 +1144,14 @@ export async function dbDeleteSequence(projectId: string, sequenceId: string): P
 
   await initializeTables();
 
-  const result = await sql`
-    DELETE FROM sequences WHERE id = ${sequenceId}::uuid AND project_id = ${projectId}::uuid
-  `;
+  const result = await query(
+    'DELETE FROM sequences WHERE id = $1::uuid AND project_id = $2::uuid',
+    [sequenceId, projectId]
+  );
 
   const deleted = (result.rowCount ?? 0) > 0;
   if (deleted) {
-    await sql`UPDATE projects SET updated_at = NOW() WHERE id = ${projectId}::uuid`;
+    await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
   }
 
   return deleted;

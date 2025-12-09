@@ -12,16 +12,11 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 // Mock the db module
 vi.mock('@/utils/db', () => ({
   isPostgresAvailable: vi.fn(),
-}));
-
-// Mock @vercel/postgres
-vi.mock('@vercel/postgres', () => ({
-  sql: vi.fn(),
+  testConnection: vi.fn(),
 }));
 
 import handler from '@/pages/api/health';
-import { isPostgresAvailable } from '@/utils/db';
-import { sql } from '@vercel/postgres';
+import { isPostgresAvailable, testConnection } from '@/utils/db';
 
 describe('Journey: health_check - Health Check Endpoint', () => {
   let mockReq: Partial<NextApiRequest>;
@@ -71,7 +66,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
   it('should return 200 and healthy status when Postgres is available and connected', async () => {
     // Step: Send GET request to /api/health
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockResolvedValue({ rows: [{ '?column?': 1 }], command: 'SELECT', rowCount: 1, oid: 0, fields: [] });
+    vi.mocked(testConnection).mockResolvedValue(undefined);
     vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
     await handler(
@@ -170,7 +165,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
 
   it('should return unhealthy status (503) when database connection fails', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockRejectedValue(new Error('Connection refused'));
+    vi.mocked(testConnection).mockRejectedValue(new Error('Connection refused'));
     vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
     await handler(
@@ -213,7 +208,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
 
   it('should filter error details in production', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockRejectedValue(new Error('password authentication failed for user "postgres"'));
+    vi.mocked(testConnection).mockRejectedValue(new Error('password authentication failed for user "postgres"'));
     vi.stubEnv('NODE_ENV', 'production');
     vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
@@ -231,7 +226,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
 
   it('should show full error details in development', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockRejectedValue(new Error('password authentication failed for user "postgres"'));
+    vi.mocked(testConnection).mockRejectedValue(new Error('password authentication failed for user "postgres"'));
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
@@ -249,7 +244,7 @@ describe('Journey: health_check - Health Check Endpoint', () => {
 
   it('should handle non-Error thrown values', async () => {
     vi.mocked(isPostgresAvailable).mockReturnValue(true);
-    vi.mocked(sql).mockRejectedValue('string error'); // Non-Error thrown value
+    vi.mocked(testConnection).mockRejectedValue('string error'); // Non-Error thrown value
     vi.stubEnv('NODE_ENV', 'development');
     vi.stubEnv('NEXTAUTH_SECRET', 'test-secret');
 
