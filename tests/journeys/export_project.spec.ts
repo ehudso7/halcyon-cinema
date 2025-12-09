@@ -8,9 +8,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
-// Mock the storage module - export API uses sync getProjectById
+// Mock the storage module - export API uses async getProjectByIdAsync
 vi.mock('@/utils/storage', () => ({
-  getProjectById: vi.fn(),
+  getProjectByIdAsync: vi.fn(),
 }));
 
 // Mock export utility
@@ -23,7 +23,7 @@ vi.mock('@/utils/api-auth', () => ({
 }));
 
 import handler from '@/pages/api/export/project/[id]';
-import { getProjectById } from '@/utils/storage';
+import { getProjectByIdAsync } from '@/utils/storage';
 import { exportProjectAsZip } from '@/utils/export';
 import { requireAuth } from '@/utils/api-auth';
 
@@ -90,7 +90,7 @@ describe('Journey: export_project - Export Project Data', () => {
 
     const mockZipBuffer = Buffer.from('mock-zip-data');
 
-    vi.mocked(getProjectById).mockReturnValue(mockProject);
+    vi.mocked(getProjectByIdAsync).mockResolvedValue(mockProject);
     vi.mocked(exportProjectAsZip).mockResolvedValue(mockZipBuffer);
 
     await handler(
@@ -107,7 +107,7 @@ describe('Journey: export_project - Export Project Data', () => {
 
   it('should return 404 for non-existent project', async () => {
     vi.mocked(requireAuth).mockResolvedValue('user-123');
-    vi.mocked(getProjectById).mockReturnValue(null);
+    vi.mocked(getProjectByIdAsync).mockResolvedValue(null);
 
     await handler(
       mockReq as NextApiRequest,
@@ -132,7 +132,7 @@ describe('Journey: export_project - Export Project Data', () => {
       updatedAt: new Date().toISOString(),
     };
 
-    vi.mocked(getProjectById).mockReturnValue(otherUsersProject);
+    vi.mocked(getProjectByIdAsync).mockResolvedValue(otherUsersProject);
 
     await handler(
       mockReq as NextApiRequest,
@@ -171,7 +171,7 @@ describe('Journey: export_project - Export Project Data', () => {
       updatedAt: new Date().toISOString(),
     };
 
-    vi.mocked(getProjectById).mockReturnValue(mockProject);
+    vi.mocked(getProjectByIdAsync).mockResolvedValue(mockProject);
     vi.mocked(exportProjectAsZip).mockRejectedValue(new Error('Export failed'));
 
     await handler(
