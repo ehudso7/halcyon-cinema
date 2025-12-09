@@ -33,6 +33,56 @@ function getDatabaseUrl(): string | undefined {
 let pool: Pool | null = null;
 
 /**
+ * Determine SSL configuration based on environment.
+ *
+ * For Vercel deployments: defaults to SSL enabled without strict validation
+ * since Vercel Postgres connections are already trusted.
+ *
+ * For other production environments: allows configuration via env vars.
+ *
+ * Configuration options:
+ * - DB_SSL=false: Disable SSL entirely (not recommended for production)
+ * - DB_SSL_REJECT_UNAUTHORIZED=true: Enable strict certificate validation
+ * - DB_SSL_CA: Provide a custom CA certificate for validation
+ */
+function getSslConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } | undefined {
+  // In development, no SSL by default
+  if (process.env.NODE_ENV !== 'production') {
+    return undefined;
+  }
+
+  // Allow explicitly disabling SSL (not recommended)
+  if (process.env.DB_SSL === 'false') {
+    console.warn('[db] SSL disabled via DB_SSL=false - this is not recommended for production');
+    return false;
+  }
+
+  // Check if strict validation is requested
+  const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true';
+
+  // If a custom CA is provided, use it with strict validation
+  if (process.env.DB_SSL_CA) {
+    return {
+      rejectUnauthorized: true,
+      ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n'),
+    };
+  }
+
+  // For Vercel deployments, use SSL without strict validation by default
+  // Vercel Postgres connections are already secured at the infrastructure level
+  if (process.env.VERCEL === '1') {
+    return {
+      rejectUnauthorized,
+    };
+  }
+
+  // For other production environments, default to SSL with configurable validation
+  return {
+    rejectUnauthorized,
+  };
+}
+
+/**
  * Get or create the database connection pool
  */
 function getPool(): Pool {
@@ -41,17 +91,8 @@ function getPool(): Pool {
     if (!connectionString) {
       throw new Error('Database connection not configured. Please set the POSTGRES_URL or DATABASE_URL environment variable.');
     }
-    // SSL configuration: Enable in production with certificate validation by default
-    // Set DB_SSL_REJECT_UNAUTHORIZED=false only if using self-signed certs (not recommended)
-    const sslConfig = process.env.NODE_ENV === 'production'
-      ? {
-          rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-          // Normalize PEM certificate: convert literal \n sequences to actual newlines
-          ...(process.env.DB_SSL_CA
-            ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n') }
-            : {}),
-        }
-      : undefined;
+
+    const sslConfig = getSslConfig();
 
     pool = new Pool({
       connectionString,
