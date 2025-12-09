@@ -23,6 +23,15 @@ const DB_LITERAL_PATTERNS = [
   'password authentication failed',
   'ssl required',
   'ssl connection',
+  // SSL certificate verification errors
+  'self signed certificate',
+  'unable to verify',
+  'certificate has expired',
+  'cert_has_expired',
+  'depth_zero_self_signed_cert',
+  'unable_to_get_issuer_cert',
+  'unable_to_verify_leaf_signature',
+  'certificate chain',
 ] as const;
 
 // Pre-compiled regex patterns for dynamic error messages (e.g., "role xyz does not exist")
