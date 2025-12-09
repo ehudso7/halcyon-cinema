@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { isPostgresAvailable, testConnection } from '@/utils/db';
+import { isSupabaseConfigured, isSupabaseAdminConfigured, getSupabaseUrl } from '@/utils/supabase';
 
 interface HealthCheckResponse {
   status: 'healthy' | 'degraded' | 'unhealthy';
@@ -12,6 +13,12 @@ interface HealthCheckResponse {
       latencyMs?: number;
       error?: string;
       postgresUrlConfigured?: boolean;
+    };
+    supabase: {
+      status: 'configured' | 'partial' | 'not_configured';
+      clientConfigured: boolean;
+      adminConfigured: boolean;
+      url?: string;
     };
     auth: {
       status: 'configured' | 'not_configured';
@@ -45,10 +52,17 @@ export default async function handler(
   let dbError: string | undefined;
   let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
 
+  // Check Supabase configuration
+  const supabaseClientConfigured = isSupabaseConfigured();
+  const supabaseAdminConfigured = isSupabaseAdminConfigured();
+  const supabaseUrl = getSupabaseUrl();
+
   // Log environment check only once per cold start to reduce log noise
   if (!configLoggedOnce) {
     console.log('[health] POSTGRES_URL configured:', usePostgres);
     console.log('[health] NEXTAUTH_SECRET configured:', authConfigured);
+    console.log('[health] Supabase client configured:', supabaseClientConfigured);
+    console.log('[health] Supabase admin configured:', supabaseAdminConfigured);
     console.log('[health] NODE_ENV:', process.env.NODE_ENV);
     configLoggedOnce = true;
   }
@@ -84,6 +98,14 @@ export default async function handler(
     overallStatus = process.env.NODE_ENV === 'production' ? 'unhealthy' : 'degraded';
   }
 
+  // Determine Supabase overall status
+  let supabaseStatus: 'configured' | 'partial' | 'not_configured' = 'not_configured';
+  if (supabaseClientConfigured && supabaseAdminConfigured) {
+    supabaseStatus = 'configured';
+  } else if (supabaseClientConfigured || supabaseAdminConfigured) {
+    supabaseStatus = 'partial';
+  }
+
   const healthCheck: HealthCheckResponse = {
     status: overallStatus,
     timestamp: new Date().toISOString(),
@@ -95,6 +117,12 @@ export default async function handler(
         postgresUrlConfigured: usePostgres,
         ...(dbLatencyMs !== undefined && { latencyMs: dbLatencyMs }),
         ...(dbError !== undefined && { error: dbError }),
+      },
+      supabase: {
+        status: supabaseStatus,
+        clientConfigured: supabaseClientConfigured,
+        adminConfigured: supabaseAdminConfigured,
+        ...(supabaseUrl && { url: supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, '$1.***') }), // Mask URL for security
       },
       auth: {
         status: authConfigured ? 'configured' : 'not_configured',

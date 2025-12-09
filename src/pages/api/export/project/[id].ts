@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getProjectById } from '@/utils/storage';
+import { getProjectByIdAsync } from '@/utils/storage';
 import { exportProjectAsZip } from '@/utils/export';
 import { requireAuth } from '@/utils/api-auth';
 
@@ -22,7 +22,7 @@ export default async function handler(
     return res.status(400).json({ error: 'Invalid project ID' });
   }
 
-  const project = getProjectById(id);
+  const project = await getProjectByIdAsync(id);
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
   }

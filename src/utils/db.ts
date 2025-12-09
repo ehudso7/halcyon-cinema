@@ -17,16 +17,67 @@ function parseIntEnv(name: string, defaultValue: number): number {
  * Check if Postgres is available - evaluated at runtime, not module load time.
  * This is important for serverless environments where env vars might not be
  * available during module initialization.
+ *
+ * Checks for connection string OR individual connection components from
+ * Vercel's Supabase integration.
  */
 function checkPostgresAvailable(): boolean {
-  return !!process.env.POSTGRES_URL || !!process.env.DATABASE_URL;
+  // Check for full connection URLs first
+  if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
+    return true;
+  }
+
+  // Check for individual Supabase/Vercel Postgres components
+  const hasComponents = !!(
+    process.env.POSTGRES_HOST &&
+    process.env.POSTGRES_USER &&
+    process.env.POSTGRES_PASSWORD &&
+    process.env.POSTGRES_DATABASE
+  );
+
+  return hasComponents;
 }
 
 /**
- * Get the database connection URL
+ * Build a connection string from individual Postgres components.
+ * Used when POSTGRES_URL is not available but individual components are set.
+ */
+function buildConnectionString(): string | undefined {
+  const host = process.env.POSTGRES_HOST;
+  const user = process.env.POSTGRES_USER;
+  const password = process.env.POSTGRES_PASSWORD;
+  const database = process.env.POSTGRES_DATABASE;
+
+  if (!host || !user || !password || !database) {
+    return undefined;
+  }
+
+  // Default to port 5432 for Supabase direct connections
+  // Supabase pooler uses 6543, but direct connections use 5432
+  const port = '5432';
+
+  // URL-encode the password in case it contains special characters
+  const encodedPassword = encodeURIComponent(password);
+
+  return `postgres://${user}:${encodedPassword}@${host}:${port}/${database}`;
+}
+
+/**
+ * Get the database connection URL.
+ * Priority: POSTGRES_URL > DATABASE_URL > built from components
  */
 function getDatabaseUrl(): string | undefined {
-  return process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  // Prefer explicit connection URLs
+  if (process.env.POSTGRES_URL) {
+    return process.env.POSTGRES_URL;
+  }
+
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
+
+  // Fall back to building from individual components
+  return buildConnectionString();
 }
 
 // Lazy-initialized connection pool
@@ -402,6 +453,65 @@ export async function createUser(
     id: row.id as string,
     email: row.email as string,
     name: row.name as string,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
+  };
+}
+
+export async function dbUpdateUser(
+  id: string,
+  updates: Partial<{ name: string; image: string | null }>
+): Promise<{
+  id: string;
+  email: string;
+  name: string;
+  image: string | null;
+  createdAt: string;
+  updatedAt: string;
+} | null> {
+  if (!checkPostgresAvailable()) return null;
+
+  await initializeTables();
+
+  // Build dynamic update query based on provided fields
+  const setClauses: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  if (updates.name !== undefined) {
+    setClauses.push(`name = $${paramIndex}`);
+    values.push(updates.name);
+    paramIndex++;
+  }
+
+  if (updates.image !== undefined) {
+    setClauses.push(`image = $${paramIndex}`);
+    values.push(updates.image);
+    paramIndex++;
+  }
+
+  if (setClauses.length === 0) {
+    // No updates provided, just return the existing user
+    return getUserById(id);
+  }
+
+  setClauses.push('updated_at = NOW()');
+  values.push(id);
+
+  const result = await query(
+    `UPDATE users SET ${setClauses.join(', ')} WHERE id = $${paramIndex}::uuid
+     RETURNING id, email, name, image, created_at, updated_at`,
+    values
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    email: row.email as string,
+    name: row.name as string,
+    image: row.image as string | null,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
   };

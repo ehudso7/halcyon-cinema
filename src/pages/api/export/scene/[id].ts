@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getProjectById, getSceneById } from '@/utils/storage';
+import { getProjectByIdAsync, getSceneByIdAsync } from '@/utils/storage';
 import { exportSceneAsZip } from '@/utils/export';
 import { requireAuth } from '@/utils/api-auth';
 
@@ -22,7 +22,7 @@ export default async function handler(
     return res.status(400).json({ error: 'Invalid scene or project ID' });
   }
 
-  const project = getProjectById(projectId);
+  const project = await getProjectByIdAsync(projectId);
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
   }
@@ -32,7 +32,7 @@ export default async function handler(
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  const scene = getSceneById(projectId, id);
+  const scene = await getSceneByIdAsync(projectId, id);
   if (!scene) {
     return res.status(404).json({ error: 'Scene not found' });
   }

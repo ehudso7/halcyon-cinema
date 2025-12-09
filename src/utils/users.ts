@@ -8,6 +8,7 @@ import {
   getUserByEmail as dbGetUserByEmail,
   getUserById as dbGetUserById,
   createUser as dbCreateUser,
+  dbUpdateUser,
 } from './db';
 
 // Note: isPostgresAvailable() is now a runtime check, not a module-level constant
@@ -229,12 +230,23 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return safeUser as User;
 }
 
-export function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'>>): User | null {
-  // Postgres update not implemented - throw error to make failure explicit
+export async function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'>>): Promise<User | null> {
+  // Use Postgres if available
   if (isPostgresAvailable()) {
-    throw new Error('updateUser not yet implemented for Postgres storage');
+    const dbUser = await dbUpdateUser(id, updates);
+    if (!dbUser) return null;
+
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      image: dbUser.image || undefined,
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.updatedAt,
+    };
   }
 
+  // Fallback to file storage
   loadFromFile();
 
   const index = users.findIndex(u => u.id === id);
