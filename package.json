@@ -16,6 +16,7 @@
     "verify:journeys": "node scripts/verify-journeys.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.87.0",
     "bcryptjs": "^2.4.3",
     "jspdf": "^2.5.1",
     "jszip": "^3.10.1",
