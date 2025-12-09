@@ -52,9 +52,9 @@ function buildConnectionString(): string | undefined {
     return undefined;
   }
 
-  // Default to port 5432 for Supabase direct connections
-  // Supabase pooler uses 6543, but direct connections use 5432
-  const port = '5432';
+  // Support POSTGRES_PORT env var, default to 6543 for Supabase pooler connections
+  // Vercel's Supabase integration uses the pooler (6543), direct connections use 5432
+  const port = process.env.POSTGRES_PORT || '6543';
 
   // URL-encode the password in case it contains special characters
   const encodedPassword = encodeURIComponent(password);
@@ -492,7 +492,7 @@ export async function dbUpdateUser(
 
   if (setClauses.length === 0) {
     // No updates provided, just return the existing user
-    return getUserById(id);
+    return await getUserById(id);
   }
 
   setClauses.push('updated_at = NOW()');
