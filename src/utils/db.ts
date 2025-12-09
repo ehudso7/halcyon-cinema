@@ -2,52 +2,6 @@ import { Pool, QueryResult, QueryResultRow } from 'pg';
 import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType, ShotBlock, CharacterAppearance, ProjectType } from '@/types';
 
 /**
- * UUID regex pattern for validation (accepts standard UUID format)
- * More permissive than strict version/variant checking to handle all valid PostgreSQL UUIDs
- */
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/**
- * Validate that a string is a valid UUID
- */
-function isValidUUID(value: string): boolean {
-  return typeof value === 'string' && UUID_REGEX.test(value);
-}
-
-/**
- * Safely convert a string array to PostgreSQL array literal format.
- * Properly escapes backslashes and quotes to prevent injection.
- * Filters out null/undefined values.
- */
-function toPostgresArray(arr: string[]): string {
-  if (!arr || arr.length === 0) return '{}';
-  const escaped = arr
-    .filter((s): s is string => s != null)
-    .map(s => {
-      // Escape backslashes first, then quotes
-      const safe = s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-      return `"${safe}"`;
-    });
-  return `{${escaped.join(',')}}`;
-}
-
-/**
- * Safely convert a UUID array to PostgreSQL array literal format.
- * Validates that all values are valid UUIDs to prevent injection.
- * Logs a warning if invalid UUIDs are filtered out.
- */
-function toPostgresUUIDArray(arr: string[]): string {
-  if (!arr || arr.length === 0) return '{}';
-  const validUUIDs = arr.filter(isValidUUID);
-  // Warn about filtered invalid UUIDs to aid debugging
-  if (validUUIDs.length !== arr.length) {
-    const invalidUUIDs = arr.filter(id => !isValidUUID(id));
-    console.warn('[db] Filtered invalid UUIDs from array:', invalidUUIDs);
-  }
-  return `{${validUUIDs.join(',')}}`;
-}
-
-/**
  * Check if Postgres is available - evaluated at runtime, not module load time.
  * This is important for serverless environments where env vars might not be
  * available during module initialization.
@@ -73,17 +27,37 @@ function getPool(): Pool {
   if (!pool) {
     const connectionString = getDatabaseUrl();
     if (!connectionString) {
-      throw new Error('Database not available - POSTGRES_URL or DATABASE_URL not configured');
+      throw new Error('Database not available');
     }
+    // SSL configuration: Enable in production with certificate validation by default
+    // Set DB_SSL_REJECT_UNAUTHORIZED=false only if using self-signed certs (not recommended)
+    const sslConfig = process.env.NODE_ENV === 'production'
+      ? {
+          rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+          ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA } : {}),
+        }
+      : undefined;
+
     pool = new Pool({
       connectionString,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      ssl: sslConfig,
+      max: parseInt(process.env.DB_POOL_MAX || '10', 10),
+      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
+      connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000', 10),
     });
   }
   return pool;
+}
+
+/**
+ * Close the database connection pool gracefully.
+ * Call this on application shutdown to prevent connection leaks.
+ */
+export async function closePool(): Promise<void> {
+  if (pool) {
+    await pool.end();
+    pool = null;
+  }
 }
 
 /**
@@ -365,16 +339,15 @@ export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
     return [];
   }
 
-  // Create a validated PostgreSQL UUID array literal for use in queries
+  // Extract project IDs - pg library handles array parameters natively
   const projectIds = projectsResult.rows.map(p => (p as Record<string, unknown>).id as string);
-  const projectIdsArray = toPostgresUUIDArray(projectIds);
 
   // Fetch all related data in parallel to avoid N+1 queries
   const [scenesResult, charactersResult, loreResult, sequencesResult] = await Promise.all([
-    query(`SELECT * FROM scenes WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
-    query(`SELECT * FROM characters WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
-    query(`SELECT * FROM lore WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
-    query(`SELECT * FROM sequences WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIdsArray]),
+    query(`SELECT * FROM scenes WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIds]),
+    query(`SELECT * FROM characters WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIds]),
+    query(`SELECT * FROM lore WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIds]),
+    query(`SELECT * FROM sequences WHERE project_id = ANY($1::uuid[]) ORDER BY created_at ASC`, [projectIds]),
   ]);
 
   // Group related data by project_id
@@ -786,12 +759,11 @@ export async function dbAddCharacter(
 
   await initializeTables();
 
-  const traitsArray = toPostgresArray(traits);
   const result = await query(
     `INSERT INTO characters (project_id, name, description, traits, image_url)
     VALUES ($1::uuid, $2, $3, $4::text[], $5)
     RETURNING *`,
-    [projectId, name, description, traitsArray, imageUrl || null]
+    [projectId, name, description, traits, imageUrl || null]
   );
 
   await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
@@ -845,8 +817,6 @@ export async function dbUpdateCharacter(
 
   await initializeTables();
 
-  // Use properly escaped array format for traits
-  const traitsValue = updates.traits !== undefined ? toPostgresArray(updates.traits) : null;
   const appearancesValue = updates.appearances !== undefined ? JSON.stringify(updates.appearances) : null;
 
   await query(
@@ -861,7 +831,7 @@ export async function dbUpdateCharacter(
     [
       updates.name || null,
       updates.description || null,
-      traitsValue,
+      updates.traits ?? null,
       updates.imageUrl || null,
       appearancesValue,
       characterId,
@@ -908,12 +878,11 @@ export async function dbAddLore(
 
   await initializeTables();
 
-  const tagsArray = toPostgresArray(tags || []);
   const result = await query(
     `INSERT INTO lore (project_id, type, name, summary, description, tags)
     VALUES ($1::uuid, $2, $3, $4, $5, $6::text[])
     RETURNING *`,
-    [projectId, type, name, summary, description || null, tagsArray]
+    [projectId, type, name, summary, description || null, tags || []]
   );
 
   await query('UPDATE projects SET updated_at = NOW() WHERE id = $1::uuid', [projectId]);
@@ -971,13 +940,6 @@ export async function dbUpdateLore(
 
   await initializeTables();
 
-  // Use properly escaped array format for tags
-  const tagsValue = updates.tags !== undefined ? toPostgresArray(updates.tags) : null;
-  // Use UUID-validated array format for associatedScenes to prevent injection
-  const scenesValue = updates.associatedScenes !== undefined
-    ? toPostgresUUIDArray(updates.associatedScenes)
-    : null;
-
   await query(
     `UPDATE lore SET
       name = COALESCE($1, name),
@@ -992,8 +954,8 @@ export async function dbUpdateLore(
       updates.name || null,
       updates.summary || null,
       updates.description || null,
-      tagsValue,
-      scenesValue,
+      updates.tags ?? null,
+      updates.associatedScenes ?? null,
       updates.imageUrl || null,
       loreId,
       projectId,
