@@ -1,9 +1,15 @@
 -- ============================================================================
--- Halcyon Cinema Database Schema (Simple Version)
+-- Halcyon Cinema Database Schema (Recommended Version)
 -- Run this SQL in the Supabase SQL Editor to create all required tables
--- This version omits Row-Level Security policies; use the full version
--- (001_create_tables.sql) for production deployments with RLS enabled.
+--
+-- IMPORTANT: This is the RECOMMENDED version for this application.
+-- This app uses NextAuth + direct PostgreSQL connections (pg library),
+-- NOT Supabase Auth. The RLS version (001_create_tables.sql) uses
+-- auth.uid() and auth.role() which only work with Supabase Auth.
+-- Authorization is handled at the application layer via NextAuth sessions.
 -- ============================================================================
+
+BEGIN;
 
 -- ============================================================================
 -- 1. HELPER FUNCTIONS
@@ -23,6 +29,7 @@ $$ LANGUAGE plpgsql;
 -- ============================================================================
 
 -- Users table
+-- Stores application profile data with NextAuth-managed authentication.
 -- Note: This table stores application profile data. If using Supabase Auth,
 -- consider referencing auth.users(id) instead of storing password_hash here.
 -- Halcyon Cinema Database Schema (Simple Version)
@@ -193,4 +200,6 @@ CREATE TRIGGER update_sequences_updated_at
   BEFORE UPDATE ON sequences
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+COMMIT;
 CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id);
