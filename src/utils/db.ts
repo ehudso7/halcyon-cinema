@@ -407,6 +407,65 @@ export async function createUser(
   };
 }
 
+export async function dbUpdateUser(
+  id: string,
+  updates: Partial<{ name: string; image: string | null }>
+): Promise<{
+  id: string;
+  email: string;
+  name: string;
+  image: string | null;
+  createdAt: string;
+  updatedAt: string;
+} | null> {
+  if (!checkPostgresAvailable()) return null;
+
+  await initializeTables();
+
+  // Build dynamic update query based on provided fields
+  const setClauses: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  if (updates.name !== undefined) {
+    setClauses.push(`name = $${paramIndex}`);
+    values.push(updates.name);
+    paramIndex++;
+  }
+
+  if (updates.image !== undefined) {
+    setClauses.push(`image = $${paramIndex}`);
+    values.push(updates.image);
+    paramIndex++;
+  }
+
+  if (setClauses.length === 0) {
+    // No updates provided, just return the existing user
+    return getUserById(id);
+  }
+
+  setClauses.push('updated_at = NOW()');
+  values.push(id);
+
+  const result = await query(
+    `UPDATE users SET ${setClauses.join(', ')} WHERE id = $${paramIndex}::uuid
+     RETURNING id, email, name, image, created_at, updated_at`,
+    values
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    email: row.email as string,
+    name: row.name as string,
+    image: row.image as string | null,
+    createdAt: (row.created_at as Date).toISOString(),
+    updatedAt: (row.updated_at as Date).toISOString(),
+  };
+}
+
 // ============================================================================
 // Project operations
 // ============================================================================

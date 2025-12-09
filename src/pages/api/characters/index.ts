@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { v4 as uuidv4 } from 'uuid';
-import { getProjectById, updateProject } from '@/utils/storage';
+import { getProjectByIdAsync, addCharacterToProjectAsync } from '@/utils/storage';
 import { Character, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 
@@ -18,7 +17,7 @@ export default async function handler(
     return res.status(400).json({ error: 'Project ID is required' });
   }
 
-  const project = getProjectById(projectId);
+  const project = await getProjectByIdAsync(projectId);
   if (!project) {
     return res.status(404).json({ error: 'Project not found' });
   }
@@ -43,23 +42,18 @@ export default async function handler(
       return res.status(400).json({ error: 'Character description is required' });
     }
 
-    const now = new Date().toISOString();
-    const character: Character = {
-      id: uuidv4(),
+    const character = await addCharacterToProjectAsync(
       projectId,
-      name: name.trim(),
-      description: description.trim(),
-      imageUrl: imageUrl?.trim() || undefined,
-      traits: Array.isArray(traits) ? traits : [],
-      appearances: [],
-      createdAt: now,
-      updatedAt: now,
-    };
+      name.trim(),
+      description.trim(),
+      Array.isArray(traits) ? traits : [],
+      imageUrl?.trim() || undefined
+    );
 
-    const characters = project.characters || [];
-    characters.push(character);
+    if (!character) {
+      return res.status(500).json({ error: 'Failed to create character' });
+    }
 
-    updateProject(projectId, { characters } as never);
     return res.status(201).json(character);
   }
 

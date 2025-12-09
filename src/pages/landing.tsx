@@ -70,7 +70,7 @@ export default function LandingPage() {
               </div>
               <div className={styles.previewContent}>
                 <div className={styles.previewPrompt}>
-                  "A lone samurai standing on a misty mountain peak at dawn, cherry blossoms falling..."
+                  &ldquo;A lone samurai standing on a misty mountain peak at dawn, cherry blossoms falling...&rdquo;
                 </div>
                 <div className={styles.previewImage}>
                   <span className={styles.previewIcon}>🎨</span>

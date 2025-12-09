@@ -213,7 +213,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             ) : (
               <div className="empty-state">
                 <h3>No scenes yet</h3>
-                <p>Click "Add Scene" to create your first scene with AI-generated visuals.</p>
+                <p>Click &ldquo;Add Scene&rdquo; to create your first scene with AI-generated visuals.</p>
               </div>
             )}
           </section>
