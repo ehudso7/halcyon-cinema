@@ -370,6 +370,10 @@ export function isPostgresAvailable(): boolean {
 // User operations
 // ============================================================================
 
+/**
+ * Retrieve a user by their email address.
+ * Email comparison is case-insensitive.
+ */
 export async function getUserByEmail(email: string): Promise<{
   id: string;
   email: string;
@@ -402,6 +406,9 @@ export async function getUserByEmail(email: string): Promise<{
   };
 }
 
+/**
+ * Retrieve a user by their unique ID.
+ */
 export async function getUserById(id: string): Promise<{
   id: string;
   email: string;
@@ -432,6 +439,9 @@ export async function getUserById(id: string): Promise<{
   };
 }
 
+/**
+ * Create a new user with the given email, name, and password hash.
+ */
 export async function createUser(
   email: string,
   name: string,
@@ -458,6 +468,10 @@ export async function createUser(
   };
 }
 
+/**
+ * Update a user's profile information.
+ * Only provided fields will be updated.
+ */
 export async function dbUpdateUser(
   id: string,
   updates: Partial<{ name: string; image: string | null }>
@@ -521,6 +535,10 @@ export async function dbUpdateUser(
 // Project operations
 // ============================================================================
 
+/**
+ * Retrieve all projects, optionally filtered by user ID.
+ * Includes related scenes, characters, lore, and sequences.
+ */
 export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
   if (!checkPostgresAvailable()) return [];
 
@@ -643,6 +661,10 @@ export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
   });
 }
 
+/**
+ * Retrieve a project by its unique ID.
+ * Includes related scenes, characters, lore, and sequences.
+ */
 export async function dbGetProjectById(id: string): Promise<Project | null> {
   if (!checkPostgresAvailable()) return null;
 
@@ -741,6 +763,9 @@ export async function dbGetProjectById(id: string): Promise<Project | null> {
   };
 }
 
+/**
+ * Create a new project with the given name and optional description.
+ */
 export async function dbCreateProject(
   name: string,
   description?: string,
@@ -772,6 +797,10 @@ export async function dbCreateProject(
   };
 }
 
+/**
+ * Update a project's properties.
+ * Only provided fields will be updated.
+ */
 export async function dbUpdateProject(
   id: string,
   updates: Partial<Pick<Project, 'name' | 'description' | 'projectType'>>
@@ -793,6 +822,9 @@ export async function dbUpdateProject(
   return dbGetProjectById(id);
 }
 
+/**
+ * Delete a project and all its related data (cascades to scenes, characters, etc.).
+ */
 export async function dbDeleteProject(id: string): Promise<boolean> {
   if (!checkPostgresAvailable()) return false;
 
@@ -806,6 +838,9 @@ export async function dbDeleteProject(id: string): Promise<boolean> {
 // Scene operations
 // ============================================================================
 
+/**
+ * Add a new scene to a project.
+ */
 export async function dbAddScene(
   projectId: string,
   prompt: string,
@@ -853,6 +888,9 @@ export async function dbAddScene(
   };
 }
 
+/**
+ * Retrieve a scene by its ID within a project.
+ */
 export async function dbGetSceneById(projectId: string, sceneId: string): Promise<Scene | null> {
   if (!checkPostgresAvailable()) return null;
 
@@ -884,6 +922,9 @@ export async function dbGetSceneById(projectId: string, sceneId: string): Promis
   };
 }
 
+/**
+ * Update a scene's properties.
+ */
 export async function dbUpdateScene(
   projectId: string,
   sceneId: string,
@@ -922,6 +963,9 @@ export async function dbUpdateScene(
   return dbGetSceneById(projectId, sceneId);
 }
 
+/**
+ * Delete a scene from a project.
+ */
 export async function dbDeleteScene(projectId: string, sceneId: string): Promise<boolean> {
   if (!checkPostgresAvailable()) return false;
 
@@ -944,6 +988,9 @@ export async function dbDeleteScene(projectId: string, sceneId: string): Promise
 // Character operations
 // ============================================================================
 
+/**
+ * Add a new character to a project.
+ */
 export async function dbAddCharacter(
   projectId: string,
   name: string,
@@ -978,6 +1025,9 @@ export async function dbAddCharacter(
   };
 }
 
+/**
+ * Retrieve a character by its ID within a project.
+ */
 export async function dbGetCharacterById(projectId: string, characterId: string): Promise<Character | null> {
   if (!checkPostgresAvailable()) return null;
 
@@ -1004,6 +1054,9 @@ export async function dbGetCharacterById(projectId: string, characterId: string)
   };
 }
 
+/**
+ * Update a character's properties.
+ */
 export async function dbUpdateCharacter(
   projectId: string,
   characterId: string,
@@ -1040,6 +1093,9 @@ export async function dbUpdateCharacter(
   return dbGetCharacterById(projectId, characterId);
 }
 
+/**
+ * Delete a character from a project.
+ */
 export async function dbDeleteCharacter(projectId: string, characterId: string): Promise<boolean> {
   if (!checkPostgresAvailable()) return false;
 
@@ -1062,6 +1118,9 @@ export async function dbDeleteCharacter(projectId: string, characterId: string):
 // Lore operations
 // ============================================================================
 
+/**
+ * Add a new lore entry to a project.
+ */
 export async function dbAddLore(
   projectId: string,
   type: LoreType,
@@ -1099,6 +1158,9 @@ export async function dbAddLore(
   };
 }
 
+/**
+ * Retrieve a lore entry by its ID within a project.
+ */
 export async function dbGetLoreById(projectId: string, loreId: string): Promise<LoreEntry | null> {
   if (!checkPostgresAvailable()) return null;
 
@@ -1127,6 +1189,9 @@ export async function dbGetLoreById(projectId: string, loreId: string): Promise<
   };
 }
 
+/**
+ * Update a lore entry's properties.
+ */
 export async function dbUpdateLore(
   projectId: string,
   loreId: string,
@@ -1163,6 +1228,9 @@ export async function dbUpdateLore(
   return dbGetLoreById(projectId, loreId);
 }
 
+/**
+ * Delete a lore entry from a project.
+ */
 export async function dbDeleteLore(projectId: string, loreId: string): Promise<boolean> {
   if (!checkPostgresAvailable()) return false;
 
@@ -1181,6 +1249,9 @@ export async function dbDeleteLore(projectId: string, loreId: string): Promise<b
   return deleted;
 }
 
+/**
+ * Retrieve all lore entries for a project, optionally filtered by type.
+ */
 export async function dbGetProjectLore(projectId: string, type?: LoreType): Promise<LoreEntry[]> {
   if (!checkPostgresAvailable()) return [];
 
@@ -1221,6 +1292,9 @@ export async function dbGetProjectLore(projectId: string, type?: LoreType): Prom
 // Sequence operations
 // ============================================================================
 
+/**
+ * Add a new sequence to a project.
+ */
 export async function dbAddSequence(
   projectId: string,
   name: string,
@@ -1251,6 +1325,9 @@ export async function dbAddSequence(
   };
 }
 
+/**
+ * Update a sequence's properties.
+ */
 export async function dbUpdateSequence(
   projectId: string,
   sequenceId: string,
@@ -1297,6 +1374,9 @@ export async function dbUpdateSequence(
   };
 }
 
+/**
+ * Delete a sequence from a project.
+ */
 export async function dbDeleteSequence(projectId: string, sequenceId: string): Promise<boolean> {
   if (!checkPostgresAvailable()) return false;
 
