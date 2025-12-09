@@ -2,6 +2,18 @@ import { Pool, QueryResult, QueryResultRow } from 'pg';
 import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType, ShotBlock, CharacterAppearance, ProjectType } from '@/types';
 
 /**
+ * Safely parse an integer from an environment variable with validation.
+ * Returns the default value if the env var is not set, not a valid number,
+ * or not a positive integer.
+ */
+function parseIntEnv(name: string, defaultValue: number): number {
+  const raw = process.env[name];
+  if (!raw) return defaultValue;
+  const value = parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : defaultValue;
+}
+
+/**
  * Check if Postgres is available - evaluated at runtime, not module load time.
  * This is important for serverless environments where env vars might not be
  * available during module initialization.
@@ -27,23 +39,26 @@ function getPool(): Pool {
   if (!pool) {
     const connectionString = getDatabaseUrl();
     if (!connectionString) {
-      throw new Error('Database not available');
+      throw new Error('Database connection not configured. Please set the POSTGRES_URL or DATABASE_URL environment variable.');
     }
     // SSL configuration: Enable in production with certificate validation by default
     // Set DB_SSL_REJECT_UNAUTHORIZED=false only if using self-signed certs (not recommended)
     const sslConfig = process.env.NODE_ENV === 'production'
       ? {
           rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
-          ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA } : {}),
+          // Normalize PEM certificate: convert literal \n sequences to actual newlines
+          ...(process.env.DB_SSL_CA
+            ? { ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n') }
+            : {}),
         }
       : undefined;
 
     pool = new Pool({
       connectionString,
       ssl: sslConfig,
-      max: parseInt(process.env.DB_POOL_MAX || '10', 10),
-      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000', 10),
-      connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000', 10),
+      max: parseIntEnv('DB_POOL_MAX', 10),
+      idleTimeoutMillis: parseIntEnv('DB_IDLE_TIMEOUT', 30000),
+      connectionTimeoutMillis: parseIntEnv('DB_CONNECTION_TIMEOUT', 10000),
     });
   }
   return pool;
