@@ -1,8 +1,17 @@
 -- ============================================================================
 -- Halcyon Cinema Database Schema (Full Version with RLS)
 -- Run this SQL in the Supabase SQL Editor to create all required tables
--- This version includes Row-Level Security policies for production use
+--
+-- WARNING: This version uses Supabase Auth functions (auth.uid(), auth.role())
+-- which ONLY work when using Supabase Auth + Supabase client library.
+--
+-- This application currently uses NextAuth + direct PostgreSQL (pg library),
+-- so the RECOMMENDED version is 001_create_tables_simple.sql instead.
+--
+-- Only use this version if you migrate to Supabase Auth for authentication.
 -- ============================================================================
+
+BEGIN;
 
 -- ============================================================================
 -- 1. HELPER FUNCTIONS
@@ -413,3 +422,5 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated, anon;
+
+COMMIT;
