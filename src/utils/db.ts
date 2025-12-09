@@ -35,51 +35,79 @@ let pool: Pool | null = null;
 /**
  * Determine SSL configuration based on environment.
  *
- * For Vercel deployments: defaults to SSL enabled without strict validation
- * since Vercel Postgres connections are already trusted.
- *
- * For other production environments: allows configuration via env vars.
+ * Security defaults:
+ * - Production (non-Vercel): SSL enabled with strict certificate validation (rejectUnauthorized: true)
+ * - Production (Vercel): SSL enabled without strict validation by default since Vercel Postgres
+ *   connections are secured at the infrastructure level
+ * - Development: No SSL by default, but can opt-in via DB_SSL=true or DB_SSL_CA
  *
  * Configuration options:
  * - DB_SSL=false: Disable SSL entirely (not recommended for production)
- * - DB_SSL_REJECT_UNAUTHORIZED=true: Enable strict certificate validation
+ * - DB_SSL=true: Enable SSL in development
+ * - DB_SSL_REJECT_UNAUTHORIZED=false: Disable strict certificate validation (not recommended)
+ * - DB_SSL_REJECT_UNAUTHORIZED=true: Enable strict certificate validation (Vercel deployments)
  * - DB_SSL_CA: Provide a custom CA certificate for validation
  */
 function getSslConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } | undefined {
-  // In development, no SSL by default
-  if (process.env.NODE_ENV !== 'production') {
-    return undefined;
-  }
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isVercel = process.env.VERCEL === '1';
 
-  // Allow explicitly disabling SSL (not recommended)
+  // Allow explicitly disabling SSL (not recommended for production)
   if (process.env.DB_SSL === 'false') {
-    console.warn('[db] SSL disabled via DB_SSL=false - this is not recommended for production');
+    if (isProduction) {
+      console.warn('[db] SSL disabled via DB_SSL=false - this is not recommended for production');
+    }
     return false;
   }
 
-  // Check if strict validation is requested
-  const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true';
+  // In development, no SSL by default unless explicitly enabled or CA provided
+  if (!isProduction) {
+    // Allow development to opt into SSL via DB_SSL=true or by providing a CA cert
+    if (process.env.DB_SSL === 'true' || process.env.DB_SSL_CA) {
+      const rejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false';
+      if (process.env.DB_SSL_CA) {
+        return {
+          rejectUnauthorized,
+          ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n'),
+        };
+      }
+      return { rejectUnauthorized };
+    }
+    return undefined;
+  }
 
-  // If a custom CA is provided, use it with strict validation
+  // Production: determine rejectUnauthorized based on environment and explicit config
+  let rejectUnauthorized: boolean;
+  const explicitRejectUnauthorized = process.env.DB_SSL_REJECT_UNAUTHORIZED;
+
+  if (explicitRejectUnauthorized !== undefined) {
+    // User explicitly configured the setting - use their value
+    rejectUnauthorized = explicitRejectUnauthorized === 'true';
+  } else if (isVercel) {
+    // Vercel: default to false since connections are secured at infrastructure level
+    rejectUnauthorized = false;
+  } else {
+    // Other production: default to true for security
+    rejectUnauthorized = true;
+  }
+
+  // Warn when certificate validation is disabled in production
+  if (!rejectUnauthorized) {
+    console.warn(
+      '[db] SSL certificate validation is disabled. ' +
+      'Set DB_SSL_REJECT_UNAUTHORIZED=true to enable strict validation.'
+    );
+  }
+
+  // If a custom CA is provided, use it (respecting the rejectUnauthorized setting)
   if (process.env.DB_SSL_CA) {
     return {
-      rejectUnauthorized: true,
+      rejectUnauthorized,
       ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n'),
     };
   }
 
-  // For Vercel deployments, use SSL without strict validation by default
-  // Vercel Postgres connections are already secured at the infrastructure level
-  if (process.env.VERCEL === '1') {
-    return {
-      rejectUnauthorized,
-    };
-  }
-
-  // For other production environments, default to SSL with configurable validation
-  return {
-    rejectUnauthorized,
-  };
+  return { rejectUnauthorized };
 }
 
 /**
