@@ -1,5 +1,6 @@
 import { Pool, QueryResult, QueryResultRow } from 'pg';
 import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType, ShotBlock, CharacterAppearance, ProjectType } from '@/types';
+import { dbLogger } from './logger';
 
 /**
  * Safely parse an integer from an environment variable with validation.
@@ -170,17 +171,48 @@ function getPool(): Pool {
   if (!pool) {
     const connectionString = getDatabaseUrl();
     if (!connectionString) {
+      dbLogger.error('Database connection not configured', {
+        postgresUrl: !!process.env.POSTGRES_URL,
+        databaseUrl: !!process.env.DATABASE_URL,
+        postgresHost: !!process.env.POSTGRES_HOST,
+        postgresUser: !!process.env.POSTGRES_USER,
+        postgresPassword: !!process.env.POSTGRES_PASSWORD,
+        postgresDatabase: !!process.env.POSTGRES_DATABASE,
+      });
       throw new Error('Database connection not configured. Please set the POSTGRES_URL or DATABASE_URL environment variable.');
     }
 
     const sslConfig = getSslConfig();
+    const poolConfig = {
+      max: parseIntEnv('DB_POOL_MAX', 10),
+      idleTimeoutMillis: parseIntEnv('DB_IDLE_TIMEOUT', 30000),
+      connectionTimeoutMillis: parseIntEnv('DB_CONNECTION_TIMEOUT', 10000),
+    };
+
+    dbLogger.info('Creating database connection pool', {
+      sslEnabled: sslConfig !== undefined && sslConfig !== false,
+      sslRejectUnauthorized: typeof sslConfig === 'object' ? sslConfig.rejectUnauthorized : undefined,
+      poolMax: poolConfig.max,
+      idleTimeout: poolConfig.idleTimeoutMillis,
+      connectionTimeout: poolConfig.connectionTimeoutMillis,
+      // Mask connection string but show host for debugging
+      connectionHost: connectionString.match(/@([^:\/]+)/)?.[1] || 'unknown',
+    });
 
     pool = new Pool({
       connectionString,
       ssl: sslConfig,
-      max: parseIntEnv('DB_POOL_MAX', 10),
-      idleTimeoutMillis: parseIntEnv('DB_IDLE_TIMEOUT', 30000),
-      connectionTimeoutMillis: parseIntEnv('DB_CONNECTION_TIMEOUT', 10000),
+      ...poolConfig,
+    });
+
+    // Add error handler for pool-level errors
+    pool.on('error', (err) => {
+      dbLogger.error('Unexpected pool error', {}, err);
+    });
+
+    // Log when pool connects
+    pool.on('connect', () => {
+      dbLogger.debug('New client connected to pool');
     });
   }
   return pool;
@@ -202,14 +234,37 @@ export async function closePool(): Promise<void> {
  */
 async function query<T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
   const client = getPool();
-  return client.query<T>(text, params);
+  const timer = dbLogger.startTimer('query', {
+    // Extract first word of query for operation type (SELECT, INSERT, etc.)
+    queryType: text.trim().split(/\s+/)[0].toUpperCase(),
+    // Truncate query for logging (avoid huge queries in logs)
+    query: text.length > 200 ? text.substring(0, 200) + '...' : text,
+    paramCount: params?.length ?? 0,
+  });
+
+  try {
+    const result = await client.query<T>(text, params);
+    timer.end({ rowCount: result.rowCount ?? 0 });
+    return result;
+  } catch (error) {
+    timer.error(error);
+    throw error;
+  }
 }
 
 /**
  * Execute a simple query (like SELECT 1)
  */
 export async function testConnection(): Promise<void> {
-  await query('SELECT 1');
+  const timer = dbLogger.startTimer('testConnection');
+  try {
+    await query('SELECT 1');
+    timer.end();
+    dbLogger.info('Database connection test successful');
+  } catch (error) {
+    timer.error(error);
+    throw error;
+  }
 }
 
 // Promise-based singleton to prevent race conditions during initialization
@@ -228,15 +283,20 @@ export async function initializeTables(): Promise<void> {
 }
 
 async function doInitializeTables(): Promise<void> {
-  console.log('[db] Initializing database tables...');
-  console.log('[db] POSTGRES_URL configured:', !!process.env.POSTGRES_URL);
-  console.log('[db] DATABASE_URL configured:', !!process.env.DATABASE_URL);
+  dbLogger.info('Initializing database tables', {
+    postgresUrlConfigured: !!process.env.POSTGRES_URL,
+    databaseUrlConfigured: !!process.env.DATABASE_URL,
+    postgresHost: process.env.POSTGRES_HOST ? 'configured' : 'not set',
+    nodeEnv: process.env.NODE_ENV,
+  });
+
+  const timer = dbLogger.startTimer('initializeTables');
 
   try {
     // Test basic connectivity first
-    console.log('[db] Testing database connectivity...');
+    dbLogger.debug('Testing database connectivity');
     await query('SELECT 1');
-    console.log('[db] Database connectivity confirmed');
+    dbLogger.info('Database connectivity confirmed');
 
     // Create users table
     await query(`
@@ -334,26 +394,34 @@ async function doInitializeTables(): Promise<void> {
     await query('CREATE INDEX IF NOT EXISTS idx_lore_project_id ON lore(project_id)');
     await query('CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id)');
 
-    console.log('[db] Database tables initialized successfully');
+    timer.end();
+    dbLogger.info('Database tables initialized successfully');
   } catch (error) {
     // Reset promise to allow retry on next request
     initPromise = null;
 
     // Log detailed error information for debugging
-    console.error('[db] Failed to initialize tables');
+    const errorContext: Record<string, unknown> = {};
     if (error instanceof Error) {
-      console.error('[db] Error name:', error.name);
-      console.error('[db] Error message:', error.message);
+      errorContext.errorName = error.name;
       if ('code' in error) {
-        console.error('[db] Error code:', (error as { code: string }).code);
+        errorContext.errorCode = (error as { code: string }).code;
       }
       if ('detail' in error) {
-        console.error('[db] Error detail:', (error as { detail: string }).detail);
+        errorContext.errorDetail = (error as { detail: string }).detail;
       }
-    } else {
-      console.error('[db] Unknown error type:', error);
+      if ('hint' in error) {
+        errorContext.errorHint = (error as { hint: string }).hint;
+      }
+      if ('position' in error) {
+        errorContext.errorPosition = (error as { position: string }).position;
+      }
+      if ('routine' in error) {
+        errorContext.errorRoutine = (error as { routine: string }).routine;
+      }
     }
 
+    timer.error(error, errorContext);
     throw error;
   }
 }

@@ -10,6 +10,7 @@ import {
   createUser as dbCreateUser,
   dbUpdateUser,
 } from './db';
+import { authLogger } from './logger';
 
 // Note: isPostgresAvailable() is now a runtime check, not a module-level constant
 // This ensures environment variables are evaluated fresh in serverless environments
@@ -28,11 +29,13 @@ function logStorageMode() {
   storageLogged = true;
 
   if (isPostgresAvailable()) {
-    console.log('[halcyon-users] Using Vercel Postgres for persistent user storage');
+    authLogger.info('Using Vercel Postgres for persistent user storage');
   } else if (isVercel) {
-    console.warn('[halcyon-users] POSTGRES_URL not configured. Using ephemeral /tmp storage. Users will not persist between cold starts.');
+    authLogger.warn('POSTGRES_URL not configured - using ephemeral /tmp storage', {
+      warning: 'Users will not persist between cold starts',
+    });
   } else {
-    console.log('[halcyon-users] Using local file storage for development');
+    authLogger.info('Using local file storage for development');
   }
 }
 
@@ -84,18 +87,32 @@ export async function createUser(email: string, password: string, name: string):
   logStorageMode();  // Log which storage mode is being used
   const normalizedEmail = email.toLowerCase().trim();
 
+  authLogger.debug('createUser called', {
+    emailDomain: normalizedEmail.split('@')[1],
+    postgresAvailable: isPostgresAvailable(),
+  });
+
   // Use Postgres if available
   if (isPostgresAvailable()) {
+    authLogger.debug('Checking for existing user in Postgres');
+
     // Check if user already exists before expensive password hashing
     const existingUser = await dbGetUserByEmail(normalizedEmail);
     if (existingUser) {
+      authLogger.debug('User already exists', { userId: existingUser.id });
       throw new Error('User already exists');
     }
 
     // Hash password after existence check to avoid wasted computation
+    authLogger.debug('Hashing password');
+    const timer = authLogger.startTimer('bcrypt.hash');
     const passwordHash = await bcrypt.hash(password, 12);
+    timer.end();
 
+    authLogger.debug('Creating user in database');
     const dbUser = await dbCreateUser(normalizedEmail, name, passwordHash);
+    authLogger.info('User created successfully', { userId: dbUser.id });
+
     return {
       id: dbUser.id,
       email: dbUser.email,
@@ -138,18 +155,29 @@ export async function createUser(email: string, password: string, name: string):
 export async function validateUser(email: string, password: string): Promise<User | null> {
   const normalizedEmail = email.toLowerCase().trim();
 
+  authLogger.debug('validateUser called', {
+    emailDomain: normalizedEmail.split('@')[1],
+    postgresAvailable: isPostgresAvailable(),
+  });
+
   // Use Postgres if available
   if (isPostgresAvailable()) {
     const dbUser = await dbGetUserByEmail(normalizedEmail);
     if (!dbUser || !dbUser.passwordHash) {
+      authLogger.debug('User not found or no password hash');
       return null;
     }
 
+    const timer = authLogger.startTimer('bcrypt.compare');
     const isValid = await bcrypt.compare(password, dbUser.passwordHash);
+    timer.end();
+
     if (!isValid) {
+      authLogger.debug('Invalid password');
       return null;
     }
 
+    authLogger.info('User validated successfully', { userId: dbUser.id });
     return {
       id: dbUser.id,
       email: dbUser.email,
