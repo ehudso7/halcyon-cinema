@@ -51,7 +51,7 @@ export default function ProductionProgress({ project }: ProductionProgressProps)
       icon: '🎞️',
       href: `/project/${project.id}/sequence`,
       count: project.sequences?.length || 0,
-      isComplete: (project.sequences?.length || 0) > 0 || project.scenes.length > 1,
+      isComplete: (project.sequences?.length || 0) > 0,
       description: 'Narrative arrangement',
     },
   ];

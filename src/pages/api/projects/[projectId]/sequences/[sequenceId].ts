@@ -3,6 +3,8 @@ import { SceneSequence, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 import { getProjectByIdAsync, getProjectSequencesAsync, updateSequenceAsync, deleteSequenceAsync } from '@/utils/storage';
 import { validateBody, updateSequenceSchema } from '@/utils/validation';
+import { getProjectByIdAsync, updateSequenceAsync, deleteSequenceAsync, getProjectSequencesAsync } from '@/utils/storage';
+import { updateSequenceSchema, validateBody } from '@/utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -38,6 +40,16 @@ export default async function handler(
       if (!sequence) {
         return res.status(404).json({ error: 'Sequence not found' });
       }
+  // GET - Retrieve single sequence
+  if (req.method === 'GET') {
+    try {
+      const sequences = await getProjectSequencesAsync(projectId);
+      const sequence = sequences.find(s => s.id === sequenceId);
+
+      if (!sequence) {
+        return res.status(404).json({ error: 'Sequence not found' });
+      }
+
       return res.status(200).json(sequence);
     } catch (error) {
       console.error('Error fetching sequence:', error);
@@ -46,6 +58,7 @@ export default async function handler(
   }
 
   if (req.method === 'PUT') {
+    // Validate request body with Zod
     const validation = validateBody(updateSequenceSchema, req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error });
@@ -85,5 +98,6 @@ export default async function handler(
   }
 
   res.setHeader('Allow', 'GET, PUT, DELETE');
+  res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
   return res.status(405).json({ error: `Method ${req.method} not allowed` });
 }

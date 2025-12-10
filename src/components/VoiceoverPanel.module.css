@@ -31,28 +31,28 @@
 .sceneTag {
   font-size: 0.75rem;
   padding: 4px 8px;
-  background: var(--color-bg);
-  border-radius: 4px;
+  background: var(--color-background);
+  border-radius: var(--border-radius-sm);
   color: var(--color-text-secondary);
 }
 
 .settingsBtn {
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   padding: 6px 10px;
   cursor: pointer;
   font-size: 1rem;
-  transition: all 0.2s;
+  transition: all var(--transition);
 }
 
 .settingsBtn:hover {
   border-color: var(--color-primary);
-  background: var(--color-bg);
+  background: var(--color-background);
 }
 
 .settings {
-  background: var(--color-bg);
+  background: var(--color-background);
   border-radius: var(--border-radius);
   padding: 16px;
   margin-bottom: 16px;
@@ -79,7 +79,7 @@
   flex: 1;
   padding: 8px 12px;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   background: var(--color-surface);
   color: var(--color-text);
   font-size: 0.9rem;
@@ -99,7 +99,7 @@
   padding: 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
-  background: var(--color-bg);
+  background: var(--color-background);
   color: var(--color-text);
   font-size: 0.95rem;
   line-height: 1.6;
@@ -136,11 +136,11 @@
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition);
 }
 
 .playBtn {
@@ -175,8 +175,8 @@
 }
 
 .stopBtn:hover:not(:disabled) {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--color-error);
+  color: var(--color-error);
 }
 
 .playingIndicator {

@@ -33,6 +33,8 @@ export default async function handler(
     }
     if (!characterIds.every((id: unknown) => typeof id === 'string')) {
       return res.status(400).json({ error: 'characterIds must contain only strings' });
+    if (characterIds.some((id: unknown) => typeof id !== 'string')) {
+      return res.status(400).json({ error: 'All characterIds must be strings' });
     }
   }
 
