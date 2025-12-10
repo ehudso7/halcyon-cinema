@@ -14,8 +14,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    labels:
-      - "dependencies"
     commit-message:
       prefix: "deps"
 
@@ -26,8 +24,5 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "ci"
     commit-message:
       prefix: "ci"
