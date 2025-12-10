@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { SceneSequence, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 import { getProjectByIdAsync, addSequenceToProjectAsync, getProjectSequencesAsync } from '@/utils/storage';
-import { validateBody, createSequenceSchema } from '@/utils/validation';
 import { createSequenceSchema, validateBody } from '@/utils/validation';
 
 export default async function handler(
