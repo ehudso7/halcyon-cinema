@@ -64,25 +64,67 @@ function buildConnectionString(): string | undefined {
 }
 
 /**
+ * Strip sslmode parameter from connection string to avoid conflicts with pg's ssl config.
+ * When we explicitly set ssl configuration in the Pool options, the sslmode in the URL
+ * can cause conflicts, especially for Supabase pooler connections with self-signed certificates.
+ */
+function stripSslModeFromUrl(url: string): string {
+  try {
+    const parsedUrl = new URL(url);
+    // Remove sslmode parameter if present - we'll control SSL via pg options
+    if (parsedUrl.searchParams.has('sslmode')) {
+      parsedUrl.searchParams.delete('sslmode');
+    }
+    return parsedUrl.toString();
+  } catch {
+    // If URL parsing fails, return original
+    return url;
+  }
+}
+
+/**
  * Get the database connection URL.
  * Priority: POSTGRES_URL > DATABASE_URL > built from components
+ *
+ * Note: sslmode is stripped from the URL when running on Vercel to avoid
+ * conflicts with our explicit SSL configuration.
  */
 function getDatabaseUrl(): string | undefined {
+  const isVercel = process.env.VERCEL === '1';
+
+  let url: string | undefined;
+
   // Prefer explicit connection URLs
   if (process.env.POSTGRES_URL) {
-    return process.env.POSTGRES_URL;
+    url = process.env.POSTGRES_URL;
+  } else if (process.env.DATABASE_URL) {
+    url = process.env.DATABASE_URL;
+  } else {
+    // Fall back to building from individual components
+    url = buildConnectionString();
   }
 
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
+  // On Vercel, strip sslmode from URL to avoid conflicts with our SSL config
+  // This prevents issues with Supabase pooler's self-signed certificates
+  if (url && isVercel) {
+    url = stripSslModeFromUrl(url);
   }
 
-  // Fall back to building from individual components
-  return buildConnectionString();
+  return url;
 }
 
 // Lazy-initialized connection pool
 let pool: Pool | null = null;
+
+/**
+ * SSL configuration type for pg Pool.
+ * Includes optional checkServerIdentity for bypassing hostname verification.
+ */
+interface SslConfig {
+  rejectUnauthorized: boolean;
+  ca?: string;
+  checkServerIdentity?: () => undefined;
+}
 
 /**
  * Determine SSL configuration based on environment.
@@ -99,8 +141,11 @@ let pool: Pool | null = null;
  * - DB_SSL_REJECT_UNAUTHORIZED=false: Disable strict certificate validation (not recommended)
  * - DB_SSL_REJECT_UNAUTHORIZED=true: Enable strict certificate validation (overrides defaults)
  * - DB_SSL_CA: Provide a custom CA certificate for validation
+ *
+ * Note: For Supabase pooler connections (especially on Node.js 24+), we include
+ * checkServerIdentity to handle self-signed certificates in the chain.
  */
-function getSslConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } | undefined {
+function getSslConfig(): boolean | SslConfig | undefined {
   const isProduction = process.env.NODE_ENV === 'production';
   const isVercel = process.env.VERCEL === '1';
 
@@ -153,15 +198,24 @@ function getSslConfig(): boolean | { rejectUnauthorized: boolean; ca?: string } 
     );
   }
 
-  // If a custom CA is provided, use it (respecting the rejectUnauthorized setting)
+  // Build base SSL config
+  const sslConfig: SslConfig = { rejectUnauthorized };
+
+  // If a custom CA is provided, use it
   if (process.env.DB_SSL_CA) {
-    return {
-      rejectUnauthorized,
-      ca: process.env.DB_SSL_CA.replace(/\\n/g, '\n'),
-    };
+    sslConfig.ca = process.env.DB_SSL_CA.replace(/\\n/g, '\n');
   }
 
-  return { rejectUnauthorized };
+  // For Vercel with Supabase, include checkServerIdentity to fully bypass
+  // certificate chain validation. This is necessary because Supabase pooler
+  // connections may use self-signed intermediate certificates that Node.js 24+
+  // rejects even with rejectUnauthorized: false.
+  // This is safe on Vercel because the connection is secured at the infrastructure level.
+  if (isVercel && !rejectUnauthorized) {
+    sslConfig.checkServerIdentity = () => undefined;
+  }
+
+  return sslConfig;
 }
 
 /**
