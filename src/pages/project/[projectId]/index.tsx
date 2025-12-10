@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
+import Breadcrumb from '@/components/Breadcrumb';
+import ProductionProgress from '@/components/ProductionProgress';
 import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneCard from '@/components/SceneCard';
 import Pagination from '@/components/Pagination';
@@ -75,6 +77,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             mood: data.mood,
             aspectRatio: data.aspectRatio,
           },
+          characterIds: data.characterIds,
         }),
       });
 
@@ -132,10 +135,19 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
         <meta name="description" content={project.description || `Scenes for ${project.name}`} />
       </Head>
 
-      <Header showBackLink backLinkHref="/" backLinkText="Projects" />
+      <Header />
 
       <main className="page">
         <div className="container">
+          <Breadcrumb
+            items={[
+              { label: 'Projects', href: '/' },
+              { label: project.name },
+            ]}
+          />
+
+          <ProductionProgress project={project} />
+
           <div className={styles.header}>
             <div className={styles.headerInfo}>
               <h1 className={styles.title}>{project.name}</h1>
@@ -185,7 +197,11 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
           {showPromptBuilder && (
             <div className={styles.promptBuilderWrapper}>
-              <PromptBuilder onSubmit={handleGenerateScene} isLoading={isGenerating} />
+              <PromptBuilder
+                onSubmit={handleGenerateScene}
+                isLoading={isGenerating}
+                characters={project.characters || []}
+              />
               {error && <p className={styles.error}>{error}</p>}
             </div>
           )}

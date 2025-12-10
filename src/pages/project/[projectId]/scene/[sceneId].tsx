@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
+import Breadcrumb from '@/components/Breadcrumb';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import { Project, Scene } from '@/types';
 import { getProjectByIdAsync, getSceneByIdAsync } from '@/utils/storage';
@@ -119,14 +120,18 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
         <title>Scene {sceneIndex + 1} - {project.name} | HALCYON-Cinema</title>
       </Head>
 
-      <Header
-        showBackLink
-        backLinkHref={`/project/${project.id}`}
-        backLinkText={project.name}
-      />
+      <Header />
 
       <main className="page">
         <div className="container">
+          <Breadcrumb
+            items={[
+              { label: 'Projects', href: '/' },
+              { label: project.name, href: `/project/${project.id}` },
+              { label: `Scene ${sceneIndex + 1}` },
+            ]}
+          />
+
           <div className={styles.viewer}>
             <div className={styles.imageContainer}>
               {scene.imageUrl ? (

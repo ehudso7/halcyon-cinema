@@ -429,10 +429,11 @@ export async function addSceneToProjectAsync(
   projectId: string,
   prompt: string,
   imageUrl: string | null,
-  metadata?: Scene['metadata']
+  metadata?: Scene['metadata'],
+  characterIds?: string[]
 ): Promise<Scene | null> {
   if (usePostgres) {
-    return dbAddScene(projectId, prompt, imageUrl, metadata);
+    return dbAddScene(projectId, prompt, imageUrl, metadata, characterIds);
   }
 
   loadFromFile();
@@ -447,6 +448,7 @@ export async function addSceneToProjectAsync(
     prompt,
     imageUrl,
     metadata,
+    characterIds,
     createdAt: now,
     updatedAt: now,
   };

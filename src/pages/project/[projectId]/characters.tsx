@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import Header from '@/components/Header';
+import Breadcrumb from '@/components/Breadcrumb';
 import ProjectNavigation from '@/components/ProjectNavigation';
 import CharacterManager from '@/components/CharacterManager';
 import { Project, Character } from '@/types';
@@ -98,10 +99,18 @@ export default function CharactersPage({ project: initialProject }: CharactersPa
         <title>Characters | {project.name} | HALCYON-Cinema</title>
       </Head>
 
-      <Header showBackLink backLinkHref="/" backLinkText="Projects" />
+      <Header />
 
       <main className="page">
         <div className="container">
+          <Breadcrumb
+            items={[
+              { label: 'Projects', href: '/' },
+              { label: project.name, href: `/project/${project.id}` },
+              { label: 'Characters' },
+            ]}
+          />
+
           <div className={styles.header}>
             <div className={styles.headerInfo}>
               <h1 className={styles.title}>{project.name}</h1>

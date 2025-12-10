@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '@/components/Header';
+import Breadcrumb from '@/components/Breadcrumb';
 import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneSequencer from '@/components/SceneSequencer';
 import VoiceoverPanel from '@/components/VoiceoverPanel';
@@ -70,10 +71,18 @@ export default function SequencePage({ project }: SequencePageProps) {
         <title>Scene Flow | {project.name} | HALCYON-Cinema</title>
       </Head>
 
-      <Header showBackLink backLinkHref="/" backLinkText="Projects" />
+      <Header />
 
       <main className="page">
         <div className="container">
+          <Breadcrumb
+            items={[
+              { label: 'Projects', href: '/' },
+              { label: project.name, href: `/project/${project.id}` },
+              { label: 'Scene Flow' },
+            ]}
+          />
+
           <div className={styles.header}>
             <div className={styles.headerInfo}>
               <h1 className={styles.title}>{project.name}</h1>

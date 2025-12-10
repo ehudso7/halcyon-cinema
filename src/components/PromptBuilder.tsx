@@ -1,5 +1,7 @@
 import { useState, FormEvent } from 'react';
 import VisualStyleSelector, { getStyleModifier } from './VisualStyleSelector';
+import CharacterSelector from './CharacterSelector';
+import { Character } from '@/types';
 import styles from './PromptBuilder.module.css';
 
 interface PromptBuilderProps {
@@ -7,6 +9,8 @@ interface PromptBuilderProps {
   isLoading?: boolean;
   initialPrompt?: string;
   onPromptChange?: (prompt: string) => void;
+  characters?: Character[];
+  initialCharacterIds?: string[];
 }
 
 export interface PromptData {
@@ -17,6 +21,7 @@ export interface PromptData {
   mood?: string;
   aspectRatio?: string;
   visualStyleId?: string;
+  characterIds?: string[];
 }
 
 const SHOT_TYPES = [
@@ -61,7 +66,14 @@ const ASPECT_RATIOS = [
   { value: '1024x1792', label: '9:16 Portrait' },
 ];
 
-export default function PromptBuilder({ onSubmit, isLoading = false, initialPrompt = '', onPromptChange }: PromptBuilderProps) {
+export default function PromptBuilder({
+  onSubmit,
+  isLoading = false,
+  initialPrompt = '',
+  onPromptChange,
+  characters = [],
+  initialCharacterIds = [],
+}: PromptBuilderProps) {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showStyleSelector, setShowStyleSelector] = useState(false);
@@ -70,6 +82,7 @@ export default function PromptBuilder({ onSubmit, isLoading = false, initialProm
   const [mood, setMood] = useState('');
   const [aspectRatio, setAspectRatio] = useState('1024x1024');
   const [visualStyleId, setVisualStyleId] = useState<string | null>(null);
+  const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>(initialCharacterIds);
   const [error, setError] = useState('');
 
   const handlePromptChange = (value: string) => {
@@ -101,6 +114,7 @@ export default function PromptBuilder({ onSubmit, isLoading = false, initialProm
       mood: mood || undefined,
       aspectRatio,
       visualStyleId: visualStyleId || undefined,
+      characterIds: selectedCharacterIds.length > 0 ? selectedCharacterIds : undefined,
     });
   };
 
@@ -258,6 +272,14 @@ export default function PromptBuilder({ onSubmit, isLoading = false, initialProm
                 ))}
               </div>
             </div>
+
+            {characters.length > 0 && (
+              <CharacterSelector
+                characters={characters}
+                selectedIds={selectedCharacterIds}
+                onSelectionChange={setSelectedCharacterIds}
+              />
+            )}
           </div>
         )}
 

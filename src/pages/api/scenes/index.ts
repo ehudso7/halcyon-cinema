@@ -16,7 +16,7 @@ export default async function handler(
   const userId = await requireAuth(req, res);
   if (!userId) return;
 
-  const { projectId, prompt, imageUrl, metadata } = req.body;
+  const { projectId, prompt, imageUrl, metadata, characterIds } = req.body;
 
   if (!projectId || typeof projectId !== 'string') {
     return res.status(400).json({ error: 'Project ID is required' });
@@ -37,7 +37,13 @@ export default async function handler(
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const scene = await addSceneToProjectAsync(projectId, prompt.trim(), imageUrl || null, metadata);
+    const scene = await addSceneToProjectAsync(
+      projectId,
+      prompt.trim(),
+      imageUrl || null,
+      metadata,
+      characterIds
+    );
 
     if (!scene) {
       return res.status(500).json({ error: 'Failed to create scene' });

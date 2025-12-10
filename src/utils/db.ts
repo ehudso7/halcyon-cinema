@@ -969,15 +969,16 @@ export async function dbAddScene(
   projectId: string,
   prompt: string,
   imageUrl: string | null,
-  metadata?: Scene['metadata']
+  metadata?: Scene['metadata'],
+  characterIds?: string[]
 ): Promise<Scene | null> {
   if (!checkPostgresAvailable()) return null;
 
   await initializeTables();
 
   const result = await query(
-    `INSERT INTO scenes (project_id, prompt, image_url, shot_type, style, lighting, mood, aspect_ratio)
-    VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO scenes (project_id, prompt, image_url, shot_type, style, lighting, mood, aspect_ratio, character_ids)
+    VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9::uuid[])
     RETURNING *`,
     [
       projectId,
@@ -988,6 +989,7 @@ export async function dbAddScene(
       metadata?.lighting || null,
       metadata?.mood || null,
       metadata?.aspectRatio || null,
+      characterIds || null,
     ]
   );
 
@@ -1007,6 +1009,7 @@ export async function dbAddScene(
       mood: row.mood as string | undefined,
       aspectRatio: row.aspect_ratio as string | undefined,
     },
+    characterIds: row.character_ids as string[] | undefined,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
   };
