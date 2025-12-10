@@ -16,7 +16,7 @@
     "verify:journeys": "node scripts/verify-journeys.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.87.0",
+    "@supabase/supabase-js": "^2.87.1",
     "bcryptjs": "^2.4.3",
     "jspdf": "^2.5.1",
     "jszip": "^3.10.1",
@@ -42,7 +42,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.32",
-    "jsdom": "^27.2.0",
+    "jsdom": "^27.3.0",
     "typescript": "^5.4.0",
     "vitest": "^4.0.15"
   }
