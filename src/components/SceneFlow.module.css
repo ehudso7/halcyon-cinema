@@ -130,6 +130,7 @@
 
 /* Scene Card */
 .sceneCard {
+  position: relative;
   width: 100%;
   max-height: 100%;
   display: flex;

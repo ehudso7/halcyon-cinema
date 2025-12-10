@@ -72,6 +72,7 @@
 }
 
 .thumbnail {
+  position: relative;
   width: 100px;
   height: 60px;
   border-radius: 6px;
