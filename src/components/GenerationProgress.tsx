@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './GenerationProgress.module.css';
 
 export type GenerationStage =
@@ -125,7 +125,7 @@ export default function GenerationProgress({
     return () => clearInterval(interval);
   }, [isGenerating]);
 
-  // Progress through stages
+  // Progress through stages - using ref to track active interval for proper cleanup
   useEffect(() => {
     if (!isGenerating) {
       setCurrentStage('preparing');
@@ -142,6 +142,7 @@ export default function GenerationProgress({
     let stageIndex = 0;
     let totalProgress = 0;
     const progressPerStage = 100 / STAGES_ORDER.length;
+    let activeInterval: NodeJS.Timeout | null = null;
 
     const advanceStage = () => {
       if (stageIndex < STAGES_ORDER.length) {
@@ -153,7 +154,7 @@ export default function GenerationProgress({
         const stageDuration = STAGE_INFO[stage].duration;
         const stageStartTime = Date.now();
 
-        const stageInterval = setInterval(() => {
+        activeInterval = setInterval(() => {
           const elapsed = Date.now() - stageStartTime;
           const stagePercent = Math.min((elapsed / stageDuration) * 100, 100);
           setStageProgress(stagePercent);
@@ -162,7 +163,7 @@ export default function GenerationProgress({
           setProgress(Math.min(overallPercent, 95)); // Never show 100% until complete
 
           if (elapsed >= stageDuration) {
-            clearInterval(stageInterval);
+            if (activeInterval) clearInterval(activeInterval);
             totalProgress += progressPerStage;
             stageIndex++;
 
@@ -171,14 +172,24 @@ export default function GenerationProgress({
             }
           }
         }, 50);
-
-        return () => clearInterval(stageInterval);
       }
     };
 
-    const cleanup = advanceStage();
-    return cleanup;
+    advanceStage();
+    return () => {
+      if (activeInterval) clearInterval(activeInterval);
+    };
   }, [isGenerating, error]);
+
+  // Track if completion was already handled to prevent multiple calls
+  const completedRef = useRef(false);
+
+  // Reset completion tracking when generation starts
+  useEffect(() => {
+    if (isGenerating) {
+      completedRef.current = false;
+    }
+  }, [isGenerating]);
 
   // Handle completion
   const handleComplete = useCallback(() => {
@@ -188,9 +199,10 @@ export default function GenerationProgress({
     onComplete?.();
   }, [onComplete]);
 
-  // When generation stops without error, mark as complete
+  // When generation stops without error, mark as complete (only once)
   useEffect(() => {
-    if (!isGenerating && !error && progress > 0) {
+    if (!isGenerating && !error && progress > 0 && !completedRef.current) {
+      completedRef.current = true;
       handleComplete();
     }
   }, [isGenerating, error, progress, handleComplete]);
@@ -200,7 +212,10 @@ export default function GenerationProgress({
   }
 
   const stageInfo = STAGE_INFO[currentStage];
-  const completedStages = STAGES_ORDER.indexOf(currentStage);
+  // For terminal states (complete/error), mark all stages as completed
+  const completedStages = currentStage === 'complete' || currentStage === 'error'
+    ? STAGES_ORDER.length
+    : STAGES_ORDER.indexOf(currentStage);
 
   return (
     <div className={`${styles.container} ${currentStage === 'complete' ? styles.complete : ''} ${error ? styles.error : ''}`}>

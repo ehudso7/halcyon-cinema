@@ -12,6 +12,23 @@ interface RateLimitEntry {
 // For production, use Redis or similar
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
+function cleanupExpiredEntries() {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitStore.entries()) {
+    if (now >= entry.resetAt) {
+      rateLimitStore.delete(key);
+    }
+  }
+}
+
+// Deterministic cleanup interval (every 60 seconds)
+// Note: This only runs in Node.js environments
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    cleanupExpiredEntries();
+  }, 60 * 1000);
+}
+
 interface RateLimitConfig {
   windowMs: number;      // Time window in milliseconds
   maxRequests: number;   // Max requests per window
@@ -55,11 +72,6 @@ export function checkRateLimit(
   const now = Date.now();
   const key = identifier;
 
-  // Clean up old entries periodically
-  if (Math.random() < 0.01) {
-    cleanupExpiredEntries();
-  }
-
   const entry = rateLimitStore.get(key);
 
   // No existing entry or expired window
@@ -99,15 +111,6 @@ export function checkRateLimit(
   };
 }
 
-function cleanupExpiredEntries() {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitStore.entries()) {
-    if (now >= entry.resetAt) {
-      rateLimitStore.delete(key);
-    }
-  }
-}
-
 /**
  * Get client identifier for rate limiting
  * Uses IP address or falls back to a generic identifier
@@ -138,10 +141,15 @@ export function getClientIdentifier(
 
 /**
  * Format rate limit headers for response
+ * @param result - Rate limit check result
+ * @param maxRequests - The maximum requests allowed in the window
  */
-export function getRateLimitHeaders(result: RateLimitResult): Record<string, string> {
+export function getRateLimitHeaders(
+  result: RateLimitResult,
+  maxRequests: number
+): Record<string, string> {
   return {
-    'X-RateLimit-Limit': result.remaining.toString(),
+    'X-RateLimit-Limit': maxRequests.toString(),
     'X-RateLimit-Remaining': result.remaining.toString(),
     'X-RateLimit-Reset': Math.ceil(result.resetAt / 1000).toString(),
     ...(result.retryAfter && { 'Retry-After': result.retryAfter.toString() }),
