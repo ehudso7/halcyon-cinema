@@ -24,7 +24,7 @@
     "next-auth": "^4.24.12",
     "openai": "^6.10.0",
     "pg": "^8.16.3",
-    "react": "^18.3.0",
+    "react": "^19.2.1",
     "react-dom": "^18.3.0",
     "uuid": "^13.0.0",
     "zod": "^4.1.13"
@@ -38,7 +38,7 @@
     "@types/bcryptjs": "^3.0.0",
     "@types/node": "^20.12.0",
     "@types/pg": "^8.15.6",
-    "@types/react": "^18.3.0",
+    "@types/react": "^19.2.7",
     "@types/react-dom": "^18.3.0",
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react": "^5.1.2",
