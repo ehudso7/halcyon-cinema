@@ -79,18 +79,27 @@ export function trackGeneration() {
   data.creditsRemaining = Math.max(0, data.creditsRemaining - 1);
   data.totalScenes++;
 
-  // Update streak
+  // Update streak using calendar-based date comparison (not time-based)
   if (lastGen) {
-    const daysSinceLastGen = Math.floor((today.getTime() - lastGen.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysSinceLastGen === 0) {
-      // Same day, streak continues
-    } else if (daysSinceLastGen === 1) {
-      // Consecutive day
-      data.streak++;
-      data.longestStreak = Math.max(data.longestStreak, data.streak);
+    const todayDate = today.toDateString();
+    const lastGenDate = lastGen.toDateString();
+
+    if (todayDate === lastGenDate) {
+      // Same calendar day, streak continues unchanged
     } else {
-      // Streak broken
-      data.streak = 1;
+      // Calculate the difference in calendar days
+      const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const lastGenMidnight = new Date(lastGen.getFullYear(), lastGen.getMonth(), lastGen.getDate());
+      const daysDiff = Math.round((todayMidnight.getTime() - lastGenMidnight.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysDiff === 1) {
+        // Consecutive calendar day
+        data.streak++;
+        data.longestStreak = Math.max(data.longestStreak, data.streak);
+      } else {
+        // Streak broken (more than 1 day gap)
+        data.streak = 1;
+      }
     }
   } else {
     data.streak = 1;
@@ -136,7 +145,9 @@ export default function UsageStats({ compact = false }: UsageStatsProps) {
 
   if (!usage) return null;
 
-  const creditsPercent = (usage.creditsRemaining / 100) * 100;
+  // Clamp credits percent to 0-100 range (in case credits exceed max via addCredits)
+  const maxCredits = 100;
+  const creditsPercent = Math.min(100, Math.max(0, (usage.creditsRemaining / maxCredits) * 100));
   const isLow = usage.creditsRemaining < 20;
 
   if (compact) {
@@ -167,7 +178,9 @@ export default function UsageStats({ compact = false }: UsageStatsProps) {
 }
 
 function UsageStatsContent({ usage }: { usage: UsageData }) {
-  const creditsPercent = (usage.creditsRemaining / 100) * 100;
+  // Clamp credits percent to 0-100 range (in case credits exceed max via addCredits)
+  const maxCredits = 100;
+  const creditsPercent = Math.min(100, Math.max(0, (usage.creditsRemaining / maxCredits) * 100));
   const isLow = usage.creditsRemaining < 20;
 
   const memberDays = Math.floor(

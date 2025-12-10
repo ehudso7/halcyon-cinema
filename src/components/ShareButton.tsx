@@ -7,10 +7,9 @@ interface ShareButtonProps {
   title: string;
   text: string;
   url?: string;
-  imageUrl?: string;
 }
 
-export default function ShareButton({ title, text, url, imageUrl }: ShareButtonProps) {
+export default function ShareButton({ title, text, url }: ShareButtonProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [copied, setCopied] = useState(false);
 
