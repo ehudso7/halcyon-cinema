@@ -46,20 +46,30 @@ const MOODS = [
 
 export default function SceneFilters({ scenes, characters = [], onFilterChange }: SceneFiltersProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [shotType, setShotType] = useState('');
   const [lighting, setLighting] = useState('');
   const [mood, setMood] = useState('');
   const [characterId, setCharacterId] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const hasActiveFilters = searchTerm || shotType || lighting || mood || characterId;
 
   const filterScenes = useCallback(() => {
     let filtered = [...scenes];
 
-    // Search term filter (searches prompt)
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
+    // Search term filter (searches prompt) - use debounced value
+    if (debouncedSearchTerm) {
+      const term = debouncedSearchTerm.toLowerCase();
       filtered = filtered.filter(scene =>
         scene.prompt.toLowerCase().includes(term)
       );
@@ -94,7 +104,7 @@ export default function SceneFilters({ scenes, characters = [], onFilterChange }
     }
 
     onFilterChange(filtered);
-  }, [scenes, searchTerm, shotType, lighting, mood, characterId, onFilterChange]);
+  }, [scenes, debouncedSearchTerm, shotType, lighting, mood, characterId, onFilterChange]);
 
   useEffect(() => {
     filterScenes();

@@ -7,6 +7,7 @@ interface SceneSequencerProps {
   initialOrder?: ShotBlock[];
   onSave?: (shots: ShotBlock[]) => void;
   onExport?: (shots: ShotBlock[]) => void;
+  isSaving?: boolean;
 }
 
 const TRANSITIONS = [
@@ -16,7 +17,7 @@ const TRANSITIONS = [
   { value: 'wipe', label: 'Wipe' },
 ];
 
-export default function SceneSequencer({ scenes, initialOrder, onSave, onExport }: SceneSequencerProps) {
+export default function SceneSequencer({ scenes, initialOrder, onSave, onExport, isSaving = false }: SceneSequencerProps) {
   const [shots, setShots] = useState<ShotBlock[]>(() => {
     if (initialOrder && initialOrder.length > 0) {
       return initialOrder;
@@ -129,8 +130,19 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport 
         </div>
         <div className={styles.actions}>
           {onSave && (
-            <button className="btn btn-secondary" onClick={() => onSave(shots)}>
-              Save Sequence
+            <button
+              className="btn btn-secondary"
+              onClick={() => onSave(shots)}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <span className={styles.spinner} />
+                  Saving...
+                </>
+              ) : (
+                'Save Sequence'
+              )}
             </button>
           )}
           {onExport && (
