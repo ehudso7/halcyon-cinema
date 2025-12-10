@@ -76,11 +76,11 @@ describe('Journey: view_project - View Project Details', () => {
       name: 'Test Project',
       description: 'A test project',
       scenes: [
-        { id: 'scene-1', prompt: 'A sunset scene', projectId: 'project-123' },
-        { id: 'scene-2', prompt: 'A forest scene', projectId: 'project-123' },
+        { id: 'scene-1', prompt: 'A sunset scene', projectId: 'project-123', imageUrl: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'scene-2', prompt: 'A forest scene', projectId: 'project-123', imageUrl: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       ],
       characters: [
-        { id: 'char-1', name: 'Hero', projectId: 'project-123' },
+        { id: 'char-1', name: 'Hero', projectId: 'project-123', description: 'The main hero', traits: [], appearances: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       ],
       lore: [],
       sequences: [],
@@ -154,7 +154,7 @@ describe('Journey: view_project - View Project Details', () => {
 
   it('should return 401 for unauthenticated requests', async () => {
     vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-      (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+      (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
 

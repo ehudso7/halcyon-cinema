@@ -78,8 +78,8 @@ describe('Journey: export_project - Export Project Data', () => {
       userId: 'user-123',
       name: 'Export Test Project',
       scenes: [
-        { id: 'scene-1', prompt: 'Scene 1', projectId: 'project-123' },
-        { id: 'scene-2', prompt: 'Scene 2', projectId: 'project-123' },
+        { id: 'scene-1', prompt: 'Scene 1', projectId: 'project-123', imageUrl: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        { id: 'scene-2', prompt: 'Scene 2', projectId: 'project-123', imageUrl: null, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       ],
       characters: [],
       lore: [],
@@ -144,7 +144,7 @@ describe('Journey: export_project - Export Project Data', () => {
 
   it('should reject unauthenticated requests', async () => {
     vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-      (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+      (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
 

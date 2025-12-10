@@ -377,7 +377,7 @@ describe('Journey: sequences - Sequence CRUD Operations', () => {
   describe('Authentication', () => {
     it('should return 401 for unauthenticated requests', async () => {
       vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-        (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+        (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
         return null;
       });
 

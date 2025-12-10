@@ -79,7 +79,7 @@ describe('Journey: create_lore - Create Lore Entry in Project', () => {
     const mockLore = {
       id: 'lore-789',
       projectId: 'project-123',
-      type: 'location',
+      type: 'location' as const,
       name: 'Ancient Temple',
       summary: 'A mysterious temple in the mountains',
       description: 'Detailed description of the temple',
@@ -178,7 +178,7 @@ describe('Journey: create_lore - Create Lore Entry in Project', () => {
 
   it('should reject unauthenticated requests', async () => {
     vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-      (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+      (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
 

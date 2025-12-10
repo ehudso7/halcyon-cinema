@@ -16,6 +16,7 @@ vi.mock('@/utils/api-auth', () => ({
 vi.mock('@/utils/openai', () => ({
   generateImage: vi.fn(),
   buildCinematicPrompt: vi.fn((prompt: string) => prompt),
+  sanitizePromptForImageGeneration: vi.fn((prompt: string) => Promise.resolve(prompt)),
 }));
 
 import handler from '@/pages/api/generate-image';
@@ -62,7 +63,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
 
   it('should reject image generation for unauthenticated user', async () => {
     vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-      (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+      (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
 
