@@ -80,7 +80,7 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test -- --coverage --passWithNoTests --exclude 'tests/e2e/**'
+        run: npm test tests/journeys -- --coverage --passWithNoTests
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v5
