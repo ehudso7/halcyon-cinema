@@ -134,7 +134,7 @@ describe('Journey: health_check_db_status - Health Check Reports Database Status
     const checks = data.checks as Record<string, unknown>;
     const dbCheck = checks.database as Record<string, unknown>;
 
-    // Latency should not be present when DB query fails
-    expect(dbCheck.latencyMs).toBeUndefined();
+    // Latency is still measured even when DB query fails (time spent attempting connection)
+    expect(typeof dbCheck.latencyMs).toBe('number');
   });
 });

@@ -31,7 +31,7 @@ describe('Journey: login_email - User Login with Email/Password', () => {
         id: 'user-123',
         email: 'user@example.com',
         name: 'Test User',
-        image: null,
+        image: undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -131,7 +131,7 @@ describe('Journey: login_email - User Login with Email/Password', () => {
     it('should add user id to JWT token', async () => {
       const jwtCallback = authOptions.callbacks?.jwt;
       const mockUser = { id: 'user-123', email: 'test@example.com', name: 'Test' };
-      const mockToken = {};
+      const mockToken = { id: '' };
 
       const result = await jwtCallback?.({
         token: mockToken,
@@ -161,7 +161,7 @@ describe('Journey: login_email - User Login with Email/Password', () => {
       });
 
       // Expected: Session includes user id
-      expect(result?.user?.id).toBe('user-123');
+      expect((result?.user as { id?: string })?.id).toBe('user-123');
     });
   });
 

@@ -173,7 +173,7 @@ describe('Journey: create_character - Create Character in Project', () => {
 
   it('should reject unauthenticated requests', async () => {
     vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-      (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+      (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
 

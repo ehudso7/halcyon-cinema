@@ -124,7 +124,8 @@ describe('Journey: create_scene - Create Scene in Project', () => {
       expect.objectContaining({
         shotType: 'wide',
         style: 'cinematic',
-      })
+      }),
+      undefined
     );
   });
 
@@ -206,7 +207,7 @@ describe('Journey: create_scene - Create Scene in Project', () => {
 
   it('should return 401 for unauthenticated requests', async () => {
     vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-      (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+      (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
 

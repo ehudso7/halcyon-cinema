@@ -182,7 +182,7 @@ describe('Journey: create_project - Create New Project', () => {
   it('should reject project creation for unauthenticated user', async () => {
     // Precondition: User is not authenticated
     vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
-      (res as typeof mockRes).status(401).json({ error: 'Unauthorized' });
+      (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
 
