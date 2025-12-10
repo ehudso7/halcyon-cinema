@@ -56,14 +56,14 @@ export const createCharacterSchema = z.object({
   name: z.string().min(1, 'Character name is required').max(100),
   description: z.string().max(2000).optional(),
   imageUrl: z.string().url().nullable().optional(),
-  attributes: z.record(z.string()).optional(),
+  attributes: z.record(z.string(), z.string()).optional(),
 });
 
 export const updateCharacterSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(2000).optional(),
   imageUrl: z.string().url().nullable().optional(),
-  attributes: z.record(z.string()).optional(),
+  attributes: z.record(z.string(), z.string()).optional(),
 });
 
 // Lore schemas
@@ -130,7 +130,7 @@ export function validateBody<T extends z.ZodSchema>(
   }
 
   // Format error messages
-  const errors = result.error.errors.map(e => {
+  const errors = result.error.issues.map(e => {
     const path = e.path.join('.');
     return path ? `${path}: ${e.message}` : e.message;
   });
