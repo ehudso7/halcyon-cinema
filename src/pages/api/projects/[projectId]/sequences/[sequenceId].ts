@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { SceneSequence, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 import { getProjectByIdAsync, updateSequenceAsync, deleteSequenceAsync, getProjectSequencesAsync } from '@/utils/storage';
+import { updateSequenceSchema, validateBody } from '@/utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -48,23 +49,13 @@ export default async function handler(
   }
 
   if (req.method === 'PUT') {
-    const { name, description, shots } = req.body;
-
-    // Validate shots if provided
-    if (shots !== undefined && shots !== null) {
-      if (!Array.isArray(shots)) {
-        return res.status(400).json({ error: 'shots must be an array' });
-      }
-      // Validate shot structure
-      for (const shot of shots) {
-        if (typeof shot !== 'object' || shot === null) {
-          return res.status(400).json({ error: 'Each shot must be an object' });
-        }
-        if (typeof shot.sceneId !== 'string') {
-          return res.status(400).json({ error: 'Each shot must have a valid sceneId' });
-        }
-      }
+    // Validate request body with Zod
+    const validation = validateBody(updateSequenceSchema, req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error });
     }
+
+    const { name, description, shots } = validation.data;
 
     try {
       const sequence = await updateSequenceAsync(projectId, sequenceId, {
