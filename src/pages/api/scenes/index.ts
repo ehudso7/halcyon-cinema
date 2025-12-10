@@ -26,6 +26,16 @@ export default async function handler(
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
+  // Validate characterIds if provided
+  if (characterIds !== undefined && characterIds !== null) {
+    if (!Array.isArray(characterIds)) {
+      return res.status(400).json({ error: 'characterIds must be an array' });
+    }
+    if (!characterIds.every((id: unknown) => typeof id === 'string')) {
+      return res.status(400).json({ error: 'characterIds must contain only strings' });
+    }
+  }
+
   try {
     const project = await getProjectByIdAsync(projectId);
     if (!project) {

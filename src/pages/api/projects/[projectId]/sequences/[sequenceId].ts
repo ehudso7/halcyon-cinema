@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { SceneSequence, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
-import { getProjectByIdAsync, updateSequenceAsync, deleteSequenceAsync } from '@/utils/storage';
+import { getProjectByIdAsync, getProjectSequencesAsync, updateSequenceAsync, deleteSequenceAsync } from '@/utils/storage';
+import { validateBody, updateSequenceSchema } from '@/utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -30,8 +31,27 @@ export default async function handler(
     return res.status(403).json({ error: 'Forbidden' });
   }
 
+  if (req.method === 'GET') {
+    try {
+      const sequences = await getProjectSequencesAsync(projectId);
+      const sequence = sequences.find((s) => s.id === sequenceId);
+      if (!sequence) {
+        return res.status(404).json({ error: 'Sequence not found' });
+      }
+      return res.status(200).json(sequence);
+    } catch (error) {
+      console.error('Error fetching sequence:', error);
+      return res.status(500).json({ error: 'Failed to fetch sequence' });
+    }
+  }
+
   if (req.method === 'PUT') {
-    const { name, description, shots } = req.body;
+    const validation = validateBody(updateSequenceSchema, req.body);
+    if (!validation.success) {
+      return res.status(400).json({ error: validation.error });
+    }
+
+    const { name, description, shots } = validation.data;
 
     try {
       const sequence = await updateSequenceAsync(projectId, sequenceId, {
@@ -64,6 +84,6 @@ export default async function handler(
     }
   }
 
-  res.setHeader('Allow', ['PUT', 'DELETE']);
+  res.setHeader('Allow', 'GET, PUT, DELETE');
   return res.status(405).json({ error: `Method ${req.method} not allowed` });
 }
