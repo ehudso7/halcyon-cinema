@@ -2,8 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { SceneSequence, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 import { getProjectByIdAsync, getProjectSequencesAsync, updateSequenceAsync, deleteSequenceAsync } from '@/utils/storage';
-import { validateBody, updateSequenceSchema } from '@/utils/validation';
-import { getProjectByIdAsync, updateSequenceAsync, deleteSequenceAsync, getProjectSequencesAsync } from '@/utils/storage';
 import { updateSequenceSchema, validateBody } from '@/utils/validation';
 
 export default async function handler(
@@ -33,13 +31,6 @@ export default async function handler(
     return res.status(403).json({ error: 'Forbidden' });
   }
 
-  if (req.method === 'GET') {
-    try {
-      const sequences = await getProjectSequencesAsync(projectId);
-      const sequence = sequences.find((s) => s.id === sequenceId);
-      if (!sequence) {
-        return res.status(404).json({ error: 'Sequence not found' });
-      }
   // GET - Retrieve single sequence
   if (req.method === 'GET') {
     try {
@@ -97,7 +88,6 @@ export default async function handler(
     }
   }
 
-  res.setHeader('Allow', 'GET, PUT, DELETE');
   res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
   return res.status(405).json({ error: `Method ${req.method} not allowed` });
 }
