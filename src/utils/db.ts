@@ -119,11 +119,12 @@ let pool: Pool | null = null;
 /**
  * SSL configuration type for pg Pool.
  * Includes optional checkServerIdentity for bypassing hostname verification.
+ * The checkServerIdentity signature matches Node.js TLS API that pg forwards to.
  */
 interface SslConfig {
   rejectUnauthorized: boolean;
   ca?: string;
-  checkServerIdentity?: () => undefined;
+  checkServerIdentity?: (hostname: string, cert: object) => Error | undefined;
 }
 
 /**
@@ -212,7 +213,8 @@ function getSslConfig(): boolean | SslConfig | undefined {
   // rejects even with rejectUnauthorized: false.
   // This is safe on Vercel because the connection is secured at the infrastructure level.
   if (isVercel && !rejectUnauthorized) {
-    sslConfig.checkServerIdentity = () => undefined;
+    // Parameters intentionally unused - we bypass all verification
+    sslConfig.checkServerIdentity = (_hostname: string, _cert: object) => undefined;
   }
 
   return sslConfig;
