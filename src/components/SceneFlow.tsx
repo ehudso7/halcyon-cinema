@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { Scene } from '@/types';
 import styles from './SceneFlow.module.css';
 
@@ -119,10 +120,13 @@ export default function SceneFlow({ scenes, projectName, onClose }: SceneFlowPro
           ) : currentScene ? (
             <div className={styles.sceneCard}>
               {currentScene.imageUrl ? (
-                <img
+                <Image
                   src={currentScene.imageUrl}
                   alt={`Scene ${currentIndex + 1}`}
                   className={styles.sceneImage}
+                  fill
+                  sizes="100vw"
+                  priority
                 />
               ) : (
                 <div className={styles.placeholder}>No Image</div>

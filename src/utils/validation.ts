@@ -8,6 +8,34 @@ export const sceneMetadataSchema = z.object({
 });
 
 // Shot block schema for sequences
+// Common schemas
+export const uuidSchema = z.string().uuid();
+
+// Scene schemas
+export const sceneMetadataSchema = z.object({
+  shotType: z.string().optional(),
+  style: z.string().optional(),
+  lighting: z.string().optional(),
+  mood: z.string().optional(),
+  aspectRatio: z.string().optional(),
+}).optional();
+
+export const createSceneSchema = z.object({
+  projectId: z.string().min(1, 'Project ID is required'),
+  prompt: z.string().min(1, 'Prompt is required').max(4000, 'Prompt too long'),
+  imageUrl: z.string().url().nullable().optional(),
+  metadata: sceneMetadataSchema,
+  characterIds: z.array(z.string().uuid()).optional(),
+});
+
+export const updateSceneSchema = z.object({
+  prompt: z.string().min(1).max(4000).optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  metadata: sceneMetadataSchema,
+  characterIds: z.array(z.string().uuid()).optional(),
+});
+
+// Shot block schema
 export const shotBlockSchema = z.object({
   sceneId: z.string().min(1, 'Scene ID is required'),
   order: z.number().int().min(0),
@@ -34,6 +62,9 @@ export const updateSceneSchema = z.object({
 // Sequence schemas
 export const createSequenceSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
+// Sequence schemas
+export const createSequenceSchema = z.object({
+  name: z.string().min(1, 'Sequence name is required').max(200),
   description: z.string().max(1000).optional(),
   shots: z.array(shotBlockSchema).optional(),
 });
@@ -50,6 +81,10 @@ export const createCharacterSchema = z.object({
   description: z.string().max(2000).optional(),
   traits: z.array(z.string().max(50)).max(20).optional(),
   imageUrl: z.string().url().optional(),
+  name: z.string().min(1, 'Character name is required').max(100),
+  description: z.string().max(2000).optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  attributes: z.record(z.string()).optional(),
 });
 
 export const updateCharacterSchema = z.object({
@@ -82,6 +117,44 @@ export const createProjectSchema = z.object({
   description: z.string().max(2000).optional(),
   genre: z.string().max(50).optional(),
   visualStyle: z.string().max(100).optional(),
+  imageUrl: z.string().url().nullable().optional(),
+  attributes: z.record(z.string()).optional(),
+});
+
+// Lore schemas
+export const loreTypeSchema = z.enum([
+  'location',
+  'event',
+  'faction',
+  'item',
+  'concept',
+  'history',
+  'custom',
+]);
+
+export const createLoreSchema = z.object({
+  title: z.string().min(1, 'Lore title is required').max(200),
+  content: z.string().max(10000).optional(),
+  type: loreTypeSchema.optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
+  relatedIds: z.array(z.string().uuid()).optional(),
+});
+
+export const updateLoreSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  content: z.string().max(10000).optional(),
+  type: loreTypeSchema.optional(),
+  tags: z.array(z.string().max(50)).max(20).optional(),
+  relatedIds: z.array(z.string().uuid()).optional(),
+});
+
+// Project schemas
+export const projectTypeSchema = z.enum(['film', 'series', 'visual-novel', 'storyboard']);
+
+export const createProjectSchema = z.object({
+  name: z.string().min(1, 'Project name is required').max(200),
+  description: z.string().max(2000).optional(),
+  projectType: projectTypeSchema.optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -89,6 +162,7 @@ export const updateProjectSchema = z.object({
   description: z.string().max(2000).optional(),
   genre: z.string().max(50).optional(),
   visualStyle: z.string().max(100).optional(),
+  projectType: projectTypeSchema.optional(),
 });
 
 // Image generation schema
@@ -115,6 +189,31 @@ export function validateBody<T extends z.ZodTypeAny>(
   } catch {
     return { success: false, error: 'Invalid request body' };
   }
+  shotType: z.string().optional(),
+  style: z.string().optional(),
+  lighting: z.string().optional(),
+  mood: z.string().optional(),
+  size: z.enum(['1024x1024', '1792x1024', '1024x1792']).optional(),
+});
+
+// Helper function to validate and parse request body
+export function validateBody<T extends z.ZodSchema>(
+  schema: T,
+  body: unknown
+): { success: true; data: z.infer<T> } | { success: false; error: string } {
+  const result = schema.safeParse(body);
+
+  if (result.success) {
+    return { success: true, data: result.data };
+  }
+
+  // Format error messages
+  const errors = result.error.errors.map(e => {
+    const path = e.path.join('.');
+    return path ? `${path}: ${e.message}` : e.message;
+  });
+
+  return { success: false, error: errors.join(', ') };
 }
 
 // Type exports for use in API handlers

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Scene } from '@/types';
 import styles from './SceneCard.module.css';
 
@@ -26,7 +27,14 @@ export default function SceneCard({ scene, index }: SceneCardProps) {
     >
       <div className={styles.thumbnail}>
         {scene.imageUrl ? (
-          <img src={scene.imageUrl} alt={`Scene ${index + 1}`} className={styles.image} />
+          <Image
+            src={scene.imageUrl}
+            alt={`Scene ${index + 1}`}
+            className={styles.image}
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            priority={index < 3}
+          />
         ) : (
           <div className={styles.placeholder}>
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

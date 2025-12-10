@@ -3,6 +3,7 @@ import { SceneSequence, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
 import { getProjectByIdAsync, addSequenceToProjectAsync, getProjectSequencesAsync } from '@/utils/storage';
 import { validateBody, createSequenceSchema } from '@/utils/validation';
+import { createSequenceSchema, validateBody } from '@/utils/validation';
 
 export default async function handler(
   req: NextApiRequest,
@@ -38,6 +39,7 @@ export default async function handler(
   }
 
   if (req.method === 'POST') {
+    // Validate request body with Zod
     const validation = validateBody(createSequenceSchema, req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error });

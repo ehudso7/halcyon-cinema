@@ -8,6 +8,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneSequencer from '@/components/SceneSequencer';
 import VoiceoverPanel from '@/components/VoiceoverPanel';
+import { useToast } from '@/components/Toast';
 import { Project, ShotBlock } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -22,11 +23,10 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
   const [voiceoverText, setVoiceoverText] = useState('');
   const [showVoiceover, setShowVoiceover] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const { showSuccess, showError } = useToast();
 
   const handleSaveSequence = async (shots: ShotBlock[]) => {
     setIsSaving(true);
-    setSaveError(null);
 
     try {
       // Check if a sequence already exists, update it; otherwise create new
@@ -75,10 +75,10 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
         }));
       }
 
-      alert('Sequence saved successfully!');
+      showSuccess('Sequence saved successfully!');
     } catch (error) {
       console.error('Error saving sequence:', error);
-      setSaveError(error instanceof Error ? error.message : 'Failed to save sequence');
+      showError(error instanceof Error ? error.message : 'Failed to save sequence');
     } finally {
       setIsSaving(false);
     }
@@ -158,6 +158,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
                 initialOrder={project.sequences?.[0]?.shots}
                 onSave={handleSaveSequence}
                 onExport={handleExportScript}
+                isSaving={isSaving}
               />
 
               <div className={styles.voiceoverSection}>

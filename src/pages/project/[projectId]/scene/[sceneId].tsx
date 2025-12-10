@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
+import Image from 'next/image';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import Breadcrumb from '@/components/Breadcrumb';
@@ -135,7 +136,14 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
           <div className={styles.viewer}>
             <div className={styles.imageContainer}>
               {scene.imageUrl ? (
-                <img src={scene.imageUrl} alt={`Scene ${sceneIndex + 1}`} className={styles.image} />
+                <Image
+                  src={scene.imageUrl}
+                  alt={`Scene ${sceneIndex + 1}`}
+                  className={styles.image}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 70vw"
+                  priority
+                />
               ) : (
                 <div className={styles.placeholder}>
                   <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
