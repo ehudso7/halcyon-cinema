@@ -210,11 +210,14 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all var(--transition);
+  text-decoration: none;
+  text-align: left;
 }
 
 .dropdownItem:hover {
   background-color: var(--color-surface-hover);
   color: var(--color-text);
+  text-decoration: none;
 }
 
 @media (max-width: 768px) {
