@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateImage, buildCinematicPrompt } from '@/utils/openai';
+import { generateImage, buildCinematicPrompt, sanitizePromptForImageGeneration } from '@/utils/openai';
 import { GenerateImageResponse, ApiError } from '@/types';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 
@@ -45,8 +45,12 @@ export default async function handler(
     return res.status(400).json({ error: `Invalid style. Must be one of: ${VALID_STYLES.join(', ')}` });
   }
 
+  // Sanitize prompt to comply with DALL-E safety guidelines
+  // This rewrites potentially problematic content while preserving artistic intent
+  const sanitizedPrompt = await sanitizePromptForImageGeneration(prompt);
+
   // Build enhanced cinematic prompt
-  const enhancedPrompt = buildCinematicPrompt(prompt, {
+  const enhancedPrompt = buildCinematicPrompt(sanitizedPrompt, {
     shotType,
     style,
     lighting,
