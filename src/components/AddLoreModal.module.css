@@ -84,11 +84,11 @@
   align-items: center;
   gap: 6px;
   padding: 12px 8px;
-  background: var(--color-bg);
+  background: var(--color-background);
   border: 2px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition);
 }
 
 .typeOption:hover {
