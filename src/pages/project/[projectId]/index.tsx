@@ -11,6 +11,7 @@ import SceneCard from '@/components/SceneCard';
 import SceneFilters from '@/components/SceneFilters';
 import Pagination from '@/components/Pagination';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
+import GenerationProgress from '@/components/GenerationProgress';
 import { Project, Scene } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -30,6 +31,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
   const [showPromptBuilder, setShowPromptBuilder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentPrompt, setCurrentPrompt] = useState<string>('');
 
   // Handle filter changes
   const handleFilterChange = useCallback((scenes: Scene[]) => {
@@ -48,6 +50,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
   const handleGenerateScene = async (data: PromptData) => {
     setIsGenerating(true);
     setError(null);
+    setCurrentPrompt(data.prompt);
 
     try {
       // Generate image
@@ -212,7 +215,12 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
                 isLoading={isGenerating}
                 characters={project.characters || []}
               />
-              {error && <p className={styles.error}>{error}</p>}
+              <GenerationProgress
+                isGenerating={isGenerating}
+                error={error}
+                prompt={currentPrompt}
+              />
+              {error && !isGenerating && <p className={styles.error}>{error}</p>}
             </div>
           )}
 

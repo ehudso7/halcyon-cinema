@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
+import UsageStats from './UsageStats';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -41,7 +42,9 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
               <span className="spinner" />
             </div>
           ) : session ? (
-            <div className={styles.userMenu}>
+            <>
+              <UsageStats compact />
+              <div className={styles.userMenu}>
               <button
                 onClick={() => setShowDropdown(!showDropdown)}
                 className={styles.userButton}
@@ -87,6 +90,7 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
                 </>
               )}
             </div>
+            </>
           ) : (
             <div className={styles.authButtons}>
               <Link href="/auth/signin" className={styles.signInBtn}>

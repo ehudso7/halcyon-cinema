@@ -27,6 +27,12 @@ export default function Footer() {
             </div>
 
             <div className={styles.linkGroup}>
+              <h4 className={styles.linkTitle}>Legal</h4>
+              <Link href="/terms" className={styles.link}>Terms of Service</Link>
+              <Link href="/privacy" className={styles.link}>Privacy Policy</Link>
+            </div>
+
+            <div className={styles.linkGroup}>
               <h4 className={styles.linkTitle}>Resources</h4>
               <Link href="/api/health" className={styles.link}>API Status</Link>
               <a
@@ -46,9 +52,9 @@ export default function Footer() {
             &copy; {currentYear} HALCYON-Cinema. All rights reserved.
           </p>
           <div className={styles.badges}>
-            <span className={styles.badge}>Next.js 14</span>
+            <span className={styles.badge}>Next.js 16</span>
             <span className={styles.badge}>TypeScript</span>
-            <span className={styles.badge}>OpenAI</span>
+            <span className={styles.badge}>DALL-E 3</span>
           </div>
         </div>
       </div>

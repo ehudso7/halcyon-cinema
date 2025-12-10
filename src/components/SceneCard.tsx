@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Scene } from '@/types';
+import ImageWithFallback from './ImageWithFallback';
 import styles from './SceneCard.module.css';
 
 interface SceneCardProps {
@@ -26,25 +26,23 @@ export default function SceneCard({ scene, index }: SceneCardProps) {
       className={styles.card}
     >
       <div className={styles.thumbnail}>
-        {scene.imageUrl ? (
-          <Image
-            src={scene.imageUrl}
-            alt={`Scene ${index + 1}`}
-            className={styles.image}
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-            priority={index < 3}
-          />
-        ) : (
-          <div className={styles.placeholder}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <path d="M21 15l-5-5L5 21" />
+        <ImageWithFallback
+          src={scene.imageUrl}
+          alt={`Scene ${index + 1}`}
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          priority={index < 3}
+          fallbackType="scene"
+        />
+        <div className={styles.number}>Scene {index + 1}</div>
+        {scene.imageUrl && (
+          <div className={styles.aiBadge}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
             </svg>
+            AI
           </div>
         )}
-        <div className={styles.number}>Scene {index + 1}</div>
       </div>
       <div className={styles.content}>
         <p className={styles.prompt}>{truncatedPrompt}</p>
