@@ -1,14 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
+import Breadcrumb from '@/components/Breadcrumb';
+import ProductionProgress from '@/components/ProductionProgress';
 import ProjectNavigation from '@/components/ProjectNavigation';
 import SceneCard from '@/components/SceneCard';
+import SceneFilters from '@/components/SceneFilters';
 import Pagination from '@/components/Pagination';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
-import { Project } from '@/types';
+import { Project, Scene } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Project.module.css';
@@ -22,18 +25,25 @@ interface ProjectPageProps {
 export default function ProjectPage({ project: initialProject }: ProjectPageProps) {
   const router = useRouter();
   const [project, setProject] = useState<Project>(initialProject);
+  const [filteredScenes, setFilteredScenes] = useState<Scene[]>(initialProject.scenes);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPromptBuilder, setShowPromptBuilder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Paginated scenes
+  // Handle filter changes
+  const handleFilterChange = useCallback((scenes: Scene[]) => {
+    setFilteredScenes(scenes);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, []);
+
+  // Paginated scenes (use filtered scenes)
   const paginatedScenes = useMemo(() => {
     const startIndex = (currentPage - 1) * SCENES_PER_PAGE;
-    return project.scenes.slice(startIndex, startIndex + SCENES_PER_PAGE);
-  }, [project.scenes, currentPage]);
+    return filteredScenes.slice(startIndex, startIndex + SCENES_PER_PAGE);
+  }, [filteredScenes, currentPage]);
 
-  const totalPages = Math.ceil(project.scenes.length / SCENES_PER_PAGE);
+  const totalPages = Math.ceil(filteredScenes.length / SCENES_PER_PAGE);
 
   const handleGenerateScene = async (data: PromptData) => {
     setIsGenerating(true);
@@ -75,6 +85,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             mood: data.mood,
             aspectRatio: data.aspectRatio,
           },
+          characterIds: data.characterIds,
         }),
       });
 
@@ -89,6 +100,8 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
         ...prev,
         scenes: [...prev.scenes, newScene],
       }));
+      // Also update filtered scenes to include the new scene
+      setFilteredScenes(prev => [...prev, newScene]);
 
       setShowPromptBuilder(false);
 
@@ -132,10 +145,19 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
         <meta name="description" content={project.description || `Scenes for ${project.name}`} />
       </Head>
 
-      <Header showBackLink backLinkHref="/" backLinkText="Projects" />
+      <Header />
 
       <main className="page">
         <div className="container">
+          <Breadcrumb
+            items={[
+              { label: 'Projects', href: '/' },
+              { label: project.name },
+            ]}
+          />
+
+          <ProductionProgress project={project} />
+
           <div className={styles.header}>
             <div className={styles.headerInfo}>
               <h1 className={styles.title}>{project.name}</h1>
@@ -185,30 +207,51 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
           {showPromptBuilder && (
             <div className={styles.promptBuilderWrapper}>
-              <PromptBuilder onSubmit={handleGenerateScene} isLoading={isGenerating} />
+              <PromptBuilder
+                onSubmit={handleGenerateScene}
+                isLoading={isGenerating}
+                characters={project.characters || []}
+              />
               {error && <p className={styles.error}>{error}</p>}
             </div>
+          )}
+
+          {project.scenes.length > 0 && (
+            <SceneFilters
+              scenes={project.scenes}
+              characters={project.characters}
+              onFilterChange={handleFilterChange}
+            />
           )}
 
           <section className={styles.gallery}>
             {project.scenes.length > 0 ? (
               <>
-                <div className="grid grid-3">
-                  {paginatedScenes.map((scene, index) => (
-                    <SceneCard
-                      key={scene.id}
-                      scene={scene}
-                      index={(currentPage - 1) * SCENES_PER_PAGE + index}
+                {filteredScenes.length > 0 ? (
+                  <>
+                    <div className="grid grid-3">
+                      {paginatedScenes.map((scene, index) => (
+                        <SceneCard
+                          key={scene.id}
+                          scene={scene}
+                          index={(currentPage - 1) * SCENES_PER_PAGE + index}
+                        />
+                      ))}
+                    </div>
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      totalItems={filteredScenes.length}
+                      itemsPerPage={SCENES_PER_PAGE}
                     />
-                  ))}
-                </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  totalItems={project.scenes.length}
-                  itemsPerPage={SCENES_PER_PAGE}
-                />
+                  </>
+                ) : (
+                  <div className="empty-state">
+                    <h3>No matching scenes</h3>
+                    <p>Try adjusting your filters or search term.</p>
+                  </div>
+                )}
               </>
             ) : (
               <div className="empty-state">
