@@ -11,6 +11,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'dalleprodsec.blob.core.windows.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'avatars.githubusercontent.com',
+      },
     ],
   },
   // Security headers for production

@@ -2,6 +2,7 @@ import type { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
 import { SessionProvider } from 'next-auth/react';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { ToastProvider } from '@/components/Toast';
 import Footer from '@/components/Footer';
 import '@/styles/globals.css';
 
@@ -15,10 +16,12 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
   return (
     <SessionProvider session={session}>
       <ErrorBoundary>
-        <div className="app-layout">
-          <Component {...pageProps} />
-          {showFooter && <Footer />}
-        </div>
+        <ToastProvider>
+          <div className="app-layout">
+            <Component {...pageProps} />
+            {showFooter && <Footer />}
+          </div>
+        </ToastProvider>
       </ErrorBoundary>
     </SessionProvider>
   );

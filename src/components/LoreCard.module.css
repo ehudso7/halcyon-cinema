@@ -3,7 +3,7 @@
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   padding: 20px;
-  transition: border-color 0.2s, transform 0.2s;
+  transition: border-color var(--transition), transform var(--transition);
 }
 
 .card:hover {
@@ -21,7 +21,7 @@
 .typeIcon {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: var(--border-radius);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,11 +74,11 @@
 }
 
 .tag {
-  background: var(--color-bg);
+  background: var(--color-background);
   color: var(--color-text-secondary);
   font-size: 0.75rem;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm);
 }
 
 .scenes {
@@ -100,19 +100,19 @@
 .actionBtn {
   background: transparent;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   padding: 6px 10px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition);
   font-size: 0.9rem;
 }
 
 .actionBtn:hover {
-  background: var(--color-bg);
+  background: var(--color-background);
   border-color: var(--color-primary);
 }
 
 .deleteBtn:hover {
-  border-color: #ef4444;
+  border-color: var(--color-error);
   background: rgba(239, 68, 68, 0.1);
 }

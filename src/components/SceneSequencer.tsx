@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import Image from 'next/image';
 import { Scene, ShotBlock } from '@/types';
 import styles from './SceneSequencer.module.css';
 
@@ -7,6 +8,7 @@ interface SceneSequencerProps {
   initialOrder?: ShotBlock[];
   onSave?: (shots: ShotBlock[]) => void;
   onExport?: (shots: ShotBlock[]) => void;
+  isSaving?: boolean;
 }
 
 const TRANSITIONS = [
@@ -16,7 +18,7 @@ const TRANSITIONS = [
   { value: 'wipe', label: 'Wipe' },
 ];
 
-export default function SceneSequencer({ scenes, initialOrder, onSave, onExport }: SceneSequencerProps) {
+export default function SceneSequencer({ scenes, initialOrder, onSave, onExport, isSaving = false }: SceneSequencerProps) {
   const [shots, setShots] = useState<ShotBlock[]>(() => {
     if (initialOrder && initialOrder.length > 0) {
       return initialOrder;
@@ -129,8 +131,19 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport 
         </div>
         <div className={styles.actions}>
           {onSave && (
-            <button className="btn btn-secondary" onClick={() => onSave(shots)}>
-              Save Sequence
+            <button
+              className="btn btn-secondary"
+              onClick={() => onSave(shots)}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <>
+                  <span className={styles.spinner} />
+                  Saving...
+                </>
+              ) : (
+                'Save Sequence'
+              )}
             </button>
           )}
           {onExport && (
@@ -161,7 +174,12 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport 
 
               <div className={styles.thumbnail}>
                 {scene.imageUrl ? (
-                  <img src={scene.imageUrl} alt={shot.title} />
+                  <Image
+                    src={scene.imageUrl}
+                    alt={shot.title || `Scene ${index + 1}`}
+                    fill
+                    sizes="120px"
+                  />
                 ) : (
                   <div className={styles.noImage}>🎬</div>
                 )}
@@ -269,7 +287,12 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport 
                 onClick={() => addScene(scene.id)}
               >
                 {scene.imageUrl ? (
-                  <img src={scene.imageUrl} alt="" />
+                  <Image
+                    src={scene.imageUrl}
+                    alt={`Available scene`}
+                    fill
+                    sizes="80px"
+                  />
                 ) : (
                   <div className={styles.noImage}>🎬</div>
                 )}

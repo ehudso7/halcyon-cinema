@@ -1,25 +1,44 @@
 :root {
+  /* Primary color palette */
   --color-primary: #6366f1;
   --color-primary-hover: #4f46e5;
+  --color-primary-light: #818cf8;
+  --color-primary-rgb: 99, 102, 241;
   --color-secondary: #10b981;
+
+  /* Background colors */
   --color-background: #0f0f0f;
   --color-surface: #1a1a1a;
   --color-surface-hover: #252525;
+
+  /* Border and text */
   --color-border: #333333;
   --color-text: #ffffff;
   --color-text-secondary: #a0a0a0;
+
+  /* Status colors */
   --color-error: #ef4444;
   --color-warning: #f59e0b;
+  --color-success: #22c55e;
+  --color-info: #3b82f6;
+
+  /* Layout */
   --border-radius: 8px;
+  --border-radius-lg: 12px;
+  --border-radius-sm: 4px;
   --transition: 150ms ease;
 
-  /* Aliases for component consistency */
+  /* Aliases for backward compatibility */
   --primary-color: var(--color-primary);
+  --primary: var(--color-primary);
+  --primary-light: var(--color-primary-light);
   --accent-color: var(--color-secondary);
   --card-bg: var(--color-surface);
   --border-color: var(--color-border);
   --text-primary: var(--color-text);
   --text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-secondary);
+  --color-bg: var(--color-background);
 }
 
 * {

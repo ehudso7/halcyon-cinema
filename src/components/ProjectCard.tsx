@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Project } from '@/types';
 import styles from './ProjectCard.module.css';
 
@@ -21,7 +22,13 @@ export default function ProjectCard({ project }: ProjectCardProps) {
     <Link href={`/project/${project.id}`} className={styles.card}>
       <div className={styles.thumbnail}>
         {thumbnail ? (
-          <img src={thumbnail} alt={project.name} className={styles.thumbnailImage} />
+          <Image
+            src={thumbnail}
+            alt={project.name}
+            className={styles.thumbnailImage}
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+          />
         ) : (
           <div className={styles.placeholder}>
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">

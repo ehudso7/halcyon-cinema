@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { Character } from '@/types';
 import styles from './CharacterCard.module.css';
 
@@ -27,7 +28,13 @@ export default function CharacterCard({
         className={`${styles.compactCard} ${selected ? styles.selected : ''}`}
       >
         {character.imageUrl ? (
-          <img src={character.imageUrl} alt={character.name} className={styles.compactImage} />
+          <Image
+            src={character.imageUrl}
+            alt={character.name}
+            className={styles.compactImage}
+            width={32}
+            height={32}
+          />
         ) : (
           <div className={styles.compactPlaceholder}>
             {character.name[0].toUpperCase()}
@@ -47,7 +54,13 @@ export default function CharacterCard({
     <div className={styles.card}>
       <div className={styles.header}>
         {character.imageUrl ? (
-          <img src={character.imageUrl} alt={character.name} className={styles.avatar} />
+          <Image
+            src={character.imageUrl}
+            alt={character.name}
+            className={styles.avatar}
+            width={48}
+            height={48}
+          />
         ) : (
           <div className={styles.avatarPlaceholder}>
             {character.name[0].toUpperCase()}

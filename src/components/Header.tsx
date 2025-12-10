@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import styles from './Header.module.css';
 
@@ -46,10 +47,12 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
                 className={styles.userButton}
               >
                 {session.user?.image ? (
-                  <img
+                  <Image
                     src={session.user.image}
                     alt={session.user.name || 'User'}
                     className={styles.avatar}
+                    width={32}
+                    height={32}
                   />
                 ) : (
                   <div className={styles.avatarPlaceholder}>
