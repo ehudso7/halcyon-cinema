@@ -133,6 +133,27 @@
   border-radius: var(--border-radius);
 }
 
+.aiBadge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aiBadge svg {
+  opacity: 0.8;
+}
+
 @media (max-width: 1024px) {
   .viewer {
     grid-template-columns: 1fr;

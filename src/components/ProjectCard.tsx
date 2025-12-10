@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { Project } from '@/types';
+import ImageWithFallback from './ImageWithFallback';
 import styles from './ProjectCard.module.css';
 
 interface ProjectCardProps {
@@ -21,23 +21,13 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Link href={`/project/${project.id}`} className={styles.card}>
       <div className={styles.thumbnail}>
-        {thumbnail ? (
-          <Image
-            src={thumbnail}
-            alt={project.name}
-            className={styles.thumbnailImage}
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-          />
-        ) : (
-          <div className={styles.placeholder}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <circle cx="8.5" cy="8.5" r="1.5" />
-              <path d="M21 15l-5-5L5 21" />
-            </svg>
-          </div>
-        )}
+        <ImageWithFallback
+          src={thumbnail}
+          alt={project.name}
+          fill
+          sizes="(max-width: 768px) 100vw, 33vw"
+          fallbackType="project"
+        />
       </div>
       <div className={styles.content}>
         <h3 className={styles.name}>{project.name}</h3>

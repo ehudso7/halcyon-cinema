@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
-import Image from 'next/image';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import Breadcrumb from '@/components/Breadcrumb';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
+import ImageWithFallback from '@/components/ImageWithFallback';
+import ShareButton from '@/components/ShareButton';
 import { Project, Scene } from '@/types';
 import { getProjectByIdAsync, getSceneByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -135,23 +136,20 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
 
           <div className={styles.viewer}>
             <div className={styles.imageContainer}>
-              {scene.imageUrl ? (
-                <Image
-                  src={scene.imageUrl}
-                  alt={`Scene ${sceneIndex + 1}`}
-                  className={styles.image}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 70vw"
-                  priority
-                />
-              ) : (
-                <div className={styles.placeholder}>
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <path d="M21 15l-5-5L5 21" />
+              <ImageWithFallback
+                src={scene.imageUrl}
+                alt={`Scene ${sceneIndex + 1}`}
+                fill
+                sizes="(max-width: 768px) 100vw, 70vw"
+                priority
+                fallbackType="scene"
+              />
+              {scene.imageUrl && (
+                <div className={styles.aiBadge}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                   </svg>
-                  <p>No image generated</p>
+                  AI-Generated with DALL-E 3
                 </div>
               )}
             </div>
@@ -180,6 +178,10 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
                       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                     </svg>
                   </button>
+                  <ShareButton
+                    title={`Scene ${sceneIndex + 1} - ${project.name}`}
+                    text={scene.prompt.slice(0, 200)}
+                  />
                 </div>
               </div>
 
