@@ -17,14 +17,71 @@ interface SequencePageProps {
   project: Project;
 }
 
-export default function SequencePage({ project }: SequencePageProps) {
+export default function SequencePage({ project: initialProject }: SequencePageProps) {
+  const [project, setProject] = useState(initialProject);
   const [voiceoverText, setVoiceoverText] = useState('');
   const [showVoiceover, setShowVoiceover] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleSaveSequence = async (shots: ShotBlock[]) => {
-    // In a full implementation, this would save to the API
-    console.log('Saving sequence:', shots);
-    alert('Sequence saved! (Demo mode)');
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      // Check if a sequence already exists, update it; otherwise create new
+      const existingSequence = project.sequences?.[0];
+
+      if (existingSequence) {
+        // Update existing sequence
+        const response = await fetch(`/api/projects/${project.id}/sequences/${existingSequence.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: existingSequence.name,
+            shots,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save sequence');
+        }
+
+        const updatedSequence = await response.json();
+        setProject(prev => ({
+          ...prev,
+          sequences: [updatedSequence],
+        }));
+      } else {
+        // Create new sequence
+        const response = await fetch(`/api/projects/${project.id}/sequences`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'Main Sequence',
+            description: `Scene flow for ${project.name}`,
+            shots,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save sequence');
+        }
+
+        const newSequence = await response.json();
+        setProject(prev => ({
+          ...prev,
+          sequences: [newSequence],
+        }));
+      }
+
+      alert('Sequence saved successfully!');
+    } catch (error) {
+      console.error('Error saving sequence:', error);
+      setSaveError(error instanceof Error ? error.message : 'Failed to save sequence');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleExportScript = (shots: ShotBlock[]) => {
@@ -98,6 +155,7 @@ export default function SequencePage({ project }: SequencePageProps) {
             <div className={styles.content}>
               <SceneSequencer
                 scenes={project.scenes}
+                initialOrder={project.sequences?.[0]?.shots}
                 onSave={handleSaveSequence}
                 onExport={handleExportScript}
               />

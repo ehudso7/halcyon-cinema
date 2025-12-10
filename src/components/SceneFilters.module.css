@@ -1,0 +1,187 @@
+.filters {
+  margin-bottom: 24px;
+}
+
+.searchRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.searchWrapper {
+  flex: 1;
+  position: relative;
+  max-width: 400px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted, #666);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 10px 36px;
+  font-size: 0.95rem;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  background: var(--color-surface, #1a1a1a);
+  color: var(--color-text, #fff);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary, #0070f3);
+  box-shadow: 0 0 0 3px rgba(0, 112, 243, 0.15);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted, #666);
+}
+
+.clearSearch {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: var(--color-text-muted, #666);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.clearSearch:hover {
+  color: var(--color-text, #fff);
+  background: var(--color-surface-hover, #333);
+}
+
+.filterToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  background: var(--color-surface, #1a1a1a);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  color: var(--color-text, #fff);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+
+.filterToggle:hover {
+  background: var(--color-surface-hover, #222);
+}
+
+.filterToggle.active {
+  border-color: var(--color-primary, #0070f3);
+  background: rgba(0, 112, 243, 0.1);
+}
+
+.filterBadge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary, #0070f3);
+  border-radius: 50%;
+}
+
+.clearAll {
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+  color: var(--color-text-muted, #888);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.clearAll:hover {
+  color: var(--color-text, #fff);
+  border-color: var(--color-text-muted, #666);
+}
+
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--color-surface, #1a1a1a);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 8px;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filterLabel {
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted, #888);
+}
+
+.filterSelect {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 6px;
+  background: var(--color-background, #0d0d0d);
+  color: var(--color-text, #fff);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filterSelect:hover {
+  border-color: var(--color-text-muted, #666);
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: var(--color-primary, #0070f3);
+}
+
+@media (max-width: 640px) {
+  .searchRow {
+    flex-wrap: wrap;
+  }
+
+  .searchWrapper {
+    max-width: none;
+    width: 100%;
+  }
+
+  .filterToggle {
+    flex: 1;
+  }
+
+  .clearAll {
+    flex: 1;
+  }
+
+  .filterGrid {
+    grid-template-columns: 1fr;
+  }
+}

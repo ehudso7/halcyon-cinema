@@ -1,4 +1,4 @@
-import { Project, Scene, Character, LoreEntry, SceneSequence, LoreType } from '@/types';
+import { Project, Scene, Character, LoreEntry, SceneSequence, ShotBlock, LoreType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
@@ -886,10 +886,15 @@ export function addSequenceToProject(
 export async function addSequenceToProjectAsync(
   projectId: string,
   name: string,
-  description?: string
+  description?: string,
+  shots?: ShotBlock[]
 ): Promise<SceneSequence | null> {
   if (usePostgres) {
-    return dbAddSequence(projectId, name, description);
+    const sequence = await dbAddSequence(projectId, name, description);
+    if (sequence && shots && shots.length > 0) {
+      return dbUpdateSequence(projectId, sequence.id, { shots });
+    }
+    return sequence;
   }
 
   loadFromFile();
@@ -907,7 +912,7 @@ export async function addSequenceToProjectAsync(
     projectId,
     name,
     description,
-    shots: [],
+    shots: shots || [],
     createdAt: now,
     updatedAt: now,
   };
@@ -917,6 +922,18 @@ export async function addSequenceToProjectAsync(
   saveToFile();
 
   return sequence;
+}
+
+export async function getProjectSequencesAsync(projectId: string): Promise<SceneSequence[]> {
+  if (usePostgres) {
+    const project = await dbGetProjectById(projectId);
+    return project?.sequences || [];
+  }
+
+  loadFromFile();
+
+  const project = projects.find(p => p.id === projectId);
+  return project?.sequences || [];
 }
 
 export function getSequenceById(projectId: string, sequenceId: string): SceneSequence | null {
