@@ -41,7 +41,7 @@
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react": "^5.1.2",
     "eslint": "^8.57.0",
-    "eslint-config-next": "^14.2.32",
+    "eslint-config-next": "^16.0.8",
     "jsdom": "^27.3.0",
     "typescript": "^5.4.0",
     "vitest": "^4.0.15"
