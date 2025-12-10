@@ -43,6 +43,22 @@ export default async function handler(
       return res.status(400).json({ error: 'Sequence name is required' });
     }
 
+    // Validate shots if provided
+    if (shots !== undefined && shots !== null) {
+      if (!Array.isArray(shots)) {
+        return res.status(400).json({ error: 'shots must be an array' });
+      }
+      // Validate shot structure
+      for (const shot of shots) {
+        if (typeof shot !== 'object' || shot === null) {
+          return res.status(400).json({ error: 'Each shot must be an object' });
+        }
+        if (typeof shot.sceneId !== 'string') {
+          return res.status(400).json({ error: 'Each shot must have a valid sceneId' });
+        }
+      }
+    }
+
     try {
       const sequence = await addSequenceToProjectAsync(projectId, name.trim(), description, shots);
       if (!sequence) {

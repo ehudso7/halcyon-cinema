@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { SceneSequence, ApiError } from '@/types';
 import { requireAuth } from '@/utils/api-auth';
-import { getProjectByIdAsync, updateSequenceAsync, deleteSequenceAsync } from '@/utils/storage';
+import { getProjectByIdAsync, updateSequenceAsync, deleteSequenceAsync, getProjectSequencesAsync } from '@/utils/storage';
 
 export default async function handler(
   req: NextApiRequest,
@@ -30,8 +30,41 @@ export default async function handler(
     return res.status(403).json({ error: 'Forbidden' });
   }
 
+  // GET - Retrieve single sequence
+  if (req.method === 'GET') {
+    try {
+      const sequences = await getProjectSequencesAsync(projectId);
+      const sequence = sequences.find(s => s.id === sequenceId);
+
+      if (!sequence) {
+        return res.status(404).json({ error: 'Sequence not found' });
+      }
+
+      return res.status(200).json(sequence);
+    } catch (error) {
+      console.error('Error fetching sequence:', error);
+      return res.status(500).json({ error: 'Failed to fetch sequence' });
+    }
+  }
+
   if (req.method === 'PUT') {
     const { name, description, shots } = req.body;
+
+    // Validate shots if provided
+    if (shots !== undefined && shots !== null) {
+      if (!Array.isArray(shots)) {
+        return res.status(400).json({ error: 'shots must be an array' });
+      }
+      // Validate shot structure
+      for (const shot of shots) {
+        if (typeof shot !== 'object' || shot === null) {
+          return res.status(400).json({ error: 'Each shot must be an object' });
+        }
+        if (typeof shot.sceneId !== 'string') {
+          return res.status(400).json({ error: 'Each shot must have a valid sceneId' });
+        }
+      }
+    }
 
     try {
       const sequence = await updateSequenceAsync(projectId, sequenceId, {
@@ -64,6 +97,6 @@ export default async function handler(
     }
   }
 
-  res.setHeader('Allow', ['PUT', 'DELETE']);
+  res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
   return res.status(405).json({ error: `Method ${req.method} not allowed` });
 }
