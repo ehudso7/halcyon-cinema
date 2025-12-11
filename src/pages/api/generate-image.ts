@@ -38,9 +38,11 @@ export default async function handler(
     return res.status(400).json({ error: 'Project ID is required for image generation' });
   }
 
-  // sceneId is optional but must be a string if provided
-  if (sceneId !== undefined && sceneId !== null && typeof sceneId !== 'string') {
-    return res.status(400).json({ error: 'Scene ID, if provided, must be a string' });
+  // sceneId is optional but must be a non-empty string if provided
+  if (sceneId !== undefined && sceneId !== null) {
+    if (typeof sceneId !== 'string' || !sceneId.trim()) {
+      return res.status(400).json({ error: 'Scene ID, if provided, must be a non-empty string' });
+    }
   }
 
   // Validate OpenAI-specific parameters
@@ -92,6 +94,7 @@ export default async function handler(
       return res.status(200).json({
         success: true,
         imageUrl: persistedUrl,
+        urlType: 'permanent',
       });
     } else {
       // persistImage returned the original URL (storage not configured or failed silently)
