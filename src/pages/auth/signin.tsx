@@ -35,7 +35,7 @@ export default function SignIn() {
       // Blocks protocol-relative URLs like "//evil.com" and dangerous characters
       const raw = router.query.callbackUrl;
       const callback = Array.isArray(raw) ? raw[0] : raw;
-      if (typeof callback === 'string' && /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+]*$/.test(callback)) {
+      if (typeof callback === 'string' && /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+:]*$/.test(callback)) {
         sessionStorage.setItem('auth_callback', callback);
       }
     }
