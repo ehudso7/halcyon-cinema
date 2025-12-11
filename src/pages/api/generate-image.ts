@@ -27,6 +27,13 @@ export default async function handler(
     return res.status(429).json({ error: 'Rate limit exceeded. Please wait before generating more images.' });
   }
 
+  // NOTE: Credits are currently tracked client-side in localStorage for UX purposes.
+  // For production-grade credits enforcement, implement:
+  // 1. Database-backed credits storage (e.g., user.creditsRemaining in Prisma schema)
+  // 2. Atomic credit deduction before generation (with transaction/optimistic locking)
+  // 3. Credit rollback on generation failure
+  // The current client-side credits serve as a UX hint, not a security measure.
+
   const { prompt, shotType, style, lighting, mood, size, quality, imageStyle, projectId, sceneId } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
