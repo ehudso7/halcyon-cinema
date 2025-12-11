@@ -33,6 +33,16 @@ export default async function handler(
     return res.status(400).json({ error: 'Name is required' });
   }
 
+  // Validate image field if provided
+  if (image !== undefined && image !== null && typeof image !== 'string') {
+    return res.status(400).json({ error: 'Image must be a string or null' });
+  }
+
+  // Validate data URL format if image is a string
+  if (typeof image === 'string' && !image.startsWith('data:image/')) {
+    return res.status(400).json({ error: 'Image must be a valid data URL' });
+  }
+
   const updates: { name: string; image?: string | null } = { name: name.trim() };
 
   // Handle image update (can be null to remove, string to update, or undefined to skip)

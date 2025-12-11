@@ -10,9 +10,10 @@ import '@/styles/globals.css';
 // Pages that should not show the footer
 const noFooterPages = ['/auth/signin', '/auth/signup', '/auth/error'];
 
-// Apply saved theme on app load
-function useThemeInitialization() {
+// Apply saved preferences on app load
+function usePreferencesInitialization() {
   useEffect(() => {
+    // Load theme preference
     const savedTheme = localStorage.getItem('halcyon-theme');
     if (savedTheme) {
       if (savedTheme === 'system') {
@@ -21,6 +22,31 @@ function useThemeInitialization() {
       } else {
         document.documentElement.setAttribute('data-theme', savedTheme);
       }
+    }
+
+    // Load accessibility settings
+    const savedAccessibility = localStorage.getItem('halcyon-accessibility');
+    if (savedAccessibility) {
+      try {
+        const settings = JSON.parse(savedAccessibility);
+        if (settings.fontSize) {
+          document.documentElement.setAttribute('data-font-size', settings.fontSize);
+        }
+        if (settings.reducedMotion) {
+          document.documentElement.setAttribute('data-reduced-motion', 'true');
+        }
+        if (settings.highContrast) {
+          document.documentElement.setAttribute('data-high-contrast', 'true');
+        }
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+
+    // Load language preference
+    const savedLanguage = localStorage.getItem('halcyon-language');
+    if (savedLanguage) {
+      document.documentElement.lang = savedLanguage;
     }
 
     // Listen for system theme changes when using 'system' preference
@@ -41,8 +67,8 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
   const router = useRouter();
   const showFooter = !noFooterPages.includes(router.pathname);
 
-  // Initialize theme from localStorage
-  useThemeInitialization();
+  // Initialize preferences (theme, accessibility, language) from localStorage
+  usePreferencesInitialization();
 
   return (
     <SessionProvider session={session}>

@@ -76,6 +76,45 @@
   --color-bg: var(--color-background);
 }
 
+/* Font Size Settings */
+[data-font-size="small"] {
+  font-size: 14px;
+}
+
+[data-font-size="medium"] {
+  font-size: 16px;
+}
+
+[data-font-size="large"] {
+  font-size: 18px;
+}
+
+/* Reduced Motion */
+[data-reduced-motion="true"],
+[data-reduced-motion="true"] * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High Contrast Mode */
+[data-high-contrast="true"] {
+  --color-text: #ffffff;
+  --color-text-secondary: #e0e0e0;
+  --color-border: #666666;
+  --color-background: #000000;
+  --color-surface: #1a1a1a;
+}
+
+[data-high-contrast="true"][data-theme="light"] {
+  --color-text: #000000;
+  --color-text-secondary: #333333;
+  --color-border: #333333;
+  --color-background: #ffffff;
+  --color-surface: #f0f0f0;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
