@@ -34,7 +34,7 @@ vi.mock('@/utils/image-storage', () => ({
 import handler from '@/pages/api/generate-image';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 import { generateImage } from '@/utils/openai';
-import { persistImage } from '@/utils/image-storage';
+import { persistImage, isPersistedUrl } from '@/utils/image-storage';
 
 describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   let mockReq: Partial<NextApiRequest>;
@@ -174,5 +174,62 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     expect(mockRes.statusCode).toBe(429);
     const data = mockRes.data as { error: string };
     expect(data.error.toLowerCase()).toContain('rate');
+  });
+
+  it('should return temporary urlType when storage is not configured', async () => {
+    vi.mocked(requireAuth).mockResolvedValue('user-123');
+    vi.mocked(checkRateLimit).mockReturnValue(true);
+    vi.mocked(generateImage).mockResolvedValue({
+      success: true,
+      imageUrl: 'https://openai.com/temp-image.png',
+    });
+    // Simulate storage not configured: persistImage returns original URL
+    vi.mocked(persistImage).mockResolvedValue('https://openai.com/temp-image.png');
+    // isPersistedUrl returns false for non-Supabase URLs
+    vi.mocked(isPersistedUrl).mockReturnValue(false);
+
+    mockReq.body = {
+      prompt: 'A test image',
+      projectId: 'project-123',
+    };
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    expect(mockRes.statusCode).toBe(200);
+    const data = mockRes.data as { success: boolean; imageUrl: string; urlType?: string; warning?: string };
+    expect(data.success).toBe(true);
+    expect(data.urlType).toBe('temporary');
+    expect(data.warning).toContain('temporary');
+  });
+
+  it('should return temporary urlType when persistence fails', async () => {
+    vi.mocked(requireAuth).mockResolvedValue('user-123');
+    vi.mocked(checkRateLimit).mockReturnValue(true);
+    vi.mocked(generateImage).mockResolvedValue({
+      success: true,
+      imageUrl: 'https://openai.com/temp-image.png',
+    });
+    // Simulate persistence failure
+    vi.mocked(persistImage).mockRejectedValue(new Error('Storage connection failed'));
+
+    mockReq.body = {
+      prompt: 'A test image',
+      projectId: 'project-123',
+    };
+
+    await handler(
+      mockReq as NextApiRequest,
+      mockRes as unknown as NextApiResponse
+    );
+
+    expect(mockRes.statusCode).toBe(200);
+    const data = mockRes.data as { success: boolean; imageUrl: string; urlType?: string; warning?: string };
+    expect(data.success).toBe(true);
+    expect(data.imageUrl).toBe('https://openai.com/temp-image.png');
+    expect(data.urlType).toBe('temporary');
+    expect(data.warning).toContain('persistence failed');
   });
 });
