@@ -33,6 +33,7 @@ export default function SignIn() {
       // Validate and store callback URL for redirect after login
       // Only allow single-slash relative paths with URL-safe characters
       // Blocks protocol-relative URLs like "//evil.com" and dangerous characters
+      // Colons allowed for ISO timestamps in query params (e.g., ?time=12:30:00)
       const raw = router.query.callbackUrl;
       const callback = Array.isArray(raw) ? raw[0] : raw;
       if (typeof callback === 'string' && /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+:]*$/.test(callback)) {
