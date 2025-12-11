@@ -2,6 +2,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { getSupabaseServerClient, isSupabaseAdminConfigured } from './supabase';
 
 const BUCKET_NAME = 'scene-images';
+const DOWNLOAD_TIMEOUT_MS = 30000; // 30 second timeout for image downloads
+
+// Cache to avoid repeated bucket existence checks
+let bucketVerified = false;
 
 /**
  * Image Storage Utility
@@ -16,23 +20,70 @@ const BUCKET_NAME = 'scene-images';
  */
 
 /**
- * Download an image from a URL and return as a Buffer
+ * Download an image from a URL and return as a Buffer with content type.
+ * Includes URL validation and timeout handling.
+ *
+ * @param url - The URL to download the image from
+ * @returns Object containing the image buffer and detected content type
+ * @throws Error if URL is invalid, request times out, or download fails
  */
-async function downloadImage(url: string): Promise<Buffer> {
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+async function downloadImage(url: string): Promise<{ buffer: Buffer; contentType: string }> {
+  // Validate URL format
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    throw new Error(`Invalid URL format: ${url}`);
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+  // Only allow HTTPS URLs for security
+  if (parsedUrl.protocol !== 'https:') {
+    throw new Error(`Only HTTPS URLs are allowed, got: ${parsedUrl.protocol}`);
+  }
+
+  // Create abort controller for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+    }
+
+    // Get content type from response headers, default to image/png
+    const contentType = response.headers.get('content-type') || 'image/png';
+
+    const arrayBuffer = await response.arrayBuffer();
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      contentType: contentType.split(';')[0].trim(), // Remove charset if present
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Image download timed out after ${DOWNLOAD_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 /**
- * Ensure the storage bucket exists, creating it if necessary
+ * Ensure the storage bucket exists, creating it if necessary.
+ * Uses a module-level cache to avoid repeated API calls.
+ *
+ * @throws Error if bucket creation fails
  */
 async function ensureBucketExists(): Promise<void> {
+  // Skip check if bucket was already verified in this process
+  if (bucketVerified) {
+    return;
+  }
+
   const supabase = getSupabaseServerClient();
 
   // Check if bucket exists
@@ -53,21 +104,45 @@ async function ensureBucketExists(): Promise<void> {
     });
 
     if (createError) {
-      // Bucket might have been created by another request
-      if (!createError.message.includes('already exists')) {
+      // Check for duplicate key error (bucket created by concurrent request)
+      // Supabase may return code '23505' or message containing 'already exists'
+      const isDuplicateError =
+        (createError as { code?: string }).code === '23505' ||
+        createError.message.includes('already exists');
+
+      if (!isDuplicateError) {
         throw new Error(`Failed to create storage bucket: ${createError.message}`);
       }
     }
   }
+
+  // Mark bucket as verified for future calls
+  bucketVerified = true;
 }
 
 /**
- * Persist an image from a temporary URL to Supabase Storage
+ * Get file extension from content type
+ */
+function getExtensionFromContentType(contentType: string): string {
+  const typeMap: Record<string, string> = {
+    'image/png': 'png',
+    'image/jpeg': 'jpg',
+    'image/webp': 'webp',
+  };
+  return typeMap[contentType] || 'png';
+}
+
+/**
+ * Persist an image from a temporary URL to Supabase Storage.
+ *
+ * Downloads the image from the temporary URL and uploads it to Supabase Storage,
+ * returning a permanent URL. If persistence fails, returns the original URL
+ * as a fallback (which will work for ~1 hour).
  *
  * @param temporaryUrl - The temporary OpenAI DALL-E URL
  * @param projectId - The project ID (for organizing files)
  * @param sceneId - Optional scene ID (for organizing files)
- * @returns The permanent Supabase Storage URL
+ * @returns The permanent Supabase Storage URL, or original URL on failure
  */
 export async function persistImage(
   temporaryUrl: string,
@@ -85,21 +160,22 @@ export async function persistImage(
     // Ensure bucket exists
     await ensureBucketExists();
 
-    // Download the image
-    const imageBuffer = await downloadImage(temporaryUrl);
+    // Download the image with content type detection
+    const { buffer: imageBuffer, contentType } = await downloadImage(temporaryUrl);
 
-    // Generate a unique filename
+    // Generate a unique filename with correct extension
     const imageId = uuidv4();
+    const extension = getExtensionFromContentType(contentType);
     const filename = sceneId
-      ? `${projectId}/${sceneId}/${imageId}.png`
-      : `${projectId}/${imageId}.png`;
+      ? `${projectId}/${sceneId}/${imageId}.${extension}`
+      : `${projectId}/${imageId}.${extension}`;
 
     // Upload to Supabase Storage
     const supabase = getSupabaseServerClient();
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(filename, imageBuffer, {
-        contentType: 'image/png',
+        contentType,
         cacheControl: '31536000', // 1 year cache
         upsert: false,
       });
@@ -127,7 +203,7 @@ export async function persistImage(
 }
 
 /**
- * Delete an image from Supabase Storage
+ * Delete an image from Supabase Storage.
  *
  * @param imageUrl - The Supabase Storage URL to delete
  * @returns true if deleted successfully, false otherwise
@@ -137,15 +213,29 @@ export async function deleteImage(imageUrl: string): Promise<boolean> {
     return false;
   }
 
+  if (!imageUrl) {
+    console.warn('[image-storage] deleteImage called with empty URL');
+    return false;
+  }
+
   try {
+    // Validate and parse the URL
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(imageUrl);
+    } catch {
+      console.warn('[image-storage] deleteImage called with invalid URL:', imageUrl);
+      return false;
+    }
+
     const supabase = getSupabaseServerClient();
 
     // Extract the file path from the URL
-    const url = new URL(imageUrl);
-    const pathParts = url.pathname.split(`/${BUCKET_NAME}/`);
+    const pathParts = parsedUrl.pathname.split(`/${BUCKET_NAME}/`);
 
     if (pathParts.length < 2) {
-      return false; // Not a Supabase Storage URL
+      // Not a Supabase Storage URL for this bucket
+      return false;
     }
 
     const filePath = pathParts[1];
@@ -167,7 +257,10 @@ export async function deleteImage(imageUrl: string): Promise<boolean> {
 }
 
 /**
- * Check if a URL is a persisted Supabase Storage URL
+ * Check if a URL is a persisted Supabase Storage URL.
+ *
+ * @param url - The URL to check
+ * @returns true if the URL points to this app's Supabase Storage bucket
  */
 export function isPersistedUrl(url: string): boolean {
   if (!url) return false;
@@ -176,8 +269,22 @@ export function isPersistedUrl(url: string): boolean {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
     if (!supabaseUrl) return false;
 
-    return url.includes(supabaseUrl) && url.includes(BUCKET_NAME);
-  } catch {
+    // Validate URL format and check if it matches Supabase Storage pattern
+    const parsedUrl = new URL(url);
+    const supabaseHost = new URL(supabaseUrl).host;
+
+    return parsedUrl.host === supabaseHost &&
+           parsedUrl.pathname.includes(`/storage/`) &&
+           parsedUrl.pathname.includes(BUCKET_NAME);
+  } catch (error) {
+    console.error('[image-storage] Error checking if URL is persisted:', error);
     return false;
   }
+}
+
+/**
+ * Reset the bucket verification cache (mainly for testing purposes)
+ */
+export function resetBucketCache(): void {
+  bucketVerified = false;
 }
