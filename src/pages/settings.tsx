@@ -1,7 +1,7 @@
 import { useState, useRef, FormEvent, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth/next';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -24,6 +24,7 @@ type Theme = 'dark' | 'light' | 'system';
 
 export default function Settings({ user }: SettingsProps) {
   const { showToast } = useToast();
+  const { update: updateSession } = useSession();
 
   // Profile state
   const [name, setName] = useState(user.name);
@@ -33,9 +34,9 @@ export default function Settings({ user }: SettingsProps) {
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper to resize image for avatar
-  const resizeImage = (dataUrl: string, maxSize: number = 128): Promise<string> => {
-    return new Promise((resolve) => {
+  // Helper to resize image for avatar - preserves PNG transparency
+  const resizeImage = (dataUrl: string, maxSize: number = 128, quality: number = 0.8): Promise<string> => {
+    return new Promise((resolve, reject) => {
       const img = document.createElement('img');
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -63,7 +64,15 @@ export default function Settings({ user }: SettingsProps) {
         canvas.width = width;
         canvas.height = height;
         ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
+
+        // Preserve original format (PNG for transparency, JPEG for photos)
+        const mimeType = dataUrl.match(/data:(image\/[^;]+)/)?.[1] || 'image/jpeg';
+        const outputFormat = mimeType === 'image/png' ? 'image/png' : 'image/jpeg';
+        resolve(canvas.toDataURL(outputFormat, quality));
+      };
+      img.onerror = () => {
+        // Return original on error or reject with error
+        reject(new Error('Failed to load image for resizing'));
       };
       img.src = dataUrl;
     });
@@ -85,6 +94,16 @@ export default function Settings({ user }: SettingsProps) {
     projectAlerts: true,
     weeklyDigest: false,
   });
+
+  // Accessibility settings
+  type FontSize = 'small' | 'medium' | 'large';
+  const [fontSize, setFontSize] = useState<FontSize>('medium');
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
+
+  // Language preference
+  type Language = 'en' | 'es' | 'fr' | 'de' | 'ja' | 'zh';
+  const [language, setLanguage] = useState<Language>('en');
 
   // Delete account modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -114,6 +133,39 @@ export default function Settings({ user }: SettingsProps) {
     }
   }, []);
 
+  // Load accessibility settings from localStorage
+  useEffect(() => {
+    const savedAccessibility = localStorage.getItem('halcyon-accessibility');
+    if (savedAccessibility) {
+      try {
+        const settings = JSON.parse(savedAccessibility);
+        if (settings.fontSize) setFontSize(settings.fontSize);
+        if (settings.reducedMotion !== undefined) setReducedMotion(settings.reducedMotion);
+        if (settings.highContrast !== undefined) setHighContrast(settings.highContrast);
+
+        // Apply settings to document
+        document.documentElement.setAttribute('data-font-size', settings.fontSize || 'medium');
+        if (settings.reducedMotion) {
+          document.documentElement.setAttribute('data-reduced-motion', 'true');
+        }
+        if (settings.highContrast) {
+          document.documentElement.setAttribute('data-high-contrast', 'true');
+        }
+      } catch {
+        // Use defaults if parsing fails
+      }
+    }
+  }, []);
+
+  // Load language preference from localStorage
+  useEffect(() => {
+    const savedLanguage = localStorage.getItem('halcyon-language') as Language;
+    if (savedLanguage) {
+      setLanguage(savedLanguage);
+      document.documentElement.lang = savedLanguage;
+    }
+  }, []);
+
   const handleUpdateProfile = async (e: FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -138,10 +190,18 @@ export default function Settings({ user }: SettingsProps) {
         throw new Error(data.error || 'Failed to update profile');
       }
 
+      // Update local state
       setSavedName(name);
       if (imageChanged) {
         setSavedAvatar(avatar);
       }
+
+      // Update NextAuth session to persist changes across page loads
+      await updateSession({
+        name,
+        image: avatar,
+      });
+
       showToast('Profile updated successfully!', 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Failed to update profile. Please try again.', 'error');
@@ -157,17 +217,29 @@ export default function Settings({ user }: SettingsProps) {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('Image must be less than 5MB', 'error');
+      // Account for base64 encoding overhead (~33% increase)
+      // API limit is 4MB, so stay under ~3MB for the original file
+      if (file.size > 3 * 1024 * 1024) {
+        showToast('Image must be less than 3MB', 'error');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        showToast('Please upload an image file', 'error');
         return;
       }
 
       const reader = new FileReader();
       reader.onload = async (event) => {
         const dataUrl = event.target?.result as string;
-        // Resize image to 128x128 for avatar
-        const resized = await resizeImage(dataUrl, 128);
-        setAvatar(resized);
+        try {
+          // Resize image to 128x128 for avatar
+          const resized = await resizeImage(dataUrl, 128);
+          setAvatar(resized);
+        } catch {
+          showToast('Failed to process image. Please try a different file.', 'error');
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -235,6 +307,45 @@ export default function Settings({ user }: SettingsProps) {
     const updated = { ...notifications, [key]: !notifications[key] };
     setNotifications(updated);
     localStorage.setItem('halcyon-notifications', JSON.stringify(updated));
+  };
+
+  const handleFontSizeChange = (newSize: FontSize) => {
+    setFontSize(newSize);
+    const settings = { fontSize: newSize, reducedMotion, highContrast };
+    localStorage.setItem('halcyon-accessibility', JSON.stringify(settings));
+    document.documentElement.setAttribute('data-font-size', newSize);
+    showToast(`Font size changed to ${newSize}`, 'success');
+  };
+
+  const handleReducedMotionChange = () => {
+    const newValue = !reducedMotion;
+    setReducedMotion(newValue);
+    const settings = { fontSize, reducedMotion: newValue, highContrast };
+    localStorage.setItem('halcyon-accessibility', JSON.stringify(settings));
+    if (newValue) {
+      document.documentElement.setAttribute('data-reduced-motion', 'true');
+    } else {
+      document.documentElement.removeAttribute('data-reduced-motion');
+    }
+  };
+
+  const handleHighContrastChange = () => {
+    const newValue = !highContrast;
+    setHighContrast(newValue);
+    const settings = { fontSize, reducedMotion, highContrast: newValue };
+    localStorage.setItem('halcyon-accessibility', JSON.stringify(settings));
+    if (newValue) {
+      document.documentElement.setAttribute('data-high-contrast', 'true');
+    } else {
+      document.documentElement.removeAttribute('data-high-contrast');
+    }
+  };
+
+  const handleLanguageChange = (newLanguage: Language) => {
+    setLanguage(newLanguage);
+    localStorage.setItem('halcyon-language', newLanguage);
+    document.documentElement.lang = newLanguage;
+    showToast('Language preference saved', 'success');
   };
 
   const handleExportData = async () => {
@@ -571,6 +682,112 @@ export default function Settings({ user }: SettingsProps) {
                     className={styles.toggle}
                   />
                 </label>
+              </div>
+            </section>
+
+            {/* Accessibility Section */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <circle cx="12" cy="12" r="4" />
+                  <line x1="12" y1="2" x2="12" y2="4" />
+                  <line x1="12" y1="20" x2="12" y2="22" />
+                  <line x1="2" y1="12" x2="4" y2="12" />
+                  <line x1="20" y1="12" x2="22" y2="12" />
+                </svg>
+                Accessibility
+              </h2>
+
+              {/* Font Size */}
+              <div className={styles.settingGroup}>
+                <label className={styles.settingLabel}>Font Size</label>
+                <div className={styles.themeOptions}>
+                  <button
+                    type="button"
+                    className={`${styles.themeOption} ${fontSize === 'small' ? styles.active : ''}`}
+                    onClick={() => handleFontSizeChange('small')}
+                    aria-pressed={fontSize === 'small'}
+                  >
+                    <span style={{ fontSize: '12px' }}>A</span>
+                    <span>Small</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.themeOption} ${fontSize === 'medium' ? styles.active : ''}`}
+                    onClick={() => handleFontSizeChange('medium')}
+                    aria-pressed={fontSize === 'medium'}
+                  >
+                    <span style={{ fontSize: '16px' }}>A</span>
+                    <span>Medium</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.themeOption} ${fontSize === 'large' ? styles.active : ''}`}
+                    onClick={() => handleFontSizeChange('large')}
+                    aria-pressed={fontSize === 'large'}
+                  >
+                    <span style={{ fontSize: '20px' }}>A</span>
+                    <span>Large</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Accessibility Toggles */}
+              <div className={styles.toggleList}>
+                <label className={styles.toggleItem}>
+                  <div className={styles.toggleInfo}>
+                    <span className={styles.toggleLabel}>Reduce Motion</span>
+                    <span className={styles.toggleDesc}>Minimize animations and transitions</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={reducedMotion}
+                    onChange={handleReducedMotionChange}
+                    className={styles.toggle}
+                  />
+                </label>
+                <label className={styles.toggleItem}>
+                  <div className={styles.toggleInfo}>
+                    <span className={styles.toggleLabel}>High Contrast</span>
+                    <span className={styles.toggleDesc}>Increase visual contrast for better readability</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={highContrast}
+                    onChange={handleHighContrastChange}
+                    className={styles.toggle}
+                  />
+                </label>
+              </div>
+            </section>
+
+            {/* Language Section */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+                </svg>
+                Language
+              </h2>
+              <div className={styles.field}>
+                <label htmlFor="language" className={styles.label}>Display Language</label>
+                <select
+                  id="language"
+                  value={language}
+                  onChange={(e) => handleLanguageChange(e.target.value as Language)}
+                  className="input"
+                >
+                  <option value="en">English</option>
+                  <option value="es">Español (Spanish)</option>
+                  <option value="fr">Français (French)</option>
+                  <option value="de">Deutsch (German)</option>
+                  <option value="ja">日本語 (Japanese)</option>
+                  <option value="zh">中文 (Chinese)</option>
+                </select>
+                <p className={styles.hint}>Choose your preferred language for the interface</p>
               </div>
             </section>
 

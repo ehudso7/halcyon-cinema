@@ -538,3 +538,16 @@
     width: 100%;
   }
 }
+
+/* Setting Group (for grouped options like font size) */
+.settingGroup {
+  margin-bottom: 20px;
+}
+
+.settingLabel {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 12px;
+}
