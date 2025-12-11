@@ -1,9 +1,21 @@
+/* Card Wrapper */
+.cardWrapper {
+  position: relative;
+}
+
+.cardWrapper.selected .card {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+/* Grid View Card */
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   padding: 20px;
   transition: border-color var(--transition), transform var(--transition);
+  cursor: pointer;
 }
 
 .card:hover {
@@ -55,6 +67,10 @@
   font-size: 0.95rem;
   line-height: 1.5;
   margin: 0 0 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .description {
@@ -64,6 +80,10 @@
   margin: 0 0 12px;
   padding-left: 12px;
   border-left: 2px solid var(--color-border);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .tags {
@@ -90,29 +110,211 @@
   color: var(--color-text-secondary);
 }
 
-.actions {
+/* Card Actions Overlay */
+.cardActions {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
   display: flex;
-  gap: 8px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border);
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.2s;
+}
+
+.cardWrapper:hover .cardActions {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .actionBtn {
-  background: transparent;
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-sm);
-  padding: 6px 10px;
+  border-radius: 6px;
+  color: var(--color-text-secondary);
   cursor: pointer;
-  transition: all var(--transition);
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
 }
 
 .actionBtn:hover {
-  background: var(--color-background);
+  background-color: var(--color-background);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.actionBtn.deleteBtn:hover {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+/* Checkbox */
+.checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.checkboxInner {
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.checkboxInner:hover {
   border-color: var(--color-primary);
 }
 
-.deleteBtn:hover {
-  border-color: var(--color-error);
-  background: rgba(239, 68, 68, 0.1);
+.checkboxInner.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkboxInner.checked svg {
+  color: white;
+}
+
+/* List View Card */
+.listCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  transition: all var(--transition);
+}
+
+.listCard:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-hover);
+}
+
+.listCard.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.listTypeIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.listContent {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.listName {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listType {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.listSummary {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.listTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.listTag {
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+}
+
+.moreTags {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  padding: 2px 6px;
+  background: var(--color-background);
+  border-radius: var(--border-radius-sm);
+}
+
+.listActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .listCard {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .listContent {
+    width: calc(100% - 80px);
+  }
+
+  .listActions {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .cardActions {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

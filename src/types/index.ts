@@ -39,6 +39,7 @@ export interface Scene {
   updatedAt: string;
   metadata?: SceneMetadata;
   characterIds?: string[];
+  notes?: string;
 }
 
 export interface SceneMetadata {
