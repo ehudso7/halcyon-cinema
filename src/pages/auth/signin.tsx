@@ -31,9 +31,10 @@ export default function SignIn() {
     }
     if (router.query.callbackUrl) {
       // Validate and store callback URL for redirect after login
-      // Only allow relative URLs to prevent open redirect attacks
-      const callback = router.query.callbackUrl as string;
-      if (callback.startsWith('/') && !callback.startsWith('//')) {
+      // Only allow single-slash relative paths (e.g., "/dashboard"), not "//evil.com" or "///evil.com"
+      const raw = router.query.callbackUrl;
+      const callback = Array.isArray(raw) ? raw[0] : raw;
+      if (typeof callback === 'string' && /^\/(?!\/)[^?#]*$/.test(callback)) {
         sessionStorage.setItem('auth_callback', callback);
       }
     }
@@ -91,6 +92,7 @@ export default function SignIn() {
       await signIn(provider, { callbackUrl: '/' });
     } catch {
       setError('Failed to initiate sign in. Please try again.');
+    } finally {
       setIsLoading(false);
     }
   };
