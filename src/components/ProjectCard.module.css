@@ -37,6 +37,19 @@
   color: var(--color-border);
 }
 
+.badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
 .content {
   padding: 16px;
 }
@@ -69,4 +82,108 @@
 
 .separator {
   opacity: 0.5;
+}
+
+.characters {
+  color: var(--color-text-secondary);
+}
+
+/* List View Styles */
+.listCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  text-decoration: none;
+  color: var(--color-text);
+  transition: all var(--transition);
+}
+
+.listCard:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-hover);
+}
+
+.listThumbnail {
+  position: relative;
+  width: 80px;
+  height: 60px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: var(--color-background);
+}
+
+.listContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.listName {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listDescription {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listMeta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.listStat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.listStat svg {
+  opacity: 0.7;
+}
+
+.listDate {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .listCard {
+    flex-wrap: wrap;
+  }
+
+  .listContent {
+    order: 2;
+    width: 100%;
+    flex: none;
+  }
+
+  .listMeta {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .listThumbnail {
+    order: 1;
+  }
 }
