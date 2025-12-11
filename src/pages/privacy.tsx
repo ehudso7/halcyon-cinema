@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Header from '@/components/Header';
@@ -24,7 +24,6 @@ export default function PrivacyPolicy() {
   const [activeSection, setActiveSection] = useState('');
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [showToc, setShowToc] = useState(false);
-  const contentRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -124,7 +123,7 @@ export default function PrivacyPolicy() {
             </button>
 
             {/* Main Content */}
-            <article className={styles.legal} ref={contentRef}>
+            <article className={styles.legal}>
               <header className={styles.header}>
                 <div className={styles.headerBadge}>Legal</div>
                 <h1 className={styles.title}>Privacy Policy</h1>

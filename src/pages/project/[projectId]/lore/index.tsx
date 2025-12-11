@@ -192,17 +192,7 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
     });
   }, []);
 
-  const selectAll = useCallback(() => {
-    const filteredIds = filteredAndSortedEntries.map(e => e.id);
-    const allSelected = filteredIds.every(id => selectedEntries.has(id));
-    if (allSelected) {
-      setSelectedEntries(new Set());
-    } else {
-      setSelectedEntries(new Set(filteredIds));
-    }
-  }, []);
-
-  // Filter and sort entries
+  // Filter and sort entries - declared before selectAll since it depends on this
   const filteredAndSortedEntries = useMemo(() => {
     let result = [...entries];
 
@@ -241,6 +231,19 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
 
     return result;
   }, [entries, activeTab, searchQuery, sortBy]);
+
+  // Select all - declared after filteredAndSortedEntries since it depends on it
+  const selectAll = useCallback(() => {
+    const filteredIds = filteredAndSortedEntries.map(e => e.id);
+    setSelectedEntries(prev => {
+      const allSelected = filteredIds.every(id => prev.has(id));
+      if (allSelected) {
+        return new Set();
+      } else {
+        return new Set(filteredIds);
+      }
+    });
+  }, [filteredAndSortedEntries]);
 
   // Statistics
   const stats = useMemo(() => {
@@ -643,7 +646,7 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
             </div>
             <h3>Delete Lore Entry?</h3>
             <p>
-              Are you sure you want to delete <strong>"{showDeleteModal.name}"</strong>?
+              Are you sure you want to delete <strong>&quot;{showDeleteModal.name}&quot;</strong>?
               {showDeleteModal.associatedScenes && showDeleteModal.associatedScenes.length > 0 && (
                 <> This entry is linked to {showDeleteModal.associatedScenes.length} scene{showDeleteModal.associatedScenes.length !== 1 ? 's' : ''}.</>
               )}

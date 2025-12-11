@@ -682,7 +682,9 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
                       )}
                     </div>
                     <div className={styles.historyMeta}>
-                      <p className={styles.historyPrompt}>{item.prompt.slice(0, 60)}...</p>
+                      <p className={styles.historyPrompt}>
+                        {item.prompt.length > 60 ? `${item.prompt.slice(0, 60)}...` : item.prompt}
+                      </p>
                       <p className={styles.historyTime}>{formatDate(item.timestamp)}</p>
                     </div>
                     <div className={styles.historyActions}>
