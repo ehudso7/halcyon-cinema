@@ -38,16 +38,22 @@ export default function SignIn() {
       const callback = Array.isArray(raw) ? raw[0] : raw;
       if (typeof callback === 'string' && /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+:]*$/.test(callback)) {
         // Block dangerous URL schemes even with leading slash (defense in depth)
-        // Decode URL to prevent bypass via encoding (e.g., /%6Aavascript:)
+        // Recursively decode URL to prevent bypass via multi-layer encoding
         const dangerousSchemes = ['/javascript:', '/data:', '/vbscript:', '/file:', '/blob:', '/about:'];
-        let decodedCallback: string;
+        let decodedCallback = callback;
+        const maxIterations = 5;
         try {
-          decodedCallback = decodeURIComponent(callback).toLowerCase();
+          for (let i = 0; i < maxIterations; i++) {
+            const decoded = decodeURIComponent(decodedCallback);
+            if (decoded === decodedCallback) break;
+            decodedCallback = decoded;
+          }
         } catch {
           // Invalid encoding - reject the URL
           return;
         }
-        if (!dangerousSchemes.some(scheme => decodedCallback.startsWith(scheme))) {
+        const lowerDecoded = decodedCallback.toLowerCase();
+        if (!dangerousSchemes.some(scheme => lowerDecoded.startsWith(scheme))) {
           sessionStorage.setItem('auth_callback', callback);
         }
       }
