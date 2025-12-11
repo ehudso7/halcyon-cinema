@@ -538,6 +538,7 @@ export async function getUserById(id: string): Promise<{
   email: string;
   name: string;
   image: string | null;
+  passwordHash: string | null;
   createdAt: string;
   updatedAt: string;
 } | null> {
@@ -546,7 +547,7 @@ export async function getUserById(id: string): Promise<{
   await initializeTables();
 
   const result = await query(
-    'SELECT id, email, name, image, created_at, updated_at FROM users WHERE id = $1::uuid',
+    'SELECT id, email, name, image, password_hash, created_at, updated_at FROM users WHERE id = $1::uuid',
     [id]
   );
 
@@ -558,6 +559,7 @@ export async function getUserById(id: string): Promise<{
     email: row.email as string,
     name: row.name as string,
     image: row.image as string | null,
+    passwordHash: row.password_hash as string | null,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
   };

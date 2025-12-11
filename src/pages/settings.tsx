@@ -1,11 +1,13 @@
-import { useState, FormEvent } from 'react';
+import { useState, useRef, FormEvent, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth/next';
+import { signOut } from 'next-auth/react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 import UsageStats from '@/components/UsageStats';
+import { useToast } from '@/components/Toast';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Settings.module.css';
 
@@ -14,37 +16,230 @@ interface SettingsProps {
     id: string;
     email: string;
     name: string;
+    image?: string;
   };
 }
 
+type Theme = 'dark' | 'light' | 'system';
+
 export default function Settings({ user }: SettingsProps) {
+  const { showToast } = useToast();
+
+  // Profile state
   const [name, setName] = useState(user.name);
+  const [savedName, setSavedName] = useState(user.name);
+  const [avatar, setAvatar] = useState<string | null>(user.image || null);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Password state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+
+  // Theme state
+  const [theme, setTheme] = useState<Theme>('dark');
+
+  // Notification preferences
+  const [notifications, setNotifications] = useState({
+    emailUpdates: true,
+    projectAlerts: true,
+    weeklyDigest: false,
+  });
+
+  // Delete account modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Load theme from localStorage on mount
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('halcyon-theme') as Theme;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  // Load notification preferences from localStorage
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('halcyon-notifications');
+    if (savedNotifications) {
+      try {
+        setNotifications(JSON.parse(savedNotifications));
+      } catch {
+        // Use defaults if parsing fails
+      }
+    }
+  }, []);
 
   const handleUpdateProfile = async (e: FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setMessage(null);
 
     try {
       const response = await fetch('/api/auth/update-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, image: avatar }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to update profile');
       }
 
-      setMessage({ type: 'success', text: 'Profile updated successfully!' });
+      setSavedName(name);
+      showToast('Profile updated successfully!', 'success');
     } catch {
-      setMessage({ type: 'error', text: 'Failed to update profile. Please try again.' });
+      showToast('Failed to update profile. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('Image must be less than 2MB', 'error');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setAvatar(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatar(null);
+  };
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setPasswordError('');
+
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+
+    setIsChangingPassword(true);
+
+    try {
+      const response = await fetch('/api/auth/change-password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to change password');
+      }
+
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      showToast('Password changed successfully!', 'success');
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : 'Failed to change password');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const handleThemeChange = (newTheme: Theme) => {
+    setTheme(newTheme);
+    localStorage.setItem('halcyon-theme', newTheme);
+
+    // Apply theme to document
+    if (newTheme === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', newTheme);
+    }
+
+    showToast(`Theme changed to ${newTheme}`, 'success');
+  };
+
+  const handleNotificationChange = (key: keyof typeof notifications) => {
+    const updated = { ...notifications, [key]: !notifications[key] };
+    setNotifications(updated);
+    localStorage.setItem('halcyon-notifications', JSON.stringify(updated));
+  };
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+
+    try {
+      const response = await fetch('/api/auth/export-data');
+
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `halcyon-data-${user.id}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      showToast('Data exported successfully!', 'success');
+    } catch {
+      showToast('Failed to export data. Please try again.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const response = await fetch('/api/auth/delete-account', {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete account');
+      }
+
+      showToast('Account deleted. Goodbye!', 'success');
+      setTimeout(() => {
+        signOut({ callbackUrl: '/landing' });
+      }, 1500);
+    } catch {
+      showToast('Failed to delete account. Please try again.', 'error');
+      setIsDeleting(false);
+    }
+  };
+
+  const hasProfileChanges = name !== savedName || avatar !== user.image;
 
   return (
     <>
@@ -73,6 +268,49 @@ export default function Settings({ user }: SettingsProps) {
                 Profile
               </h2>
               <form onSubmit={handleUpdateProfile} className={styles.form}>
+                {/* Avatar */}
+                <div className={styles.avatarSection}>
+                  <div className={styles.avatarWrapper} onClick={handleAvatarClick}>
+                    {avatar ? (
+                      <Image
+                        src={avatar}
+                        alt="Profile avatar"
+                        width={80}
+                        height={80}
+                        className={styles.avatar}
+                      />
+                    ) : (
+                      <div className={styles.avatarPlaceholder}>
+                        {name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                      </div>
+                    )}
+                    <div className={styles.avatarOverlay}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                    </div>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className={styles.hiddenInput}
+                    aria-label="Upload avatar"
+                  />
+                  <div className={styles.avatarActions}>
+                    <button type="button" onClick={handleAvatarClick} className={styles.avatarBtn}>
+                      Change Photo
+                    </button>
+                    {avatar && (
+                      <button type="button" onClick={handleRemoveAvatar} className={styles.avatarRemove}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 <div className={styles.field}>
                   <label htmlFor="email" className={styles.label}>Email</label>
                   <input
@@ -81,9 +319,11 @@ export default function Settings({ user }: SettingsProps) {
                     value={user.email}
                     className="input"
                     disabled
+                    aria-describedby="email-hint"
                   />
-                  <p className={styles.hint}>Email cannot be changed</p>
+                  <p id="email-hint" className={styles.hint}>Email cannot be changed</p>
                 </div>
+
                 <div className={styles.field}>
                   <label htmlFor="name" className={styles.label}>Display Name</label>
                   <input
@@ -93,21 +333,193 @@ export default function Settings({ user }: SettingsProps) {
                     onChange={(e) => setName(e.target.value)}
                     className="input"
                     placeholder="Your name"
+                    maxLength={50}
                   />
+                  <p className={styles.hint}>{name.length}/50 characters</p>
                 </div>
-                {message && (
-                  <p className={`${styles.message} ${styles[message.type]}`}>
-                    {message.text}
-                  </p>
-                )}
+
                 <button
                   type="submit"
                   className="btn btn-primary"
-                  disabled={isSaving || name === user.name}
+                  disabled={isSaving || !hasProfileChanges}
                 >
                   {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
               </form>
+            </section>
+
+            {/* Password Section */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0110 0v4" />
+                </svg>
+                Security
+              </h2>
+              <form onSubmit={handleChangePassword} className={styles.form}>
+                <div className={styles.field}>
+                  <label htmlFor="currentPassword" className={styles.label}>Current Password</label>
+                  <input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="input"
+                    placeholder="Enter current password"
+                  />
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="newPassword" className={styles.label}>New Password</label>
+                  <input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="input"
+                    placeholder="Enter new password"
+                    minLength={8}
+                  />
+                  <p className={styles.hint}>Minimum 8 characters</p>
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="confirmPassword" className={styles.label}>Confirm New Password</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="input"
+                    placeholder="Confirm new password"
+                  />
+                </div>
+
+                {passwordError && (
+                  <p className={`${styles.message} ${styles.error}`}>{passwordError}</p>
+                )}
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+                >
+                  {isChangingPassword ? 'Changing...' : 'Change Password'}
+                </button>
+              </form>
+            </section>
+
+            {/* Theme Section */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+                Appearance
+              </h2>
+              <div className={styles.themeOptions}>
+                <button
+                  type="button"
+                  className={`${styles.themeOption} ${theme === 'dark' ? styles.active : ''}`}
+                  onClick={() => handleThemeChange('dark')}
+                  aria-pressed={theme === 'dark'}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                  </svg>
+                  <span>Dark</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.themeOption} ${theme === 'light' ? styles.active : ''}`}
+                  onClick={() => handleThemeChange('light')}
+                  aria-pressed={theme === 'light'}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                  <span>Light</span>
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.themeOption} ${theme === 'system' ? styles.active : ''}`}
+                  onClick={() => handleThemeChange('system')}
+                  aria-pressed={theme === 'system'}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                    <line x1="8" y1="21" x2="16" y2="21" />
+                    <line x1="12" y1="17" x2="12" y2="21" />
+                  </svg>
+                  <span>System</span>
+                </button>
+              </div>
+            </section>
+
+            {/* Notifications Section */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 01-3.46 0" />
+                </svg>
+                Notifications
+              </h2>
+              <div className={styles.toggleList}>
+                <label className={styles.toggleItem}>
+                  <div className={styles.toggleInfo}>
+                    <span className={styles.toggleLabel}>Email Updates</span>
+                    <span className={styles.toggleDesc}>Receive updates about new features</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.emailUpdates}
+                    onChange={() => handleNotificationChange('emailUpdates')}
+                    className={styles.toggle}
+                  />
+                </label>
+                <label className={styles.toggleItem}>
+                  <div className={styles.toggleInfo}>
+                    <span className={styles.toggleLabel}>Project Alerts</span>
+                    <span className={styles.toggleDesc}>Get notified about project activity</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.projectAlerts}
+                    onChange={() => handleNotificationChange('projectAlerts')}
+                    className={styles.toggle}
+                  />
+                </label>
+                <label className={styles.toggleItem}>
+                  <div className={styles.toggleInfo}>
+                    <span className={styles.toggleLabel}>Weekly Digest</span>
+                    <span className={styles.toggleDesc}>Weekly summary of your activity</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.weeklyDigest}
+                    onChange={() => handleNotificationChange('weeklyDigest')}
+                    className={styles.toggle}
+                  />
+                </label>
+              </div>
             </section>
 
             {/* Usage Stats Section */}
@@ -175,6 +587,45 @@ export default function Settings({ user }: SettingsProps) {
               </div>
             </section>
 
+            {/* Data Management Section */}
+            <section className={styles.section}>
+              <h2 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                  <polyline points="7,10 12,15 17,10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Data Management
+              </h2>
+              <p className={styles.sectionDesc}>
+                Export all your data including projects, scenes, and settings in JSON format.
+              </p>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleExportData}
+                disabled={isExporting}
+              >
+                {isExporting ? (
+                  <>
+                    <svg className={styles.spinner} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M21 12a9 9 0 11-6.219-8.56" />
+                    </svg>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                      <polyline points="7,10 12,15 17,10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Export My Data
+                  </>
+                )}
+              </button>
+            </section>
+
             {/* Danger Zone */}
             <section className={`${styles.section} ${styles.danger}`}>
               <h2 className={styles.sectionTitle}>
@@ -186,11 +637,11 @@ export default function Settings({ user }: SettingsProps) {
                 Danger Zone
               </h2>
               <p className={styles.dangerText}>
-                These actions are irreversible. Please proceed with caution.
+                Once you delete your account, there is no going back. All your projects, scenes, and data will be permanently removed.
               </p>
               <button
                 className={`btn ${styles.dangerBtn}`}
-                onClick={() => alert('Account deletion is not yet implemented. Contact support for assistance.')}
+                onClick={() => setShowDeleteModal(true)}
               >
                 Delete Account
               </button>
@@ -199,7 +650,65 @@ export default function Settings({ user }: SettingsProps) {
         </div>
       </main>
 
-      <Footer />
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowDeleteModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <h3>Delete Account</h3>
+            </div>
+            <div className={styles.modalBody}>
+              <p>This action is <strong>permanent</strong> and cannot be undone. All your:</p>
+              <ul>
+                <li>Projects and scenes</li>
+                <li>Generated images</li>
+                <li>Characters and lore</li>
+                <li>Account settings</li>
+              </ul>
+              <p>will be permanently deleted.</p>
+              <div className={styles.field}>
+                <label htmlFor="deleteConfirm" className={styles.label}>
+                  Type <strong>DELETE</strong> to confirm
+                </label>
+                <input
+                  id="deleteConfirm"
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="input"
+                  placeholder="DELETE"
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+            <div className={styles.modalFooter}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeleteConfirmText('');
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`btn ${styles.dangerBtn}`}
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete My Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -222,6 +731,7 @@ export const getServerSideProps: GetServerSideProps<SettingsProps> = async (cont
         id: session.user.id,
         email: session.user.email || '',
         name: session.user.name || '',
+        image: session.user.image || undefined,
       },
     },
   };
