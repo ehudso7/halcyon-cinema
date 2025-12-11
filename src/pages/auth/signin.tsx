@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { signIn, getCsrfToken } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -30,8 +30,12 @@ export default function SignIn() {
       setError('Session expired. Please sign in again.');
     }
     if (router.query.callbackUrl) {
-      // Store callback URL for redirect after login
-      sessionStorage.setItem('auth_callback', router.query.callbackUrl as string);
+      // Validate and store callback URL for redirect after login
+      // Only allow relative URLs to prevent open redirect attacks
+      const callback = router.query.callbackUrl as string;
+      if (callback.startsWith('/') && !callback.startsWith('//')) {
+        sessionStorage.setItem('auth_callback', callback);
+      }
     }
   }, [router.query]);
 
@@ -83,7 +87,12 @@ export default function SignIn() {
 
   const handleSocialSignIn = async (provider: string) => {
     setIsLoading(true);
-    await signIn(provider, { callbackUrl: '/' });
+    try {
+      await signIn(provider, { callbackUrl: '/' });
+    } catch {
+      setError('Failed to initiate sign in. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (

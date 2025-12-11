@@ -1048,3 +1048,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Reduced motion support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .badgeDot,
+  .cursor,
+  .previewGlow {
+    animation: none;
+  }
+
+  .testimonialCard {
+    transition: opacity 0.1s ease;
+  }
+
+  .featureCard,
+  .faqItem,
+  .navLink,
+  .btn,
+  .socialLink {
+    transition-duration: 0.1s;
+  }
+}

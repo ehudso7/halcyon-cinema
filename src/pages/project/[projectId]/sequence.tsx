@@ -154,11 +154,14 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
   };
 
   const handleExportScript = (shots: ShotBlock[], format: 'markdown' | 'json' | 'txt' = 'markdown') => {
+    // Calculate total duration from the shots being exported for consistency
+    const exportTotalDuration = shots.reduce((sum, shot) => sum + (shot.duration || 0), 0);
+
     if (format === 'json') {
       const exportData = {
         projectName: project.name,
         exportedAt: new Date().toISOString(),
-        totalDuration: shots.reduce((sum, shot) => sum + (shot.duration || 0), 0),
+        totalDuration: exportTotalDuration,
         shots: shots.map((shot, index) => {
           const scene = project.scenes.find(s => s.id === shot.sceneId);
           return {
@@ -183,7 +186,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
       let script = `${project.name.toUpperCase()}\n`;
       script += `${'='.repeat(project.name.length)}\n\n`;
       script += `Scene Sequence - ${shots.length} shots\n`;
-      script += `Total Runtime: ${formatDuration(stats.totalDuration)}\n\n`;
+      script += `Total Runtime: ${formatDuration(exportTotalDuration)}\n\n`;
       script += `----------------------------------------\n\n`;
 
       shots.forEach((shot, index) => {
@@ -207,7 +210,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
       let script = `# ${project.name}\n\n`;
       script += `## Scene Sequence\n\n`;
       script += `**Total Shots:** ${shots.length}\n`;
-      script += `**Total Runtime:** ${formatDuration(stats.totalDuration)}\n\n`;
+      script += `**Total Runtime:** ${formatDuration(exportTotalDuration)}\n\n`;
       script += `---\n\n`;
 
       shots.forEach((shot, index) => {
