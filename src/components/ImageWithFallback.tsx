@@ -14,6 +14,7 @@ interface ImageWithFallbackProps {
   className?: string;
   priority?: boolean;
   fallbackType?: 'scene' | 'project' | 'character' | 'generic';
+  onLoad?: () => void;
 }
 
 // Generate a consistent gradient based on string hash
@@ -81,6 +82,7 @@ export default function ImageWithFallback({
   className = '',
   priority = false,
   fallbackType = 'generic',
+  onLoad,
 }: ImageWithFallbackProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,7 +125,10 @@ export default function ImageWithFallback({
           sizes={sizes}
           priority={priority}
           className={`${styles.image} ${isLoading ? styles.hidden : ''}`}
-          onLoad={() => setIsLoading(false)}
+          onLoad={() => {
+            setIsLoading(false);
+            onLoad?.();
+          }}
           onError={() => {
             setHasError(true);
             setIsLoading(false);
@@ -137,7 +142,10 @@ export default function ImageWithFallback({
           height={height}
           priority={priority}
           className={`${styles.image} ${isLoading ? styles.hidden : ''}`}
-          onLoad={() => setIsLoading(false)}
+          onLoad={() => {
+            setIsLoading(false);
+            onLoad?.();
+          }}
           onError={() => {
             setHasError(true);
             setIsLoading(false);
