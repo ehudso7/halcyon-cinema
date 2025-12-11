@@ -201,6 +201,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     expect(mockRes.statusCode).toBe(200);
     const data = mockRes.data as { success: boolean; imageUrl: string; urlType?: string; warning?: string };
     expect(data.success).toBe(true);
+    expect(data.imageUrl).toBe('https://openai.com/temp-image.png');
     expect(data.urlType).toBe('temporary');
     expect(data.warning).toContain('temporary');
   });
