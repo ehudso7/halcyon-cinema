@@ -18,14 +18,21 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { name } = req.body;
+  const { name, image } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return res.status(400).json({ error: 'Name is required' });
   }
 
+  const updates: { name: string; image?: string } = { name: name.trim() };
+
+  // Handle image update (can be null to remove, string to update, or undefined to skip)
+  if (image !== undefined) {
+    updates.image = image || undefined;
+  }
+
   try {
-    const updatedUser = await updateUser(session.user.id, { name: name.trim() });
+    const updatedUser = await updateUser(session.user.id, updates);
 
     if (!updatedUser) {
       return res.status(404).json({ error: 'User not found' });

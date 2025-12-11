@@ -5,6 +5,7 @@ export interface User {
   name: string;
   image?: string;
   passwordHash?: string;
+  password?: string; // For password validation (hashed)
   createdAt: string;
   updatedAt: string;
 }

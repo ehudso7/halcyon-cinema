@@ -1,8 +1,12 @@
+'use client';
+
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import styles from './Footer.module.css';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
+  const { data: session } = useSession();
 
   return (
     <footer className={styles.footer}>
@@ -21,9 +25,17 @@ export default function Footer() {
           <div className={styles.links}>
             <div className={styles.linkGroup}>
               <h4 className={styles.linkTitle}>Product</h4>
-              <Link href="/" className={styles.link}>Projects</Link>
-              <Link href="/auth/signin" className={styles.link}>Sign In</Link>
-              <Link href="/auth/signup" className={styles.link}>Get Started</Link>
+              <Link href="/" className={styles.link}>
+                {session ? 'Dashboard' : 'Projects'}
+              </Link>
+              {session ? (
+                <Link href="/settings" className={styles.link}>Settings</Link>
+              ) : (
+                <>
+                  <Link href="/auth/signin" className={styles.link}>Sign In</Link>
+                  <Link href="/auth/signup" className={styles.link}>Get Started</Link>
+                </>
+              )}
             </div>
 
             <div className={styles.linkGroup}>

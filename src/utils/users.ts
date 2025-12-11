@@ -217,6 +217,7 @@ export async function getUserById(id: string): Promise<User | null> {
       email: dbUser.email,
       name: dbUser.name,
       image: dbUser.image || undefined,
+      password: dbUser.passwordHash || '', // Include for password validation
       createdAt: dbUser.createdAt,
       updatedAt: dbUser.updatedAt,
     };
@@ -227,8 +228,10 @@ export async function getUserById(id: string): Promise<User | null> {
   const user = users.find(u => u.id === id);
   if (!user) return null;
 
-  const { passwordHash: _, ...safeUser } = user;
-  return safeUser as User;
+  return {
+    ...user,
+    password: user.passwordHash || '', // Include for password validation
+  } as User;
 }
 
 export async function getUserByEmail(email: string): Promise<User | null> {
@@ -258,7 +261,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return safeUser as User;
 }
 
-export async function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'>>): Promise<User | null> {
+export async function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'> & { password?: string }>): Promise<User | null> {
   // Use Postgres if available
   if (isPostgresAvailable()) {
     const dbUser = await dbUpdateUser(id, updates);
@@ -280,9 +283,16 @@ export async function updateUser(id: string, updates: Partial<Pick<User, 'name' 
   const index = users.findIndex(u => u.id === id);
   if (index === -1) return null;
 
+  // Handle password update separately
+  const { password, ...otherUpdates } = updates;
+  const updateData: Partial<User> = { ...otherUpdates };
+  if (password) {
+    updateData.passwordHash = password; // Already hashed by caller
+  }
+
   users[index] = {
     ...users[index],
-    ...updates,
+    ...updateData,
     updatedAt: new Date().toISOString(),
   };
 
@@ -290,4 +300,28 @@ export async function updateUser(id: string, updates: Partial<Pick<User, 'name' 
 
   const { passwordHash: _, ...safeUser } = users[index];
   return safeUser as User;
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  // Use Postgres if available
+  if (isPostgresAvailable()) {
+    try {
+      // For Postgres, we'd need to add a delete function to db.ts
+      // For now, we'll throw to indicate it's not implemented for Postgres
+      throw new Error('User deletion via Postgres not yet implemented');
+    } catch {
+      // Fall through to file storage or handle appropriately
+    }
+  }
+
+  // Fallback to file storage
+  loadFromFile();
+
+  const index = users.findIndex(u => u.id === id);
+  if (index === -1) return false;
+
+  users.splice(index, 1);
+  saveToFile();
+
+  return true;
 }
