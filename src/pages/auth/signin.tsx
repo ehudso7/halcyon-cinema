@@ -31,10 +31,11 @@ export default function SignIn() {
     }
     if (router.query.callbackUrl) {
       // Validate and store callback URL for redirect after login
-      // Only allow single-slash relative paths, block protocol-relative URLs like "//evil.com"
+      // Only allow single-slash relative paths with URL-safe characters
+      // Blocks protocol-relative URLs like "//evil.com" and dangerous characters
       const raw = router.query.callbackUrl;
       const callback = Array.isArray(raw) ? raw[0] : raw;
-      if (typeof callback === 'string' && /^\/(?!\/).*$/.test(callback)) {
+      if (typeof callback === 'string' && /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+]*$/.test(callback)) {
         sessionStorage.setItem('auth_callback', callback);
       }
     }
