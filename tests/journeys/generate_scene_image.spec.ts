@@ -28,6 +28,7 @@ vi.mock('@/utils/image-storage', () => ({
     return Promise.resolve(`https://test.supabase.co/storage/v1/object/public/scene-images/${filename}`);
   }),
   isPersistedUrl: vi.fn((url: string) => url.includes('supabase.co/storage')),
+  resetBucketCache: vi.fn(),
 }));
 
 import handler from '@/pages/api/generate-image';
@@ -138,7 +139,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     );
 
     expect(mockRes.statusCode).toBe(200);
-    const data = mockRes.data as { success: boolean; imageUrl: string };
+    const data = mockRes.data as { success: boolean; imageUrl: string; urlType?: string };
     expect(data.success).toBe(true);
 
     // Verify persistImage was called with correct arguments
@@ -151,6 +152,9 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     // Verify the returned URL is the persisted Supabase URL, not the original
     expect(data.imageUrl).toContain('supabase.co/storage');
     expect(data.imageUrl).toContain('project-123');
+
+    // Verify urlType is 'permanent' for persisted URLs
+    expect(data.urlType).toBe('permanent');
   });
 
   it('should respect rate limiting', async () => {

@@ -3,6 +3,7 @@ import { getSupabaseServerClient, isSupabaseAdminConfigured } from './supabase';
 
 const BUCKET_NAME = 'scene-images';
 const DOWNLOAD_TIMEOUT_MS = 30000; // 30 second timeout for image downloads
+const ALLOWED_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 
 // Cache to avoid repeated bucket existence checks
 let bucketVerified = false;
@@ -20,6 +21,18 @@ let bucketVerified = false;
  */
 
 /**
+ * Sanitize a URL for safe logging (removes query parameters which may contain tokens)
+ */
+function sanitizeUrlForLogging(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.protocol}//${parsed.host}${parsed.pathname}`;
+  } catch {
+    return '[invalid URL]';
+  }
+}
+
+/**
  * Download an image from a URL and return as a Buffer with content type.
  * Includes URL validation and timeout handling.
  *
@@ -33,12 +46,12 @@ async function downloadImage(url: string): Promise<{ buffer: Buffer; contentType
   try {
     parsedUrl = new URL(url);
   } catch {
-    throw new Error(`Invalid URL format: ${url}`);
+    throw new Error('Invalid URL format');
   }
 
   // Only allow HTTPS URLs for security
   if (parsedUrl.protocol !== 'https:') {
-    throw new Error(`Only HTTPS URLs are allowed, got: ${parsedUrl.protocol}`);
+    throw new Error('Only HTTPS URLs are allowed');
   }
 
   // Create abort controller for timeout
@@ -55,12 +68,18 @@ async function downloadImage(url: string): Promise<{ buffer: Buffer; contentType
     }
 
     // Get content type from response headers, default to image/png
-    const contentType = response.headers.get('content-type') || 'image/png';
+    const rawContentType = response.headers.get('content-type') || 'image/png';
+    const contentType = rawContentType.split(';')[0].trim(); // Remove charset if present
+
+    // Validate content type is an allowed image type
+    if (!ALLOWED_CONTENT_TYPES.includes(contentType)) {
+      console.warn(`[image-storage] Unexpected content type '${contentType}', defaulting to image/png`);
+    }
 
     const arrayBuffer = await response.arrayBuffer();
     return {
       buffer: Buffer.from(arrayBuffer),
-      contentType: contentType.split(';')[0].trim(), // Remove charset if present
+      contentType: ALLOWED_CONTENT_TYPES.includes(contentType) ? contentType : 'image/png',
     };
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
@@ -95,24 +114,28 @@ async function ensureBucketExists(): Promise<void> {
 
   const bucketExists = buckets?.some(b => b.name === BUCKET_NAME);
 
-  if (!bucketExists) {
-    // Create the bucket with public access for images
-    const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: true,
-      fileSizeLimit: 10485760, // 10MB
-      allowedMimeTypes: ['image/png', 'image/jpeg', 'image/webp'],
-    });
+  if (bucketExists) {
+    // Mark bucket as verified immediately when found
+    bucketVerified = true;
+    return;
+  }
 
-    if (createError) {
-      // Check for duplicate key error (bucket created by concurrent request)
-      // Supabase may return code '23505' or message containing 'already exists'
-      const isDuplicateError =
-        (createError as { code?: string }).code === '23505' ||
-        createError.message.includes('already exists');
+  // Create the bucket with public access for images
+  const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
+    public: true,
+    fileSizeLimit: 10485760, // 10MB
+    allowedMimeTypes: ALLOWED_CONTENT_TYPES,
+  });
 
-      if (!isDuplicateError) {
-        throw new Error(`Failed to create storage bucket: ${createError.message}`);
-      }
+  if (createError) {
+    // Check for duplicate key error (bucket created by concurrent request)
+    // Supabase may return code '23505' or message containing 'already exists'
+    const isDuplicateError =
+      (createError as { code?: string }).code === '23505' ||
+      createError.message.includes('already exists');
+
+    if (!isDuplicateError) {
+      throw new Error(`Failed to create storage bucket: ${createError.message}`);
     }
   }
 
@@ -121,7 +144,8 @@ async function ensureBucketExists(): Promise<void> {
 }
 
 /**
- * Get file extension from content type
+ * Get file extension from content type.
+ * Only supports allowed image types; throws for unsupported types.
  */
 function getExtensionFromContentType(contentType: string): string {
   const typeMap: Record<string, string> = {
@@ -129,7 +153,14 @@ function getExtensionFromContentType(contentType: string): string {
     'image/jpeg': 'jpg',
     'image/webp': 'webp',
   };
-  return typeMap[contentType] || 'png';
+
+  const extension = typeMap[contentType];
+  if (!extension) {
+    // This shouldn't happen if downloadImage validates content types properly
+    console.warn(`[image-storage] Unsupported content type '${contentType}', using png`);
+    return 'png';
+  }
+  return extension;
 }
 
 /**
@@ -190,7 +221,7 @@ export async function persistImage(
       .getPublicUrl(filename);
 
     console.log('[image-storage] Image persisted successfully:', {
-      originalUrl: temporaryUrl.substring(0, 50) + '...',
+      originalUrl: sanitizeUrlForLogging(temporaryUrl),
       permanentUrl: publicUrl,
     });
 
@@ -224,7 +255,7 @@ export async function deleteImage(imageUrl: string): Promise<boolean> {
     try {
       parsedUrl = new URL(imageUrl);
     } catch {
-      console.warn('[image-storage] deleteImage called with invalid URL:', imageUrl);
+      console.warn('[image-storage] deleteImage called with invalid URL');
       return false;
     }
 
@@ -274,16 +305,17 @@ export function isPersistedUrl(url: string): boolean {
     const supabaseHost = new URL(supabaseUrl).host;
 
     return parsedUrl.host === supabaseHost &&
-           parsedUrl.pathname.includes(`/storage/`) &&
+           parsedUrl.pathname.includes('/storage/') &&
            parsedUrl.pathname.includes(BUCKET_NAME);
-  } catch (error) {
-    console.error('[image-storage] Error checking if URL is persisted:', error);
+  } catch {
+    // URL parsing failures are expected for non-Supabase URLs
     return false;
   }
 }
 
 /**
- * Reset the bucket verification cache (mainly for testing purposes)
+ * Reset the bucket verification cache.
+ * @internal This function is exported for testing purposes only and should not be used in production code.
  */
 export function resetBucketCache(): void {
   bucketVerified = false;
