@@ -64,6 +64,16 @@ function loadUsageData(): UsageData {
   return getDefaultUsageData();
 }
 
+/**
+ * Get the current credits remaining.
+ * Returns 100 (default) if not in browser or no data stored.
+ */
+export function getCreditsRemaining(): number {
+  if (typeof window === 'undefined') return 100;
+  const data = loadUsageData();
+  return data.creditsRemaining;
+}
+
 export function trackGeneration() {
   if (typeof window === 'undefined') return;
 

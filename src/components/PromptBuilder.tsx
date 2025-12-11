@@ -1,6 +1,7 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import VisualStyleSelector, { getStyleModifier } from './VisualStyleSelector';
 import CharacterSelector from './CharacterSelector';
+import { getCreditsRemaining } from './UsageStats';
 import { Character } from '@/types';
 import styles from './PromptBuilder.module.css';
 
@@ -88,6 +89,12 @@ export default function PromptBuilder({
   const [visualStyleId, setVisualStyleId] = useState<string | null>(null);
   const [selectedCharacterIds, setSelectedCharacterIds] = useState<string[]>(initialCharacterIds);
   const [error, setError] = useState('');
+  const [creditsRemaining, setCreditsRemaining] = useState(100);
+
+  // Load credits on mount and after loading state changes
+  useEffect(() => {
+    setCreditsRemaining(getCreditsRemaining());
+  }, [isLoading]);
 
   const handlePromptChange = (value: string) => {
     setPrompt(value);
@@ -107,6 +114,12 @@ export default function PromptBuilder({
     // Video generation is coming soon
     if (contentType === 'video') {
       setError('Video generation is coming soon! Please select Image for now.');
+      return;
+    }
+
+    // Check credits
+    if (creditsRemaining <= 0) {
+      setError('No credits remaining. Please upgrade your plan to continue generating.');
       return;
     }
 
@@ -329,25 +342,43 @@ export default function PromptBuilder({
 
         {error && <p className={styles.error}>{error}</p>}
 
-        <button
-          type="submit"
-          className={`btn btn-primary ${styles.submitButton}`}
-          disabled={isLoading || !prompt.trim()}
-        >
-          {isLoading ? (
-            <>
-              <span className="spinner" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-              Generate Scene
-            </>
-          )}
-        </button>
+        <div className={styles.submitRow}>
+          <div className={styles.creditsIndicator}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <span className={creditsRemaining <= 10 ? styles.creditsLow : ''}>
+              {creditsRemaining} credit{creditsRemaining !== 1 ? 's' : ''} remaining
+            </span>
+          </div>
+          <button
+            type="submit"
+            className={`btn btn-primary ${styles.submitButton}`}
+            disabled={isLoading || !prompt.trim() || creditsRemaining <= 0}
+          >
+            {isLoading ? (
+              <>
+                <span className="spinner" />
+                Generating...
+              </>
+            ) : creditsRemaining <= 0 ? (
+              <>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 9v2m0 4h.01M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                No Credits
+              </>
+            ) : (
+              <>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                Generate Scene
+              </>
+            )}
+          </button>
+        </div>
       </form>
     </div>
   );
