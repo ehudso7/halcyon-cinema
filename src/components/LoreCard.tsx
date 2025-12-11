@@ -61,7 +61,7 @@ export default function LoreCard({
           className={styles.listTypeIcon}
           style={{ backgroundColor: TYPE_COLORS[entry.type] + '20', color: TYPE_COLORS[entry.type] }}
           onClick={onShowDetail}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onShowDetail?.(); } }}
+          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onShowDetail) { e.preventDefault(); onShowDetail(); } }}
           role="button"
           tabIndex={0}
           aria-label={`View ${entry.name} details`}
@@ -72,9 +72,10 @@ export default function LoreCard({
         <div
           className={styles.listContent}
           onClick={onShowDetail}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onShowDetail?.(); } }}
+          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onShowDetail) { e.preventDefault(); onShowDetail(); } }}
           role="button"
           tabIndex={0}
+          aria-label={`View ${entry.name} details`}
         >
           <div className={styles.listHeader}>
             <h3 className={styles.listName}>{entry.name}</h3>
@@ -155,7 +156,7 @@ export default function LoreCard({
       <div
         className={styles.card}
         onClick={onShowDetail}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onShowDetail?.(); } }}
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && onShowDetail) { e.preventDefault(); onShowDetail(); } }}
         role="button"
         tabIndex={0}
         aria-label={`View ${entry.name} details`}
