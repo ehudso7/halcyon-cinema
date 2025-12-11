@@ -32,12 +32,17 @@ export default function SignIn() {
     if (router.query.callbackUrl) {
       // Validate and store callback URL for redirect after login
       // Only allow single-slash relative paths with URL-safe characters
-      // Blocks protocol-relative URLs like "//evil.com" and dangerous characters
+      // Blocks protocol-relative URLs like "//evil.com" and dangerous schemes
       // Colons allowed for ISO timestamps in query params (e.g., ?time=12:30:00)
       const raw = router.query.callbackUrl;
       const callback = Array.isArray(raw) ? raw[0] : raw;
       if (typeof callback === 'string' && /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+:]*$/.test(callback)) {
-        sessionStorage.setItem('auth_callback', callback);
+        // Block dangerous URL schemes even with leading slash (defense in depth)
+        const dangerousSchemes = ['/javascript:', '/data:', '/vbscript:'];
+        const lowerCallback = callback.toLowerCase();
+        if (!dangerousSchemes.some(scheme => lowerCallback.startsWith(scheme))) {
+          sessionStorage.setItem('auth_callback', callback);
+        }
       }
     }
   }, [router.query]);
