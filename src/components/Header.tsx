@@ -21,7 +21,7 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
         <div className={styles.left}>
           {showBackLink && (
             <Link href={backLinkHref} className={styles.backLink}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
               {backLinkText}
@@ -63,7 +63,7 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
                   </div>
                 )}
                 <span className={styles.userName}>{session.user?.name || 'User'}</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <path d="M6 9l6 6 6-6" />
                 </svg>
               </button>
@@ -82,7 +82,7 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
                       className={styles.dropdownItem}
                       onClick={() => setShowDropdown(false)}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <circle cx="12" cy="12" r="3" />
                         <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
                       </svg>
@@ -93,8 +93,9 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
                       className={styles.dropdownItem}
                       onClick={() => setShowDropdown(false)}
                       target="_blank"
+                      rel="noopener noreferrer"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                       </svg>
                       API Status
@@ -104,7 +105,7 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
                       className={styles.dropdownItem}
                       onClick={() => setShowDropdown(false)}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
                         <polyline points="14,2 14,8 20,8" />
                         <line x1="16" y1="13" x2="8" y2="13" />
@@ -118,7 +119,7 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
                       onClick={() => signOut({ callbackUrl: '/' })}
                       className={styles.dropdownItem}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                         <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
                       </svg>
                       Sign Out
