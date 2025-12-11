@@ -10,10 +10,36 @@
   flex: 1;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .title {
   font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin: 0;
+}
+
+.statsButton {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.statsButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .meta {
@@ -21,6 +47,336 @@
   color: var(--color-text-secondary);
 }
 
+.sceneCount {
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.projectName {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.activeBtn {
+  background: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: white !important;
+}
+
+/* Export Menu */
+.exportMenu {
+  position: relative;
+}
+
+.exportDropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 180px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition: all 0.2s;
+}
+
+.exportMenu:hover .exportDropdown,
+.exportMenu:focus-within .exportDropdown {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.exportDropdown button {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.9rem;
+}
+
+.exportDropdown button:hover {
+  background: var(--color-background);
+}
+
+.exportDropdown button:first-child {
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.exportDropdown button:last-child {
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+/* Success Message */
+.successMessage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid var(--color-success);
+  border-radius: var(--border-radius);
+  color: var(--color-success);
+  margin-bottom: 20px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Statistics Panel */
+.statsPanel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  margin-bottom: 24px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+  padding: 0 16px;
+  border-right: 1px solid var(--color-border);
+}
+
+.statItem:last-child {
+  border-right: none;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* Preview Panel */
+.previewPanel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.previewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--color-background);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.previewHeader h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.previewControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.previewBtn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.previewBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.playBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+.playBtn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: white;
+  transform: scale(1.05);
+}
+
+.previewCounter {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  min-width: 60px;
+  text-align: right;
+}
+
+.previewContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 24px;
+}
+
+.previewImage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--color-background);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.previewImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.previewPlaceholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+}
+
+.previewTransition {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.previewInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.previewInfo h4 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+.previewInfo p {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  flex: 1;
+  margin: 0 0 16px;
+}
+
+.previewMeta {
+  display: flex;
+  gap: 16px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.previewTimeline {
+  display: flex;
+  gap: 8px;
+  padding: 16px 24px;
+  background: var(--color-background);
+  border-top: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.timelineThumb {
+  width: 64px;
+  height: 36px;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background: var(--color-surface);
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.timelineThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.timelineThumb:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.timelineThumb.active {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+/* Navigation */
 .projectNav {
   display: flex;
   gap: 8px;
@@ -85,6 +441,12 @@
   border-color: var(--color-primary);
 }
 
+.voiceoverToggle.active {
+  border-color: var(--color-primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+/* Empty State */
 .emptyState {
   text-align: center;
   padding: 64px 24px;
@@ -96,6 +458,7 @@
 .emptyIcon {
   font-size: 4rem;
   margin-bottom: 16px;
+  color: var(--color-text-secondary);
 }
 
 .emptyState h3 {
@@ -112,8 +475,190 @@
   line-height: 1.6;
 }
 
+/* Keyboard Shortcut Hint */
+.shortcutHint {
+  text-align: center;
+  padding: 16px;
+  margin-top: 32px;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+}
+
+.shortcutHint kbd {
+  display: inline-block;
+  padding: 2px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  margin: 0 4px;
+}
+
+/* Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  padding: 24px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+.shortcutsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.shortcut kbd {
+  display: inline-block;
+  min-width: 80px;
+  padding: 6px 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.shortcut span {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .previewContent {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
+    gap: 16px;
+  }
+
+  .headerActions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .statsPanel {
+    justify-content: center;
+  }
+
+  .statItem {
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    padding: 12px;
+    min-width: 100px;
+  }
+
+  .previewHeader {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .previewTimeline {
+    padding: 12px;
+  }
+
+  .timelineThumb {
+    width: 48px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .statsPanel {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .statValue {
+    font-size: 1.25rem;
+  }
+
+  .exportMenu {
+    position: static;
+  }
+
+  .exportDropdown {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    margin: 0;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    transform: translateY(100%);
+  }
+
+  .exportMenu:hover .exportDropdown,
+  .exportMenu:focus-within .exportDropdown {
+    transform: translateY(0);
   }
 }
