@@ -1,4 +1,5 @@
-:root {
+:root,
+[data-theme="dark"] {
   /* Primary color palette */
   --color-primary: #6366f1;
   --color-primary-hover: #4f46e5;
@@ -33,6 +34,40 @@
   --primary: var(--color-primary);
   --primary-light: var(--color-primary-light);
   --accent-color: var(--color-secondary);
+  --card-bg: var(--color-surface);
+  --border-color: var(--color-border);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-secondary);
+  --color-bg: var(--color-background);
+}
+
+/* Light theme */
+[data-theme="light"] {
+  /* Primary color palette - slightly adjusted for light mode */
+  --color-primary: #4f46e5;
+  --color-primary-hover: #4338ca;
+  --color-primary-light: #6366f1;
+  --color-primary-rgb: 79, 70, 229;
+  --color-secondary: #059669;
+
+  /* Background colors */
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f1f5f9;
+
+  /* Border and text */
+  --color-border: #e2e8f0;
+  --color-text: #1e293b;
+  --color-text-secondary: #64748b;
+
+  /* Status colors - slightly adjusted for light mode contrast */
+  --color-error: #dc2626;
+  --color-warning: #d97706;
+  --color-success: #16a34a;
+  --color-info: #2563eb;
+
+  /* Aliases */
   --card-bg: var(--color-surface);
   --border-color: var(--color-border);
   --text-primary: var(--color-text);

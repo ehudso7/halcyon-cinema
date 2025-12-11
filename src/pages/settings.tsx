@@ -29,8 +29,45 @@ export default function Settings({ user }: SettingsProps) {
   const [name, setName] = useState(user.name);
   const [savedName, setSavedName] = useState(user.name);
   const [avatar, setAvatar] = useState<string | null>(user.image || null);
+  const [savedAvatar, setSavedAvatar] = useState<string | null>(user.image || null);
   const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to resize image for avatar
+  const resizeImage = (dataUrl: string, maxSize: number = 128): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = document.createElement('img');
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+
+        // Calculate dimensions maintaining aspect ratio
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          }
+        } else {
+          if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = dataUrl;
+    });
+  };
 
   // Password state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -82,20 +119,32 @@ export default function Settings({ user }: SettingsProps) {
     setIsSaving(true);
 
     try {
+      // Only send image if it's changed from what's saved
+      const imageChanged = avatar !== savedAvatar;
+      const payload: { name: string; image?: string | null } = { name };
+
+      if (imageChanged) {
+        payload.image = avatar;
+      }
+
       const response = await fetch('/api/auth/update-profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, image: avatar }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update profile');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update profile');
       }
 
       setSavedName(name);
+      if (imageChanged) {
+        setSavedAvatar(avatar);
+      }
       showToast('Profile updated successfully!', 'success');
-    } catch {
-      showToast('Failed to update profile. Please try again.', 'error');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Failed to update profile. Please try again.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -105,17 +154,20 @@ export default function Settings({ user }: SettingsProps) {
     fileInputRef.current?.click();
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        showToast('Image must be less than 2MB', 'error');
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be less than 5MB', 'error');
         return;
       }
 
       const reader = new FileReader();
-      reader.onload = (event) => {
-        setAvatar(event.target?.result as string);
+      reader.onload = async (event) => {
+        const dataUrl = event.target?.result as string;
+        // Resize image to 128x128 for avatar
+        const resized = await resizeImage(dataUrl, 128);
+        setAvatar(resized);
       };
       reader.readAsDataURL(file);
     }
@@ -239,7 +291,7 @@ export default function Settings({ user }: SettingsProps) {
     }
   };
 
-  const hasProfileChanges = name !== savedName || avatar !== user.image;
+  const hasProfileChanges = name !== savedName || avatar !== savedAvatar;
 
   return (
     <>

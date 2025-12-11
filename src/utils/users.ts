@@ -261,7 +261,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return safeUser as User;
 }
 
-export async function updateUser(id: string, updates: Partial<Pick<User, 'name' | 'image'> & { password?: string }>): Promise<User | null> {
+export async function updateUser(id: string, updates: Partial<Pick<User, 'name'> & { image?: string | null; password?: string }>): Promise<User | null> {
   // Use Postgres if available
   if (isPostgresAvailable()) {
     const dbUser = await dbUpdateUser(id, updates);
@@ -283,11 +283,15 @@ export async function updateUser(id: string, updates: Partial<Pick<User, 'name' 
   const index = users.findIndex(u => u.id === id);
   if (index === -1) return null;
 
-  // Handle password update separately
-  const { password, ...otherUpdates } = updates;
+  // Handle password and image updates separately
+  const { password, image, ...otherUpdates } = updates;
   const updateData: Partial<User> = { ...otherUpdates };
   if (password) {
     updateData.passwordHash = password; // Already hashed by caller
+  }
+  // Convert null to undefined for file storage (null removes the image)
+  if (image !== undefined) {
+    updateData.image = image ?? undefined;
   }
 
   users[index] = {
