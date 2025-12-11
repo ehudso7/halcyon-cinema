@@ -1,3 +1,13 @@
+/* Grid View Card Wrapper */
+.cardWrapper {
+  position: relative;
+}
+
+.cardWrapper.selected .card {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
 .card {
   display: block;
   background-color: var(--color-surface);
@@ -86,4 +96,254 @@
 
 .aiBadge svg {
   opacity: 0.8;
+}
+
+/* Metadata Tags */
+.metaTags {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.2s ease;
+}
+
+.card:hover .metaTags {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.metaTag {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: capitalize;
+}
+
+/* Quick Actions Overlay */
+.quickActions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: all 0.2s ease;
+}
+
+.card:hover .quickActions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.quickAction {
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.quickAction:hover {
+  background: var(--color-primary);
+}
+
+/* Checkbox */
+.checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.checkboxInner {
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.checkboxInner:hover {
+  border-color: var(--color-primary);
+}
+
+.checkboxInner.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkboxInner.checked svg {
+  color: white;
+}
+
+/* List View Styles */
+.listCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  transition: all var(--transition);
+}
+
+.listCard:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-hover);
+}
+
+.listCard.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.listLink {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+
+.listThumbnail {
+  position: relative;
+  width: 100px;
+  height: 56px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: var(--color-background);
+}
+
+.listContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.listNumber {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.listTag {
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: capitalize;
+}
+
+.listPrompt {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 4px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listTimestamp {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+.listActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.actionButton {
+  width: 36px;
+  height: 36px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.actionButton:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-surface-hover);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .listCard {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+
+  .listLink {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .listThumbnail {
+    width: 80px;
+    height: 45px;
+  }
+
+  .listContent {
+    width: calc(100% - 92px);
+  }
+
+  .listActions {
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+
+  .quickActions {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .metaTags {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

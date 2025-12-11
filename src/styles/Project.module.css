@@ -12,10 +12,82 @@
   flex: 1;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
 .title {
   font-size: 2rem;
   font-weight: 700;
-  margin-bottom: 8px;
+  margin: 0;
+}
+
+.editButton {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--border-radius);
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editButton:hover {
+  color: var(--color-primary);
+  background: var(--color-surface-hover);
+}
+
+/* Edit Title Form */
+.editTitleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.titleInput {
+  font-size: 1.75rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  width: 100%;
+}
+
+.titleInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 99, 102, 241), 0.15);
+}
+
+.descriptionInput {
+  padding: 10px 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.descriptionInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 99, 102, 241), 0.15);
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
 }
 
 .description {
@@ -80,10 +152,257 @@
   border-radius: var(--border-radius);
 }
 
+/* Controls Section */
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+}
+
+.sortAndView {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sortSelect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.sortSelect select {
+  padding: 8px 12px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  color: var(--color-text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.sortSelect select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.viewToggle {
+  display: flex;
+  background: var(--color-background);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+}
+
+.viewButton {
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewButton:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.viewButton.active {
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+/* Bulk Actions */
+.bulkActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selectedCount {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.selectAllBtn {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: var(--border-radius);
+  transition: all var(--transition);
+}
+
+.selectAllBtn:hover {
+  background: var(--color-surface-hover);
+}
+
+/* List View */
+.listView {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+  background: var(--color-surface);
+  border: 2px dashed var(--color-border);
+  border-radius: var(--border-radius);
+}
+
+.emptyIcon {
+  color: var(--color-text-secondary);
+  opacity: 0.4;
+  margin-bottom: 24px;
+}
+
+.emptyState h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--color-text);
+}
+
+.emptyState p {
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
 .gallery {
   margin-bottom: 48px;
 }
 
+/* Modal Styles */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 32px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalIcon {
+  color: var(--color-error);
+  margin-bottom: 16px;
+}
+
+.modal h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--color-text);
+}
+
+.modal p {
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.modalActions button {
+  min-width: 120px;
+}
+
+/* Keyboard Shortcuts */
+.shortcutsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 24px 0;
+  text-align: left;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background: var(--color-background);
+  border-radius: var(--border-radius);
+}
+
+.shortcut kbd {
+  padding: 4px 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.shortcut span {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
@@ -95,5 +414,26 @@
 
   .headerActions button {
     flex: 1;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sortAndView {
+    justify-content: space-between;
+  }
+
+  .bulkActions {
+    justify-content: flex-end;
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+
+  .modalActions button {
+    width: 100%;
   }
 }
