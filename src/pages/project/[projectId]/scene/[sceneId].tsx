@@ -9,6 +9,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import ImageWithFallback from '@/components/ImageWithFallback';
 import ShareButton from '@/components/ShareButton';
+import { trackGeneration } from '@/components/UsageStats';
 import { Project, Scene } from '@/types';
 import { getProjectByIdAsync, getSceneByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -49,6 +50,7 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [imageWarning, setImageWarning] = useState<string | null>(null);
 
   const imageContainerRef = useRef<HTMLDivElement>(null);
   const downloadMenuRef = useRef<HTMLDivElement>(null);
@@ -150,6 +152,7 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
   const handleRegenerate = async (data: PromptData) => {
     setIsRegenerating(true);
     setError(null);
+    setImageWarning(null);
 
     // Save current version to history before regenerating
     if (scene.imageUrl) {
@@ -185,6 +188,11 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
         throw new Error(imageResult.error || 'Failed to generate image');
       }
 
+      // Show warning if image URL is temporary (storage not configured or failed)
+      if (imageResult.urlType === 'temporary' && imageResult.warning) {
+        setImageWarning(imageResult.warning);
+      }
+
       // Update scene
       const updateResponse = await fetch(`/api/scenes/${scene.id}?projectId=${project.id}`, {
         method: 'PUT',
@@ -207,6 +215,10 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
       }
 
       const updatedScene = await updateResponse.json();
+
+      // Track the generation for credits system
+      trackGeneration();
+
       setScene(updatedScene);
       setShowRegenerate(false);
       setIsImageLoaded(false);
@@ -720,6 +732,16 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
                 initialPrompt={scene.prompt}
               />
               {error && <p className={styles.error}>{error}</p>}
+              {imageWarning && !isRegenerating && (
+                <div className={styles.warning}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <span>{imageWarning}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
