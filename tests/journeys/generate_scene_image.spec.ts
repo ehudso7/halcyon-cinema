@@ -19,6 +19,10 @@ vi.mock('@/utils/openai', () => ({
   sanitizePromptForImageGeneration: vi.fn((prompt: string) => Promise.resolve(prompt)),
 }));
 
+vi.mock('@/utils/image-storage', () => ({
+  persistImage: vi.fn((url: string) => Promise.resolve(url)),
+}));
+
 import handler from '@/pages/api/generate-image';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 import { generateImage } from '@/utils/openai';
@@ -117,6 +121,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     mockReq.body = {
       prompt: 'A dramatic sunset over mountains',
       size: '1024x1024',
+      projectId: 'project-123',
     };
 
     await handler(

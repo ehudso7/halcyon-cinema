@@ -174,6 +174,8 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
           lighting: data.lighting,
           mood: data.mood,
           size: data.aspectRatio,
+          projectId: project.id,
+          sceneId: scene.id,
         }),
       });
 
