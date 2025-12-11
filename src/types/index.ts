@@ -95,6 +95,10 @@ export interface GenerateImageResponse {
   success: boolean;
   imageUrl?: string;
   error?: string;
+  /** Indicates if the URL is 'permanent' (stored) or 'temporary' (will expire) */
+  urlType?: 'permanent' | 'temporary';
+  /** Warning message if image persistence failed or is not configured */
+  warning?: string;
 }
 
 export interface ApiError {

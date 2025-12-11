@@ -20,12 +20,20 @@ vi.mock('@/utils/openai', () => ({
 }));
 
 vi.mock('@/utils/image-storage', () => ({
-  persistImage: vi.fn((url: string) => Promise.resolve(url)),
+  persistImage: vi.fn((_url: string, projectId: string, sceneId?: string) => {
+    // Simulate actual behavior: return a different URL representing Supabase storage
+    const filename = sceneId
+      ? `${projectId}/${sceneId}/image-123.png`
+      : `${projectId}/image-123.png`;
+    return Promise.resolve(`https://test.supabase.co/storage/v1/object/public/scene-images/${filename}`);
+  }),
+  isPersistedUrl: vi.fn((url: string) => url.includes('supabase.co/storage')),
 }));
 
 import handler from '@/pages/api/generate-image';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 import { generateImage } from '@/utils/openai';
+import { persistImage } from '@/utils/image-storage';
 
 describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   let mockReq: Partial<NextApiRequest>;
@@ -132,7 +140,17 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     expect(mockRes.statusCode).toBe(200);
     const data = mockRes.data as { success: boolean; imageUrl: string };
     expect(data.success).toBe(true);
-    expect(data.imageUrl).toBe('https://example.com/generated-image.png');
+
+    // Verify persistImage was called with correct arguments
+    expect(vi.mocked(persistImage)).toHaveBeenCalledWith(
+      'https://example.com/generated-image.png',
+      'project-123',
+      undefined
+    );
+
+    // Verify the returned URL is the persisted Supabase URL, not the original
+    expect(data.imageUrl).toContain('supabase.co/storage');
+    expect(data.imageUrl).toContain('project-123');
   });
 
   it('should respect rate limiting', async () => {

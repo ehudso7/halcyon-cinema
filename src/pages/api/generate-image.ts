@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateImage, buildCinematicPrompt, sanitizePromptForImageGeneration } from '@/utils/openai';
-import { persistImage } from '@/utils/image-storage';
+import { persistImage, isPersistedUrl } from '@/utils/image-storage';
 import { GenerateImageResponse, ApiError } from '@/types';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 
@@ -36,6 +36,11 @@ export default async function handler(
   // projectId is required for image persistence
   if (!projectId || typeof projectId !== 'string') {
     return res.status(400).json({ error: 'Project ID is required for image generation' });
+  }
+
+  // sceneId is optional but must be a string if provided
+  if (sceneId !== undefined && sceneId !== null && typeof sceneId !== 'string') {
+    return res.status(400).json({ error: 'Scene ID, if provided, must be a string' });
   }
 
   // Validate OpenAI-specific parameters
@@ -80,14 +85,30 @@ export default async function handler(
   // Persist the image to Supabase Storage for permanent access
   // OpenAI DALL-E URLs expire after ~1 hour, so we need to store them
   try {
-    const permanentUrl = await persistImage(result.imageUrl, projectId, sceneId);
-    return res.status(200).json({
-      success: true,
-      imageUrl: permanentUrl,
-    });
+    const persistedUrl = await persistImage(result.imageUrl, projectId, sceneId);
+
+    // Check if the image was actually persisted or if we got back the temporary URL
+    if (isPersistedUrl(persistedUrl)) {
+      return res.status(200).json({
+        success: true,
+        imageUrl: persistedUrl,
+      });
+    } else {
+      // persistImage returned the original URL (storage not configured or failed silently)
+      return res.status(200).json({
+        success: true,
+        imageUrl: persistedUrl,
+        urlType: 'temporary',
+        warning: 'Image storage not configured. The image URL is temporary and will expire in about 1 hour.',
+      });
+    }
   } catch (error) {
     console.error('[generate-image] Failed to persist image:', error);
     // Fall back to temporary URL if persistence fails
-    return res.status(200).json(result);
+    return res.status(200).json({
+      ...result,
+      urlType: 'temporary',
+      warning: 'Image persistence failed. The image URL is temporary and will expire in about 1 hour.',
+    });
   }
 }
