@@ -36,9 +36,10 @@ export default function SignIn() {
       // Colons allowed for ISO timestamps in query params (e.g., ?time=12:30:00)
       const raw = router.query.callbackUrl;
       const callback = Array.isArray(raw) ? raw[0] : raw;
-      if (typeof callback === 'string' && /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+:]*$/.test(callback)) {
+      const safeUrlPattern = /^\/(?!\/)[a-zA-Z0-9/_\-?#&=.%+:]*$/;
+      if (typeof callback === 'string' && safeUrlPattern.test(callback)) {
         // Block dangerous URL schemes even with leading slash (defense in depth)
-        // Recursively decode URL to prevent bypass via multi-layer encoding
+        // Recursively decode URL (max 5 iterations) to prevent multi-layer encoding bypass
         const dangerousSchemes = ['/javascript:', '/data:', '/vbscript:', '/file:', '/blob:', '/about:'];
         let decodedCallback = callback;
         const maxIterations = 5;
@@ -52,8 +53,13 @@ export default function SignIn() {
           // Invalid encoding - reject the URL
           return;
         }
+        // Re-validate decoded URL structure to prevent encoded bypass attacks
+        // e.g., /%2F%2Fevil.com decodes to //evil.com (protocol-relative)
         const lowerDecoded = decodedCallback.toLowerCase();
-        if (!dangerousSchemes.some(scheme => lowerDecoded.startsWith(scheme))) {
+        if (
+          safeUrlPattern.test(decodedCallback) &&
+          !dangerousSchemes.some(scheme => lowerDecoded.startsWith(scheme))
+        ) {
           sessionStorage.setItem('auth_callback', callback);
         }
       }
