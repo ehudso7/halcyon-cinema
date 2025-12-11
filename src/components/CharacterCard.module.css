@@ -1,13 +1,26 @@
+/* Card Wrapper */
+.cardWrapper {
+  position: relative;
+}
+
+.cardWrapper.selected .card {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+/* Grid View Card */
 .card {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
   padding: 16px;
   transition: all var(--transition);
+  cursor: pointer;
 }
 
 .card:hover {
   border-color: var(--color-primary);
+  transform: translateY(-2px);
 }
 
 .header {
@@ -18,33 +31,38 @@
 }
 
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .avatarPlaceholder {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: white;
+  flex-shrink: 0;
 }
 
 .info {
   flex: 1;
+  min-width: 0;
 }
 
 .name {
   font-size: 1rem;
   font-weight: 600;
   margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .appearances {
@@ -52,31 +70,15 @@
   color: var(--color-text-secondary);
 }
 
-.actions {
-  display: flex;
-  gap: 4px;
-}
-
-.actionBtn {
-  background: none;
-  border: none;
-  color: var(--color-text-secondary);
-  padding: 6px;
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all var(--transition);
-}
-
-.actionBtn:hover {
-  background-color: var(--color-background);
-  color: var(--color-text);
-}
-
 .description {
   font-size: 0.9rem;
   color: var(--color-text-secondary);
   margin-bottom: 12px;
   line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .traits {
@@ -91,6 +93,154 @@
   border-radius: 12px;
   font-size: 0.8rem;
   color: var(--color-text-secondary);
+}
+
+/* Card Actions Overlay */
+.cardActions {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: all 0.2s;
+}
+
+.cardWrapper:hover .cardActions {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.actionBtn {
+  width: 32px;
+  height: 32px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.actionBtn:hover {
+  background-color: var(--color-background);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.actionBtn.deleteBtn:hover {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+/* Checkbox */
+.checkbox {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.checkboxInner {
+  width: 22px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.checkboxInner:hover {
+  border-color: var(--color-primary);
+}
+
+.checkboxInner.checked {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.checkboxInner.checked svg {
+  color: white;
+}
+
+/* List View Card */
+.listCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  transition: all var(--transition);
+}
+
+.listCard:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-hover);
+}
+
+.listCard.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.listAvatar {
+  cursor: pointer;
+}
+
+.listContent {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.listHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.listDescription {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listTraits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.moreTraits {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  padding: 2px 8px;
+  background: var(--color-background);
+  border-radius: 10px;
+}
+
+.listActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 /* Compact mode for selection */
@@ -145,4 +295,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .listCard {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .listContent {
+    width: calc(100% - 64px);
+  }
+
+  .listActions {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .cardActions {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
