@@ -3,6 +3,15 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../auth/[...nextauth]';
 import { updateUser } from '@/utils/users';
 
+// Increase body size limit for avatar images
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '4mb',
+    },
+  },
+};
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -24,11 +33,12 @@ export default async function handler(
     return res.status(400).json({ error: 'Name is required' });
   }
 
-  const updates: { name: string; image?: string } = { name: name.trim() };
+  const updates: { name: string; image?: string | null } = { name: name.trim() };
 
   // Handle image update (can be null to remove, string to update, or undefined to skip)
   if (image !== undefined) {
-    updates.image = image || undefined;
+    // Pass null to remove image, or the string value to update
+    updates.image = image;
   }
 
   try {
