@@ -178,6 +178,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
           lighting: data.lighting,
           mood: data.mood,
           size: data.aspectRatio,
+          projectId: project.id,
         }),
       });
 

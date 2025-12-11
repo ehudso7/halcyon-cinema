@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateImage, buildCinematicPrompt, sanitizePromptForImageGeneration } from '@/utils/openai';
+import { persistImage } from '@/utils/image-storage';
 import { GenerateImageResponse, ApiError } from '@/types';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 
@@ -26,10 +27,15 @@ export default async function handler(
     return res.status(429).json({ error: 'Rate limit exceeded. Please wait before generating more images.' });
   }
 
-  const { prompt, shotType, style, lighting, mood, size, quality, imageStyle } = req.body;
+  const { prompt, shotType, style, lighting, mood, size, quality, imageStyle, projectId, sceneId } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
+  }
+
+  // projectId is required for image persistence
+  if (!projectId || typeof projectId !== 'string') {
+    return res.status(400).json({ error: 'Project ID is required for image generation' });
   }
 
   // Validate OpenAI-specific parameters
@@ -64,12 +70,24 @@ export default async function handler(
     style: imageStyle || 'vivid',
   });
 
-  if (!result.success) {
+  if (!result.success || !result.imageUrl) {
     return res.status(500).json({
       success: false,
       error: result.error || 'Failed to generate image',
     });
   }
 
-  return res.status(200).json(result);
+  // Persist the image to Supabase Storage for permanent access
+  // OpenAI DALL-E URLs expire after ~1 hour, so we need to store them
+  try {
+    const permanentUrl = await persistImage(result.imageUrl, projectId, sceneId);
+    return res.status(200).json({
+      success: true,
+      imageUrl: permanentUrl,
+    });
+  } catch (error) {
+    console.error('[generate-image] Failed to persist image:', error);
+    // Fall back to temporary URL if persistence fails
+    return res.status(200).json(result);
+  }
 }
