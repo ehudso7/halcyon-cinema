@@ -13,8 +13,11 @@ interface PromptBuilderProps {
   initialCharacterIds?: string[];
 }
 
+export type ContentType = 'image' | 'video';
+
 export interface PromptData {
   prompt: string;
+  contentType: ContentType;
   shotType?: string;
   style?: string;
   lighting?: string;
@@ -75,6 +78,7 @@ export default function PromptBuilder({
   initialCharacterIds = [],
 }: PromptBuilderProps) {
   const [prompt, setPrompt] = useState(initialPrompt);
+  const [contentType, setContentType] = useState<ContentType>('image');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [shotType, setShotType] = useState('');
@@ -100,6 +104,12 @@ export default function PromptBuilder({
       return;
     }
 
+    // Video generation is coming soon
+    if (contentType === 'video') {
+      setError('Video generation is coming soon! Please select Image for now.');
+      return;
+    }
+
     // Build the final prompt with style modifier
     const styleModifier = getStyleModifier(visualStyleId);
     const finalPrompt = styleModifier
@@ -108,6 +118,7 @@ export default function PromptBuilder({
 
     onSubmit({
       prompt: finalPrompt,
+      contentType,
       shotType: shotType || undefined,
       style: visualStyleId || undefined,
       lighting: lighting || undefined,
@@ -125,6 +136,39 @@ export default function PromptBuilder({
   return (
     <div className={styles.builder}>
       <form onSubmit={handleSubmit}>
+        {/* Content Type Selector */}
+        <div className={styles.contentTypeSelector}>
+          <label className={styles.label}>Content Type</label>
+          <div className={styles.contentTypeButtons}>
+            <button
+              type="button"
+              onClick={() => setContentType('image')}
+              className={`${styles.contentTypeButton} ${contentType === 'image' ? styles.contentTypeActive : ''}`}
+              disabled={isLoading}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+              <span>Image</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setContentType('video')}
+              className={`${styles.contentTypeButton} ${contentType === 'video' ? styles.contentTypeActive : ''}`}
+              disabled={isLoading}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="23 7 16 12 23 17 23 7" />
+                <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+              </svg>
+              <span>Video</span>
+              <span className={styles.comingSoonBadge}>Coming Soon</span>
+            </button>
+          </div>
+        </div>
+
         <div className={styles.mainInput}>
           <label htmlFor="prompt" className={styles.label}>
             Scene Description
