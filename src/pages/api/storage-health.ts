@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { timingSafeEqual } from 'crypto';
+import { timingSafeEqual, createHmac } from 'crypto';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '@/utils/supabase';
 
 interface HealthResponse {
@@ -12,14 +12,21 @@ interface HealthResponse {
   message: string;
 }
 
+// Track if we've already logged the missing token warning
+let hasLoggedMissingTokenWarning = false;
+
 /**
  * Constant-time string comparison to prevent timing attacks.
+ * Uses HMAC to hash both values to fixed-length outputs before comparison,
+ * which prevents leaking information about the expected token length.
  */
 function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) {
-    return false;
-  }
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  // Use HMAC with a constant key to produce fixed-length hashes
+  // This ensures comparison time is constant regardless of input lengths
+  const key = 'storage-health-token-compare';
+  const hashA = createHmac('sha256', key).update(a).digest();
+  const hashB = createHmac('sha256', key).update(b).digest();
+  return timingSafeEqual(hashA, hashB);
 }
 
 /**
@@ -42,9 +49,12 @@ export default function handler(
     const providedToken = req.headers['x-internal-health-token'];
 
     if (!expectedToken) {
-      console.warn(
-        'INTERNAL_HEALTH_TOKEN not configured in production - storage-health endpoint blocked'
-      );
+      if (!hasLoggedMissingTokenWarning) {
+        console.warn(
+          'INTERNAL_HEALTH_TOKEN not configured in production - storage-health endpoint blocked'
+        );
+        hasLoggedMissingTokenWarning = true;
+      }
       return res.status(404).end();
     }
 
