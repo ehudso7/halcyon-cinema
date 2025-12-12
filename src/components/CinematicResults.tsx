@@ -68,9 +68,11 @@ interface CinematicResultsProps {
   scenes?: Scene[];
   lore?: LoreEntry[];
   qualityMetrics?: QualityMetrics;
-  onCreateProject: () => void;
+  onCreateProject: (generateImages?: boolean) => void;
   onRegenerate: () => void;
   onClose: () => void;
+  isCreating?: boolean;
+  creationStep?: string;
 }
 
 type TabType = 'overview' | 'scenes' | 'characters' | 'world' | 'style';
@@ -100,6 +102,8 @@ export default function CinematicResults({
   onCreateProject,
   onRegenerate,
   onClose,
+  isCreating = false,
+  creationStep = '',
 }: CinematicResultsProps) {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [expandedScene, setExpandedScene] = useState<number | null>(null);
@@ -516,20 +520,51 @@ export default function CinematicResults({
 
         {/* Footer Actions */}
         <footer className={styles.footer}>
-          <button className={`btn btn-secondary ${styles.actionBtn}`} onClick={onRegenerate}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M23 4v6h-6" />
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-            </svg>
-            Regenerate
-          </button>
-          <button className={`btn btn-primary ${styles.actionBtn}`} onClick={onCreateProject}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
-            </svg>
-            Create Project
-          </button>
+          {isCreating ? (
+            <div className={styles.creatingProgress}>
+              <div className={styles.spinner} />
+              <span className={styles.creatingText}>{creationStep || 'Creating project...'}</span>
+            </div>
+          ) : (
+            <>
+              <button
+                className={`btn btn-secondary ${styles.actionBtn}`}
+                onClick={onRegenerate}
+                disabled={isCreating}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 4v6h-6" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+                Regenerate
+              </button>
+              <button
+                className={`btn btn-secondary ${styles.actionBtn}`}
+                onClick={() => onCreateProject(false)}
+                disabled={isCreating}
+                title="Create project without generating images (faster)"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z" />
+                  <polyline points="13 2 13 9 20 9" />
+                </svg>
+                Quick Create
+              </button>
+              <button
+                className={`btn btn-primary ${styles.actionBtn}`}
+                onClick={() => onCreateProject(true)}
+                disabled={isCreating}
+                title="Create project and generate AI images for all scenes"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <circle cx="8.5" cy="8.5" r="1.5" />
+                  <polyline points="21 15 16 10 5 21" />
+                </svg>
+                Create with Images
+              </button>
+            </>
+          )}
         </footer>
       </div>
     </div>
