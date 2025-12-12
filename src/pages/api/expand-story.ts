@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
-import { requireAuth } from '@/utils/api-auth';
+import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 
 interface StoryExpansionRequest {
   prompt: string;
@@ -64,6 +64,14 @@ export default async function handler(
   const userId = await requireAuth(req, res);
   if (!userId) return;
 
+  // Rate limiting: 10 story expansions per hour per user (expensive AI operation)
+  if (!checkRateLimit(`expand-story:${userId}`, 10, 3600000)) {
+    return res.status(429).json({
+      success: false,
+      error: 'Rate limit exceeded. You can generate up to 10 projects per hour.',
+    });
+  }
+
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({
@@ -89,6 +97,9 @@ export default async function handler(
   }
 
   const clampedSceneCount = Math.min(Math.max(sceneCount, 3), 10);
+
+  // Dynamic max tokens based on scene count (base 2500 + 200 per extra scene above 3)
+  const dynamicMaxTokens = Math.min(2500 + (clampedSceneCount - 3) * 200, 4000);
 
   try {
     const systemPrompt = `You are an expert cinematic storyteller and storyboard artist. Your task is to expand a simple story idea into a complete cinematic project.
@@ -148,7 +159,7 @@ Respond ONLY with valid JSON in this exact format:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt.trim() },
       ],
-      max_tokens: 3000,
+      max_tokens: dynamicMaxTokens,
       temperature: 0.8,
       response_format: { type: 'json_object' },
     });
@@ -171,14 +182,39 @@ Respond ONLY with valid JSON in this exact format:
       });
     }
 
+    // Validate scene structure - ensure each scene has required prompt field
+    const validScenes = parsed.scenes.filter(
+      (scene: Record<string, unknown>) =>
+        scene && typeof scene.prompt === 'string' && scene.prompt.trim().length > 0
+    );
+
+    if (validScenes.length === 0) {
+      return res.status(500).json({
+        success: false,
+        error: 'AI generated no valid scenes',
+      });
+    }
+
+    // Validate characters if present
+    const validCharacters = (parsed.characters || []).filter(
+      (char: Record<string, unknown>) =>
+        char && typeof char.name === 'string' && char.name.trim().length > 0
+    );
+
+    // Validate lore if present
+    const validLore = (parsed.lore || []).filter(
+      (lore: Record<string, unknown>) =>
+        lore && typeof lore.name === 'string' && lore.name.trim().length > 0
+    );
+
     return res.status(200).json({
       success: true,
       projectName: parsed.projectName,
       projectDescription: parsed.projectDescription,
       visualStyle: parsed.visualStyle,
-      characters: parsed.characters || [],
-      scenes: parsed.scenes,
-      lore: parsed.lore || [],
+      characters: validCharacters,
+      scenes: validScenes,
+      lore: validLore,
     });
   } catch (error) {
     console.error('[expand-story] Error:', error);

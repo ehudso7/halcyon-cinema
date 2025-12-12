@@ -377,9 +377,14 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       const newProject = await projectResponse.json();
       const projectId = newProject.id;
 
+      // Track partial failures for user feedback
+      let failedCharacters = 0;
+      let failedLore = 0;
+      let failedScenes = 0;
+
       // Step 3: Create characters (in parallel)
-      const characterPromises = (storyData.characters || []).map((char: { name: string; description: string; traits?: string[] }) =>
-        fetch(`/api/projects/${projectId}/characters`, {
+      const characterPromises = (storyData.characters || []).map(async (char: { name: string; description: string; traits?: string[] }) => {
+        const response = await fetch(`/api/projects/${projectId}/characters`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -387,12 +392,14 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
             description: char.description,
             traits: char.traits || [],
           }),
-        })
-      );
+        });
+        if (!response.ok) failedCharacters++;
+        return response;
+      });
 
       // Step 4: Create lore entries (in parallel)
-      const lorePromises = (storyData.lore || []).map((lore: { type: string; name: string; summary: string }) =>
-        fetch(`/api/projects/${projectId}/lore`, {
+      const lorePromises = (storyData.lore || []).map(async (lore: { type: string; name: string; summary: string }) => {
+        const response = await fetch(`/api/projects/${projectId}/lore`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -400,29 +407,39 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
             name: lore.name,
             summary: lore.summary,
           }),
-        })
-      );
+        });
+        if (!response.ok) failedLore++;
+        return response;
+      });
 
       // Wait for characters and lore to be created
-      await Promise.all([...characterPromises, ...lorePromises]);
+      await Promise.allSettled([...characterPromises, ...lorePromises]);
 
       // Step 5: Create scenes sequentially (to maintain order)
       for (const scene of storyData.scenes || []) {
-        await fetch('/api/scenes', {
+        const sceneResponse = await fetch('/api/scenes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             projectId,
             prompt: scene.prompt,
-            style: storyData.visualStyle || data.genre,
+            metadata: { style: storyData.visualStyle || data.genre },
           }),
         });
+        if (!sceneResponse.ok) failedScenes++;
       }
 
       // Refresh projects list
       setProjects(prev => [newProject, ...prev]);
       setIsQuickCreateOpen(false);
-      showToast('Project created with AI-generated content!', 'success');
+
+      // Provide appropriate feedback based on results
+      const totalFailures = failedCharacters + failedLore + failedScenes;
+      if (totalFailures > 0) {
+        showToast(`Project created with some issues (${totalFailures} items failed to save)`, 'warning');
+      } else {
+        showToast('Project created with AI-generated content!', 'success');
+      }
 
       // Navigate to the new project
       router.push(`/project/${projectId}`);

@@ -74,8 +74,8 @@ export default function QuickCreateModal({
       return;
     }
 
-    if (trimmedPrompt.length < 10) {
-      setError('Please provide a more detailed description (at least 10 characters)');
+    if (trimmedPrompt.length < 20) {
+      setError('Please provide a more detailed description (at least 20 characters)');
       return;
     }
 
@@ -220,7 +220,7 @@ export default function QuickCreateModal({
           {error && <p className={styles.error}>{error}</p>}
 
           <div className={styles.preview}>
-            <h4>What you'll get:</h4>
+            <h4>What you&apos;ll get:</h4>
             <ul>
               <li>Complete project with {sceneCount} scenes</li>
               <li>Auto-generated characters with descriptions</li>
