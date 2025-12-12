@@ -16,6 +16,10 @@ import { getAllProjectsAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Home.module.css';
 
+// Constants for error logging
+const MAX_ERROR_CHARS = 2000;
+const TRUNCATED_SUFFIX = '…[truncated]';
+
 interface HomeProps {
   projects: Project[];
   isNewUser: boolean;
@@ -593,15 +597,16 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
                   }),
                 });
                 if (!updateResponse.ok) {
-                  const MAX_ERROR_CHARS = 2000;
                   const contentType = updateResponse.headers.get('content-type') ?? '';
-                  const errorTextRaw = await (contentType.includes('application/json')
+                  const errorTextRaw = await (contentType.toLowerCase().includes('json')
                     ? updateResponse.json().then(d => JSON.stringify(d)).catch(() => '')
                     : updateResponse.text().catch(() => '')
                   );
-                  const errorText = errorTextRaw.length > MAX_ERROR_CHARS
-                    ? `${errorTextRaw.slice(0, MAX_ERROR_CHARS)}…[truncated]`
-                    : (errorTextRaw || 'Unknown error');
+                  const errorText = !errorTextRaw
+                    ? 'Unknown error'
+                    : errorTextRaw.length > MAX_ERROR_CHARS
+                      ? `${errorTextRaw.slice(0, MAX_ERROR_CHARS - TRUNCATED_SUFFIX.length)}${TRUNCATED_SUFFIX}`
+                      : errorTextRaw;
                   console.error(`Failed to update scene ${scene.id} with image. Status: ${updateResponse.status} ${updateResponse.statusText}. Response: ${errorText}`);
                   failedImages++;
                 } else {
