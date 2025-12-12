@@ -593,8 +593,9 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
                   }),
                 });
                 if (!updateResponse.ok) {
-                  const errorText = await updateResponse.text().catch(() => 'Unknown error');
-                  console.error(`Failed to update scene ${scene.id} with image. Status: ${updateResponse.status}. Response: ${errorText}`);
+                  const errorTextRaw = await updateResponse.text().catch(() => 'Unknown error');
+                  const errorText = errorTextRaw.length > 2000 ? `${errorTextRaw.slice(0, 2000)}…[truncated]` : errorTextRaw;
+                  console.error(`Failed to update scene ${scene.id} with image. Status: ${updateResponse.status} ${updateResponse.statusText}. Response: ${errorText}`);
                   failedImages++;
                 } else {
                   imagesSucceeded++;
@@ -631,8 +632,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       // Provide appropriate feedback based on results
       const totalFailures = failedCharacters + failedLore + failedScenes;
       if (totalFailures > 0 || failedImages > 0) {
-        const imageWarning = failedImages > 0 ? ` (${failedImages} images failed)` : '';
-        showToast(`Project created with some issues (${totalFailures} items failed)${imageWarning}`, 'warning');
+        const parts: string[] = [];
+        if (totalFailures > 0) parts.push(`${totalFailures} items failed`);
+        if (failedImages > 0) parts.push(`${failedImages} images failed`);
+        showToast(`Project created with some issues (${parts.join(', ')})`, 'warning');
       } else if (imagesSucceeded > 0) {
         showToast('Project created with AI-generated content and images!', 'success');
       } else {
