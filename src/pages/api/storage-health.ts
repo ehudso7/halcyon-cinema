@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { isSupabaseAdminConfigured, getSupabaseUrl } from '@/utils/supabase';
+import { timingSafeEqual } from 'crypto';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '@/utils/supabase';
 
 interface HealthResponse {
   status: 'ok' | 'error';
@@ -9,6 +10,16 @@ interface HealthResponse {
     serviceKeySet: boolean;
   };
   message: string;
+}
+
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ */
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
 /**
@@ -30,8 +41,18 @@ export default function handler(
     const expectedToken = process.env.INTERNAL_HEALTH_TOKEN;
     const providedToken = req.headers['x-internal-health-token'];
 
-    // If token is configured, require it; otherwise allow access (for initial setup)
-    if (expectedToken && providedToken !== expectedToken) {
+    if (!expectedToken) {
+      console.warn(
+        'INTERNAL_HEALTH_TOKEN not configured in production - storage-health endpoint blocked'
+      );
+      return res.status(404).end();
+    }
+
+    // Use constant-time comparison to prevent timing attacks
+    if (
+      typeof providedToken !== 'string' ||
+      !safeCompare(providedToken, expectedToken)
+    ) {
       return res.status(404).end();
     }
   }
@@ -46,7 +67,7 @@ export default function handler(
   }
 
   const supabaseUrl = getSupabaseUrl();
-  const serviceKeySet = isSupabaseAdminConfigured();
+  const serviceKeySet = !!getSupabaseServiceRoleKey();
   let urlIsValid = false;
 
   // Mask the URL for privacy (show only the host)
