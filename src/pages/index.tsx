@@ -582,20 +582,24 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
             if (imageResponse.ok) {
               const imageData = await imageResponse.json();
               if (imageData.imageUrl) {
-                // Update scene with the generated image
-                await fetch(`/api/scenes/${scene.id}`, {
+                // Update scene with the generated image (projectId as query param)
+                const updateResponse = await fetch(`/api/scenes/${scene.id}?projectId=${projectId}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    projectId,
                     imageUrl: imageData.imageUrl,
                   }),
                 });
+                if (!updateResponse.ok) {
+                  console.error(`Failed to update scene ${scene.id} with image`);
+                  failedImages++;
+                }
               }
             } else {
               failedImages++;
             }
-          } catch {
+          } catch (error) {
+            console.error('Image generation error:', error);
             failedImages++;
           }
         }
@@ -612,8 +616,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       if (totalFailures > 0 || failedImages > 0) {
         const imageWarning = failedImages > 0 ? ` (${failedImages} images failed)` : '';
         showToast(`Project created with some issues (${totalFailures} items failed)${imageWarning}`, 'warning');
-      } else {
+      } else if (generateImages) {
         showToast('Project created with AI-generated content and images!', 'success');
+      } else {
+        showToast('Project created with AI-generated content!', 'success');
       }
 
       // Navigate to the new project
