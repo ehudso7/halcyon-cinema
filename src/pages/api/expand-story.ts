@@ -11,35 +11,70 @@ interface StoryExpansionRequest {
 
 interface GeneratedCharacter {
   name: string;
+  role: string;
   description: string;
+  archetype: string;
+  emotionalArc: string;
   traits: string[];
   visualDescription: string;
+  voiceStyle: string;
 }
 
 interface GeneratedScene {
+  sceneNumber: number;
   title: string;
+  slugline: string;
+  setting: string;
+  timeOfDay: string;
   prompt: string;
+  screenplay: string;
   shotType: string;
   mood: string;
   lighting: string;
   characters: string[];
+  keyActions: string[];
+  emotionalBeat: string;
 }
 
 interface GeneratedLore {
-  type: 'location' | 'event' | 'system';
+  type: 'location' | 'event' | 'system' | 'object' | 'concept';
   name: string;
   summary: string;
   description: string;
+  visualMotifs: string[];
+}
+
+interface VisualStyleGuide {
+  primaryStyle: string;
+  colorPalette: string[];
+  lightingApproach: string;
+  cameraStyle: string;
+  inspirationFilms: string[];
+  toneKeywords: string[];
+  visualMotifs: string[];
 }
 
 interface StoryExpansionResponse {
   success: boolean;
   projectName?: string;
   projectDescription?: string;
+  logline?: string;
+  tagline?: string;
+  directorsConcept?: string;
+  genre?: string;
+  tone?: string;
   visualStyle?: string;
+  styleGuide?: VisualStyleGuide;
   characters?: GeneratedCharacter[];
   scenes?: GeneratedScene[];
   lore?: GeneratedLore[];
+  qualityMetrics?: {
+    narrativeCoherence: number;
+    characterDepth: number;
+    worldBuilding: number;
+    visualClarity: number;
+    overallScore: number;
+  };
   error?: string;
 }
 
@@ -48,23 +83,24 @@ const openai = new OpenAI({
 });
 
 /**
- * AI Story Expansion API
- * Takes a simple prompt and expands it into a complete cinematic project with:
- * - Project name and description
- * - Multiple scenes with detailed prompts
- * - Characters with descriptions and traits
- * - World lore entries
- * - Consistent visual style
+ * AI Story Expansion API - Professional Cinematic Package Generator
+ *
+ * Takes a simple prompt and expands it into a complete, studio-grade cinematic project:
+ * - Logline and tagline
+ * - Director's concept statement
+ * - Screenplay-formatted scenes
+ * - Deep character profiles with arcs
+ * - Rich world lore
+ * - Visual style guide with moodboard elements
+ * - Quality metrics
  */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<StoryExpansionResponse>
 ) {
-  // Require authentication
   const userId = await requireAuth(req, res);
   if (!userId) return;
 
-  // Rate limiting: 10 story expansions per hour per user (expensive AI operation)
   if (!checkRateLimit(`expand-story:${userId}`, 10, 3600000)) {
     return res.status(429).json({
       success: false,
@@ -97,58 +133,126 @@ export default async function handler(
   }
 
   const clampedSceneCount = Math.min(Math.max(sceneCount, 3), 10);
-
-  // Dynamic max tokens based on scene count (base 2500 + 200 per extra scene above 3)
-  const dynamicMaxTokens = Math.min(2500 + (clampedSceneCount - 3) * 200, 4000);
+  const dynamicMaxTokens = Math.min(4000 + (clampedSceneCount - 3) * 400, 8000);
 
   try {
-    const systemPrompt = `You are an expert cinematic storyteller and storyboard artist. Your task is to expand a simple story idea into a complete cinematic project.
+    const systemPrompt = `You are an elite screenwriter, director, and world-builder with decades of experience crafting award-winning cinematic narratives. Your writing rivals the best of A24, Christopher Nolan, and Denis Villeneuve.
 
-Given a brief prompt, you will create:
-1. A compelling project name and description
-2. ${clampedSceneCount} detailed scene descriptions that tell a cohesive visual story
-3. 2-4 main characters with rich descriptions
-4. 2-3 world-building lore entries (locations, events, or systems)
-5. A consistent visual style recommendation
+Create a COMPLETE, PROFESSIONAL cinematic project from the user's story seed. Your output must be studio-ready quality.
 
-IMPORTANT GUIDELINES:
-- Each scene should be a distinct visual moment that could be a cinematic still
-- Scenes should progress logically to tell a story arc
-- Characters should be visually distinct and memorable
-- Scene prompts should be detailed enough for AI image generation (50-100 words)
-- All content must be safe for image generation (no violence, gore, or explicit content)
-${genre ? `- Genre: ${genre}` : ''}
-${mood ? `- Overall mood: ${mood}` : ''}
+REQUIREMENTS:
 
-Respond ONLY with valid JSON in this exact format:
+1. PROJECT IDENTITY
+   - Create a compelling, marketable title
+   - Write a punchy logline (1 sentence, under 30 words)
+   - Craft a memorable tagline (short, evocative phrase for posters)
+   - Write a Director's Concept (2-3 sentences capturing vision, tone, themes)
+
+2. ${clampedSceneCount} SCREENPLAY-FORMAT SCENES
+   Each scene must include:
+   - Scene number and title
+   - Proper slugline (INT./EXT. LOCATION - TIME)
+   - Setting description
+   - Detailed visual prompt for AI image generation (80-120 words)
+   - Screenplay excerpt (action lines + minimal dialogue, 50-100 words)
+   - Shot type, mood, lighting
+   - Key actions and emotional beat
+   - Characters present
+
+3. 3-4 DEEP CHARACTER PROFILES
+   Each character needs:
+   - Name and role in story
+   - Archetype (e.g., "The Reluctant Hero", "The Trickster Mentor")
+   - Personality description (2-3 sentences)
+   - Emotional arc across the story
+   - 3-5 defining traits
+   - Detailed visual description for consistency
+   - Voice/dialogue style notes
+
+4. 3-4 WORLD LORE ENTRIES
+   Types: location, event, system, object, or concept
+   Each needs:
+   - Name and type
+   - One-sentence summary
+   - Rich 2-3 sentence description
+   - Visual motifs associated with it
+
+5. VISUAL STYLE GUIDE
+   - Primary visual style (e.g., "Neo-Noir Realism", "Dreamlike Fantasy")
+   - Color palette (5-7 specific colors/tones)
+   - Lighting approach
+   - Camera style preferences
+   - 3-5 inspiration films
+   - Tone keywords
+   - Recurring visual motifs
+
+QUALITY STANDARDS (Apply these rigorously):
+- Every scene must advance plot or reveal character
+- Dialogue must be naturalistic and character-specific
+- Descriptions must be visceral and sensory
+- Avoid clichés and generic phrasing
+- Each character must have a distinct voice
+- World details must feel lived-in and consistent
+- Visual prompts must be specific enough for consistent AI generation
+
+${genre ? `GENRE: ${genre}` : ''}
+${mood ? `MOOD/TONE: ${mood}` : ''}
+
+Respond ONLY with valid JSON matching this structure:
 {
   "projectName": "string",
   "projectDescription": "string (2-3 sentences)",
-  "visualStyle": "string (e.g., 'Cinematic Realism', 'Film Noir', 'Anime', 'Fantasy Art')",
+  "logline": "string (1 sentence, under 30 words)",
+  "tagline": "string (short evocative phrase)",
+  "directorsConcept": "string (2-3 sentences on vision/tone/themes)",
+  "genre": "string",
+  "tone": "string",
+  "visualStyle": "string",
+  "styleGuide": {
+    "primaryStyle": "string",
+    "colorPalette": ["color1", "color2", "..."],
+    "lightingApproach": "string",
+    "cameraStyle": "string",
+    "inspirationFilms": ["film1", "film2", "..."],
+    "toneKeywords": ["keyword1", "keyword2", "..."],
+    "visualMotifs": ["motif1", "motif2", "..."]
+  },
   "characters": [
     {
       "name": "string",
-      "description": "string (2-3 sentences about personality and role)",
-      "traits": ["trait1", "trait2", "trait3"],
-      "visualDescription": "string (detailed appearance for image generation)"
+      "role": "string (e.g., Protagonist, Antagonist, Mentor)",
+      "archetype": "string",
+      "description": "string (2-3 sentences)",
+      "emotionalArc": "string (character's journey)",
+      "traits": ["trait1", "trait2", "..."],
+      "visualDescription": "string (detailed appearance)",
+      "voiceStyle": "string (how they speak)"
     }
   ],
   "scenes": [
     {
-      "title": "string (short scene title)",
-      "prompt": "string (detailed scene description for image generation, 50-100 words)",
-      "shotType": "string (Wide Shot, Medium Shot, Close-up, Establishing Shot, etc.)",
-      "mood": "string (Epic, Mysterious, Romantic, Tense, Peaceful, etc.)",
-      "lighting": "string (Natural, Golden Hour, Dramatic, Soft, Neon, etc.)",
-      "characters": ["character names appearing in this scene"]
+      "sceneNumber": 1,
+      "title": "string",
+      "slugline": "INT./EXT. LOCATION - TIME",
+      "setting": "string (brief setting description)",
+      "timeOfDay": "string",
+      "prompt": "string (80-120 word visual description for AI image generation)",
+      "screenplay": "string (action lines and dialogue excerpt)",
+      "shotType": "string",
+      "mood": "string",
+      "lighting": "string",
+      "characters": ["character names"],
+      "keyActions": ["action1", "action2"],
+      "emotionalBeat": "string (what this scene makes audience feel)"
     }
   ],
   "lore": [
     {
-      "type": "location | event | system",
+      "type": "location|event|system|object|concept",
       "name": "string",
       "summary": "string (1 sentence)",
-      "description": "string (2-3 sentences)"
+      "description": "string (2-3 sentences)",
+      "visualMotifs": ["motif1", "motif2"]
     }
   ]
 }`;
@@ -160,7 +264,7 @@ Respond ONLY with valid JSON in this exact format:
         { role: 'user', content: prompt.trim() },
       ],
       max_tokens: dynamicMaxTokens,
-      temperature: 0.8,
+      temperature: 0.85,
       response_format: { type: 'json_object' },
     });
 
@@ -182,7 +286,7 @@ Respond ONLY with valid JSON in this exact format:
       });
     }
 
-    // Validate scene structure - ensure each scene has required prompt field
+    // Validate and filter scenes
     const validScenes = parsed.scenes.filter(
       (scene: Record<string, unknown>) =>
         scene && typeof scene.prompt === 'string' && scene.prompt.trim().length > 0
@@ -195,26 +299,36 @@ Respond ONLY with valid JSON in this exact format:
       });
     }
 
-    // Validate characters if present
+    // Validate characters
     const validCharacters = (parsed.characters || []).filter(
       (char: Record<string, unknown>) =>
         char && typeof char.name === 'string' && char.name.trim().length > 0
     );
 
-    // Validate lore if present
+    // Validate lore
     const validLore = (parsed.lore || []).filter(
       (lore: Record<string, unknown>) =>
         lore && typeof lore.name === 'string' && lore.name.trim().length > 0
     );
 
+    // Calculate quality metrics based on content completeness
+    const qualityMetrics = calculateQualityMetrics(parsed, validScenes, validCharacters, validLore);
+
     return res.status(200).json({
       success: true,
       projectName: parsed.projectName,
       projectDescription: parsed.projectDescription,
+      logline: parsed.logline,
+      tagline: parsed.tagline,
+      directorsConcept: parsed.directorsConcept,
+      genre: parsed.genre || genre,
+      tone: parsed.tone || mood,
       visualStyle: parsed.visualStyle,
+      styleGuide: parsed.styleGuide,
       characters: validCharacters,
       scenes: validScenes,
       lore: validLore,
+      qualityMetrics,
     });
   } catch (error) {
     console.error('[expand-story] Error:', error);
@@ -238,4 +352,64 @@ Respond ONLY with valid JSON in this exact format:
       error: 'Failed to expand story',
     });
   }
+}
+
+/**
+ * Calculate quality metrics based on content completeness and depth
+ */
+function calculateQualityMetrics(
+  parsed: Record<string, unknown>,
+  scenes: unknown[],
+  characters: unknown[],
+  lore: unknown[]
+): { narrativeCoherence: number; characterDepth: number; worldBuilding: number; visualClarity: number; overallScore: number } {
+  let narrativeCoherence = 50;
+  let characterDepth = 50;
+  let worldBuilding = 50;
+  let visualClarity = 50;
+
+  // Narrative coherence: logline, tagline, director's concept, scene progression
+  if (parsed.logline && typeof parsed.logline === 'string' && parsed.logline.length > 10) narrativeCoherence += 15;
+  if (parsed.tagline && typeof parsed.tagline === 'string') narrativeCoherence += 10;
+  if (parsed.directorsConcept && typeof parsed.directorsConcept === 'string' && parsed.directorsConcept.length > 50) narrativeCoherence += 15;
+  if (scenes.length >= 5) narrativeCoherence += 10;
+
+  // Character depth: number of characters, traits, arcs
+  if (characters.length >= 3) characterDepth += 15;
+  characters.forEach((char) => {
+    const c = char as Record<string, unknown>;
+    if (c.emotionalArc && typeof c.emotionalArc === 'string' && c.emotionalArc.length > 20) characterDepth += 5;
+    if (Array.isArray(c.traits) && c.traits.length >= 3) characterDepth += 5;
+    if (c.archetype && typeof c.archetype === 'string') characterDepth += 3;
+  });
+  characterDepth = Math.min(characterDepth, 100);
+
+  // World building: lore entries, visual motifs
+  if (lore.length >= 3) worldBuilding += 20;
+  lore.forEach((l) => {
+    const entry = l as Record<string, unknown>;
+    if (entry.description && typeof entry.description === 'string' && entry.description.length > 50) worldBuilding += 5;
+    if (Array.isArray(entry.visualMotifs) && entry.visualMotifs.length >= 2) worldBuilding += 5;
+  });
+  worldBuilding = Math.min(worldBuilding, 100);
+
+  // Visual clarity: style guide completeness
+  const styleGuide = parsed.styleGuide as Record<string, unknown> | undefined;
+  if (styleGuide) {
+    if (styleGuide.primaryStyle) visualClarity += 10;
+    if (Array.isArray(styleGuide.colorPalette) && styleGuide.colorPalette.length >= 5) visualClarity += 10;
+    if (styleGuide.lightingApproach) visualClarity += 10;
+    if (Array.isArray(styleGuide.inspirationFilms) && styleGuide.inspirationFilms.length >= 3) visualClarity += 10;
+    if (Array.isArray(styleGuide.visualMotifs) && styleGuide.visualMotifs.length >= 3) visualClarity += 10;
+  }
+
+  const overallScore = Math.round((narrativeCoherence + characterDepth + worldBuilding + visualClarity) / 4);
+
+  return {
+    narrativeCoherence: Math.min(narrativeCoherence, 100),
+    characterDepth: Math.min(characterDepth, 100),
+    worldBuilding: Math.min(worldBuilding, 100),
+    visualClarity: Math.min(visualClarity, 100),
+    overallScore,
+  };
 }

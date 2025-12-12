@@ -9,6 +9,7 @@ import Header from '@/components/Header';
 import ProjectCard from '@/components/ProjectCard';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import QuickCreateModal, { QuickCreateData } from '@/components/QuickCreateModal';
+import CinematicResults from '@/components/CinematicResults';
 import { useToast } from '@/components/Toast';
 import { Project } from '@/types';
 import { getAllProjectsAsync } from '@/utils/storage';
@@ -59,6 +60,66 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
   // Quick Create state
   const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState('');
+  const [generatedStoryData, setGeneratedStoryData] = useState<{
+    projectName: string;
+    projectDescription?: string;
+    logline?: string;
+    tagline?: string;
+    directorsConcept?: string;
+    genre?: string;
+    tone?: string;
+    visualStyle?: string;
+    styleGuide?: {
+      primaryStyle: string;
+      colorPalette: string[];
+      lightingApproach: string;
+      cameraStyle: string;
+      inspirationFilms: string[];
+      toneKeywords: string[];
+      visualMotifs: string[];
+    };
+    characters?: Array<{
+      name: string;
+      role: string;
+      description: string;
+      archetype: string;
+      emotionalArc: string;
+      traits: string[];
+      visualDescription: string;
+      voiceStyle: string;
+    }>;
+    scenes?: Array<{
+      sceneNumber: number;
+      title: string;
+      slugline: string;
+      setting: string;
+      timeOfDay: string;
+      prompt: string;
+      screenplay: string;
+      shotType: string;
+      mood: string;
+      lighting: string;
+      characters: string[];
+      keyActions: string[];
+      emotionalBeat: string;
+    }>;
+    lore?: Array<{
+      type: 'location' | 'event' | 'system' | 'object' | 'concept';
+      name: string;
+      summary: string;
+      description: string;
+      visualMotifs: string[];
+    }>;
+    qualityMetrics?: {
+      narrativeCoherence: number;
+      characterDepth: number;
+      worldBuilding: number;
+      visualClarity: number;
+      overallScore: number;
+    };
+  } | null>(null);
+  const [quickCreateData, setQuickCreateData] = useState<QuickCreateData | null>(null);
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -345,6 +406,9 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
   // Quick Create: Generate full project from a single prompt
   const handleQuickCreate = async (data: QuickCreateData) => {
     setIsGenerating(true);
+    setQuickCreateData(data);
+    setGenerationStep('Weaving narrative threads...');
+
     try {
       // Step 1: Expand the story using AI
       const expandResponse = await fetch('/api/expand-story', {
@@ -360,13 +424,32 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
 
       const storyData = await expandResponse.json();
 
-      // Step 2: Create the project
+      // Store generated data and show results
+      setGeneratedStoryData(storyData);
+      setIsQuickCreateOpen(false);
+      setIsGenerating(false);
+      setGenerationStep('');
+    } catch (error) {
+      console.error('Quick create error:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to generate story', 'error');
+      setIsGenerating(false);
+      setGenerationStep('');
+    }
+  };
+
+  // Create project from generated story data
+  const handleCreateFromResults = async () => {
+    if (!generatedStoryData) return;
+
+    setIsCreating(true);
+    try {
+      // Step 1: Create the project
       const projectResponse = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: storyData.projectName,
-          description: storyData.projectDescription,
+          name: generatedStoryData.projectName,
+          description: generatedStoryData.projectDescription,
         }),
       });
 
@@ -382,8 +465,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       let failedLore = 0;
       let failedScenes = 0;
 
-      // Step 3: Create characters (in parallel)
-      const characterPromises = (storyData.characters || []).map(async (char: { name: string; description: string; traits?: string[] }) => {
+      // Step 2: Create characters (in parallel)
+      const characterPromises = (generatedStoryData.characters || []).map(async (char) => {
         const response = await fetch(`/api/projects/${projectId}/characters`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -391,14 +474,18 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
             name: char.name,
             description: char.description,
             traits: char.traits || [],
+            archetype: char.archetype,
+            emotionalArc: char.emotionalArc,
+            visualDescription: char.visualDescription,
+            voiceStyle: char.voiceStyle,
           }),
         });
         if (!response.ok) failedCharacters++;
         return response;
       });
 
-      // Step 4: Create lore entries (in parallel)
-      const lorePromises = (storyData.lore || []).map(async (lore: { type: string; name: string; summary: string }) => {
+      // Step 3: Create lore entries (in parallel)
+      const lorePromises = (generatedStoryData.lore || []).map(async (lore) => {
         const response = await fetch(`/api/projects/${projectId}/lore`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -406,6 +493,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
             type: lore.type,
             name: lore.name,
             summary: lore.summary,
+            description: lore.description,
+            visualMotifs: lore.visualMotifs,
           }),
         });
         if (!response.ok) failedLore++;
@@ -415,15 +504,25 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       // Wait for characters and lore to be created
       await Promise.allSettled([...characterPromises, ...lorePromises]);
 
-      // Step 5: Create scenes sequentially (to maintain order)
-      for (const scene of storyData.scenes || []) {
+      // Step 4: Create scenes sequentially (to maintain order)
+      for (const scene of generatedStoryData.scenes || []) {
         const sceneResponse = await fetch('/api/scenes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             projectId,
             prompt: scene.prompt,
-            metadata: { style: storyData.visualStyle || data.genre },
+            title: scene.title,
+            metadata: {
+              style: generatedStoryData.visualStyle || quickCreateData?.genre,
+              slugline: scene.slugline,
+              screenplay: scene.screenplay,
+              shotType: scene.shotType,
+              mood: scene.mood,
+              lighting: scene.lighting,
+              emotionalBeat: scene.emotionalBeat,
+              keyActions: scene.keyActions,
+            },
           }),
         });
         if (!sceneResponse.ok) failedScenes++;
@@ -431,7 +530,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
 
       // Refresh projects list
       setProjects(prev => [newProject, ...prev]);
-      setIsQuickCreateOpen(false);
+      setGeneratedStoryData(null);
+      setQuickCreateData(null);
 
       // Provide appropriate feedback based on results
       const totalFailures = failedCharacters + failedLore + failedScenes;
@@ -444,11 +544,29 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       // Navigate to the new project
       router.push(`/project/${projectId}`);
     } catch (error) {
-      console.error('Quick create error:', error);
+      console.error('Create from results error:', error);
       showToast(error instanceof Error ? error.message : 'Failed to create project', 'error');
     } finally {
-      setIsGenerating(false);
+      setIsCreating(false);
     }
+  };
+
+  // Regenerate with same settings
+  const handleRegenerate = () => {
+    if (quickCreateData) {
+      setGeneratedStoryData(null);
+      setIsQuickCreateOpen(true);
+      // Auto-submit after a short delay to let modal render
+      setTimeout(() => {
+        handleQuickCreate(quickCreateData);
+      }, 100);
+    }
+  };
+
+  // Close results and start fresh
+  const handleCloseResults = () => {
+    setGeneratedStoryData(null);
+    setQuickCreateData(null);
   };
 
   const handleCloseModal = () => {
@@ -812,7 +930,30 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
         onClose={() => setIsQuickCreateOpen(false)}
         onGenerate={handleQuickCreate}
         isGenerating={isGenerating}
+        generationStep={generationStep}
       />
+
+      {/* Cinematic Results Modal */}
+      {generatedStoryData && (
+        <CinematicResults
+          projectName={generatedStoryData.projectName}
+          projectDescription={generatedStoryData.projectDescription}
+          logline={generatedStoryData.logline}
+          tagline={generatedStoryData.tagline}
+          directorsConcept={generatedStoryData.directorsConcept}
+          genre={generatedStoryData.genre}
+          tone={generatedStoryData.tone}
+          visualStyle={generatedStoryData.visualStyle}
+          styleGuide={generatedStoryData.styleGuide}
+          characters={generatedStoryData.characters}
+          scenes={generatedStoryData.scenes}
+          lore={generatedStoryData.lore}
+          qualityMetrics={generatedStoryData.qualityMetrics}
+          onCreateProject={handleCreateFromResults}
+          onRegenerate={handleRegenerate}
+          onClose={handleCloseResults}
+        />
+      )}
 
       {/* Edit Project Modal */}
       {editingProject && (
