@@ -438,10 +438,12 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
   };
 
   // Create project from generated story data
-  const handleCreateFromResults = async () => {
+  const handleCreateFromResults = async (generateImages = true) => {
     if (!generatedStoryData) return;
 
     setIsCreating(true);
+    setGenerationStep('Creating project...');
+
     try {
       // Step 1: Create the project
       const projectResponse = await fetch('/api/projects', {
@@ -464,6 +466,9 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       let failedCharacters = 0;
       let failedLore = 0;
       let failedScenes = 0;
+      let failedImages = 0;
+
+      setGenerationStep('Creating characters...');
 
       // Step 2: Create characters (in parallel)
       const characterPromises = (generatedStoryData.characters || []).map(async (char) => {
@@ -483,6 +488,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
         if (!response.ok) failedCharacters++;
         return response;
       });
+
+      setGenerationStep('Building world lore...');
 
       // Step 3: Create lore entries (in parallel)
       const lorePromises = (generatedStoryData.lore || []).map(async (lore) => {
@@ -504,8 +511,14 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       // Wait for characters and lore to be created
       await Promise.allSettled([...characterPromises, ...lorePromises]);
 
-      // Step 4: Create scenes sequentially (to maintain order)
-      for (const scene of generatedStoryData.scenes || []) {
+      // Step 4: Create scenes and generate images
+      const scenes = generatedStoryData.scenes || [];
+      const createdScenes: Array<{ id: string; prompt: string; metadata: Record<string, unknown> }> = [];
+
+      for (let i = 0; i < scenes.length; i++) {
+        const scene = scenes[i];
+        setGenerationStep(`Creating scene ${i + 1} of ${scenes.length}...`);
+
         const sceneResponse = await fetch('/api/scenes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -525,20 +538,82 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
             },
           }),
         });
-        if (!sceneResponse.ok) failedScenes++;
+
+        if (!sceneResponse.ok) {
+          failedScenes++;
+        } else {
+          const createdScene = await sceneResponse.json();
+          createdScenes.push({
+            id: createdScene.id,
+            prompt: scene.prompt,
+            metadata: {
+              shotType: scene.shotType,
+              style: generatedStoryData.visualStyle || quickCreateData?.genre,
+              lighting: scene.lighting,
+              mood: scene.mood,
+            },
+          });
+        }
+      }
+
+      // Step 5: Generate images for scenes (if enabled)
+      if (generateImages && createdScenes.length > 0) {
+        for (let i = 0; i < createdScenes.length; i++) {
+          const scene = createdScenes[i];
+          setGenerationStep(`Generating image ${i + 1} of ${createdScenes.length}...`);
+
+          try {
+            const imageResponse = await fetch('/api/generate-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: scene.prompt,
+                projectId,
+                sceneId: scene.id,
+                shotType: scene.metadata.shotType,
+                style: scene.metadata.style,
+                lighting: scene.metadata.lighting,
+                mood: scene.metadata.mood,
+                size: '1024x1024',
+                quality: 'standard',
+              }),
+            });
+
+            if (imageResponse.ok) {
+              const imageData = await imageResponse.json();
+              if (imageData.imageUrl) {
+                // Update scene with the generated image
+                await fetch(`/api/scenes/${scene.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    projectId,
+                    imageUrl: imageData.imageUrl,
+                  }),
+                });
+              }
+            } else {
+              failedImages++;
+            }
+          } catch {
+            failedImages++;
+          }
+        }
       }
 
       // Refresh projects list
       setProjects(prev => [newProject, ...prev]);
       setGeneratedStoryData(null);
       setQuickCreateData(null);
+      setGenerationStep('');
 
       // Provide appropriate feedback based on results
       const totalFailures = failedCharacters + failedLore + failedScenes;
-      if (totalFailures > 0) {
-        showToast(`Project created with some issues (${totalFailures} items failed to save)`, 'warning');
+      if (totalFailures > 0 || failedImages > 0) {
+        const imageWarning = failedImages > 0 ? ` (${failedImages} images failed)` : '';
+        showToast(`Project created with some issues (${totalFailures} items failed)${imageWarning}`, 'warning');
       } else {
-        showToast('Project created with AI-generated content!', 'success');
+        showToast('Project created with AI-generated content and images!', 'success');
       }
 
       // Navigate to the new project
@@ -546,6 +621,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
     } catch (error) {
       console.error('Create from results error:', error);
       showToast(error instanceof Error ? error.message : 'Failed to create project', 'error');
+      setGenerationStep('');
     } finally {
       setIsCreating(false);
     }
@@ -952,6 +1028,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
           onCreateProject={handleCreateFromResults}
           onRegenerate={handleRegenerate}
           onClose={handleCloseResults}
+          isCreating={isCreating}
+          creationStep={generationStep}
         />
       )}
 
