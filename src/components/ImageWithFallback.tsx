@@ -15,6 +15,7 @@ interface ImageWithFallbackProps {
   priority?: boolean;
   fallbackType?: 'scene' | 'project' | 'character' | 'generic';
   onLoad?: () => void;
+  showExpiredMessage?: boolean;
 }
 
 // Generate a consistent gradient based on string hash
@@ -31,7 +32,16 @@ function generateGradient(seed: string): string {
 }
 
 // Get icon based on fallback type
-function getFallbackIcon(type: ImageWithFallbackProps['fallbackType']) {
+function getFallbackIcon(type: ImageWithFallbackProps['fallbackType'], isExpired: boolean = false) {
+  if (isExpired) {
+    return (
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.6">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    );
+  }
+
   switch (type) {
     case 'scene':
       return (
@@ -83,6 +93,7 @@ export default function ImageWithFallback({
   priority = false,
   fallbackType = 'generic',
   onLoad,
+  showExpiredMessage = true,
 }: ImageWithFallbackProps) {
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,9 +104,16 @@ export default function ImageWithFallback({
     setIsLoading(true);
   }, [src]);
 
+  // Check if the URL looks like a temporary OpenAI URL
+  const isLikelyExpiredUrl = src && (
+    src.includes('oaidalleapiprodscus.blob.core.windows.net') ||
+    src.includes('dalleproduse.blob.core.windows.net')
+  );
+
   // If no src or error, show fallback
   if (!src || hasError) {
     const gradient = generateGradient(alt || 'default');
+    const isExpired = hasError && !!isLikelyExpiredUrl;
 
     return (
       <div
@@ -103,8 +121,15 @@ export default function ImageWithFallback({
         style={{ background: gradient }}
       >
         <div className={styles.fallbackContent}>
-          {getFallbackIcon(fallbackType)}
-          <span className={styles.fallbackText}>{alt}</span>
+          {getFallbackIcon(fallbackType, isExpired)}
+          {isExpired && showExpiredMessage ? (
+            <>
+              <span className={styles.expiredText}>Image Expired</span>
+              <span className={styles.expiredHint}>Click to regenerate</span>
+            </>
+          ) : (
+            <span className={styles.fallbackText}>{alt}</span>
+          )}
         </div>
       </div>
     );
