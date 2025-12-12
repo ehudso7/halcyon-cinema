@@ -8,6 +8,7 @@ import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import ProjectCard from '@/components/ProjectCard';
 import CreateProjectModal from '@/components/CreateProjectModal';
+import QuickCreateModal, { QuickCreateData } from '@/components/QuickCreateModal';
 import { useToast } from '@/components/Toast';
 import { Project } from '@/types';
 import { getAllProjectsAsync } from '@/utils/storage';
@@ -55,6 +56,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Quick Create state
+  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+
   // Load preferences from localStorage
   useEffect(() => {
     const savedSort = localStorage.getItem('halcyon-sort') as SortOption;
@@ -83,6 +88,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
         case 'n':
           e.preventDefault();
           setIsModalOpen(true);
+          break;
+        case 'q':
+          e.preventDefault();
+          setIsQuickCreateOpen(true);
           break;
         case '/':
           e.preventDefault();
@@ -333,6 +342,98 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
     localStorage.setItem('halcyon-welcome-dismissed', 'true');
   };
 
+  // Quick Create: Generate full project from a single prompt
+  const handleQuickCreate = async (data: QuickCreateData) => {
+    setIsGenerating(true);
+    try {
+      // Step 1: Expand the story using AI
+      const expandResponse = await fetch('/api/expand-story', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      if (!expandResponse.ok) {
+        const errorData = await expandResponse.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to generate story');
+      }
+
+      const storyData = await expandResponse.json();
+
+      // Step 2: Create the project
+      const projectResponse = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: storyData.projectName,
+          description: storyData.projectDescription,
+        }),
+      });
+
+      if (!projectResponse.ok) {
+        throw new Error('Failed to create project');
+      }
+
+      const newProject = await projectResponse.json();
+      const projectId = newProject.id;
+
+      // Step 3: Create characters (in parallel)
+      const characterPromises = (storyData.characters || []).map((char: { name: string; description: string; traits?: string[] }) =>
+        fetch(`/api/projects/${projectId}/characters`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: char.name,
+            description: char.description,
+            traits: char.traits || [],
+          }),
+        })
+      );
+
+      // Step 4: Create lore entries (in parallel)
+      const lorePromises = (storyData.lore || []).map((lore: { type: string; name: string; summary: string }) =>
+        fetch(`/api/projects/${projectId}/lore`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: lore.type,
+            name: lore.name,
+            summary: lore.summary,
+          }),
+        })
+      );
+
+      // Wait for characters and lore to be created
+      await Promise.all([...characterPromises, ...lorePromises]);
+
+      // Step 5: Create scenes sequentially (to maintain order)
+      for (const scene of storyData.scenes || []) {
+        await fetch('/api/scenes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId,
+            prompt: scene.prompt,
+            style: storyData.visualStyle || data.genre,
+          }),
+        });
+      }
+
+      // Refresh projects list
+      setProjects(prev => [newProject, ...prev]);
+      setIsQuickCreateOpen(false);
+      showToast('Project created with AI-generated content!', 'success');
+
+      // Navigate to the new project
+      router.push(`/project/${projectId}`);
+    } catch (error) {
+      console.error('Quick create error:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to create project', 'error');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setCreateError('');
@@ -378,8 +479,18 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
                 </Link>
               )}
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => setIsQuickCreateOpen(true)}
                 className="btn btn-primary"
+                disabled={isGenerating}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+                Quick Create
+              </button>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="btn btn-secondary"
                 disabled={isCreating}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -678,6 +789,14 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
         externalError={createError}
       />
 
+      {/* Quick Create Modal */}
+      <QuickCreateModal
+        isOpen={isQuickCreateOpen}
+        onClose={() => setIsQuickCreateOpen(false)}
+        onGenerate={handleQuickCreate}
+        isGenerating={isGenerating}
+      />
+
       {/* Edit Project Modal */}
       {editingProject && (
         <div className={styles.modalOverlay} onClick={() => setEditingProject(null)}>
@@ -779,6 +898,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
             </div>
             <div className={styles.modalBody}>
               <div className={styles.shortcutList}>
+                <div className={styles.shortcut}>
+                  <kbd>Q</kbd>
+                  <span>Quick Create (AI-powered)</span>
+                </div>
                 <div className={styles.shortcut}>
                   <kbd>N</kbd>
                   <span>Create new project</span>
