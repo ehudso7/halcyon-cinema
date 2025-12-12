@@ -467,6 +467,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       let failedLore = 0;
       let failedScenes = 0;
       let failedImages = 0;
+      let imagesSucceeded = 0;
 
       setGenerationStep('Creating characters...');
 
@@ -583,7 +584,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
               const imageData = await imageResponse.json();
               if (imageData.imageUrl) {
                 // Update scene with the generated image (projectId as query param)
-                const updateResponse = await fetch(`/api/scenes/${scene.id}?projectId=${projectId}`, {
+                const queryParams = new URLSearchParams({ projectId: String(projectId) }).toString();
+                const updateResponse = await fetch(`/api/scenes/${scene.id}?${queryParams}`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
@@ -591,11 +593,26 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
                   }),
                 });
                 if (!updateResponse.ok) {
-                  console.error(`Failed to update scene ${scene.id} with image`);
+                  const errorText = await updateResponse.text().catch(() => 'Unknown error');
+                  console.error(`Failed to update scene ${scene.id} with image. Status: ${updateResponse.status}. Response: ${errorText}`);
                   failedImages++;
+                } else {
+                  imagesSucceeded++;
                 }
+              } else {
+                console.error(`Image generation succeeded but no imageUrl returned for scene ${scene.id}`);
+                failedImages++;
               }
             } else {
+              // Log error details for debugging
+              let errorMsg = '';
+              try {
+                const errorData = await imageResponse.json();
+                errorMsg = errorData?.error || errorData?.message || JSON.stringify(errorData);
+              } catch {
+                errorMsg = await imageResponse.text().catch(() => 'Unknown error');
+              }
+              console.error(`Image generation failed for scene ${scene.id}: status ${imageResponse.status} - ${errorMsg}`);
               failedImages++;
             }
           } catch (error) {
@@ -616,7 +633,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       if (totalFailures > 0 || failedImages > 0) {
         const imageWarning = failedImages > 0 ? ` (${failedImages} images failed)` : '';
         showToast(`Project created with some issues (${totalFailures} items failed)${imageWarning}`, 'warning');
-      } else if (generateImages) {
+      } else if (imagesSucceeded > 0) {
         showToast('Project created with AI-generated content and images!', 'success');
       } else {
         showToast('Project created with AI-generated content!', 'success');
