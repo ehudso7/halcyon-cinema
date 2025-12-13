@@ -136,7 +136,9 @@ export default async function handler(
 
         if (priceId && SUBSCRIPTION_TIERS[priceId]) {
           const tier = SUBSCRIPTION_TIERS[priceId];
-          const expiresAt = new Date(subscription.current_period_end * 1000);
+          // Access current_period_end safely - it exists on the subscription object
+          const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end;
+          const expiresAt = new Date(periodEnd * 1000);
 
           await updateUserSubscription(userId, tier, expiresAt, subscription.id);
           console.log(`[webhook] Updated subscription for user ${userId} to ${tier}`);
@@ -175,11 +177,19 @@ export default async function handler(
       }
 
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
+        // Use type assertion for invoice properties that may vary by Stripe version
+        const invoiceData = event.data.object as {
+          id: string;
+          subscription?: string | null;
+          billing_reason?: string;
+          customer: string | { id: string };
+        };
 
         // Handle subscription renewal
-        if (invoice.subscription && invoice.billing_reason === 'subscription_cycle') {
-          const customerId = invoice.customer as string;
+        if (invoiceData.subscription && invoiceData.billing_reason === 'subscription_cycle') {
+          const customerId = typeof invoiceData.customer === 'string'
+            ? invoiceData.customer
+            : invoiceData.customer.id;
 
           const { query } = await import('@/utils/db');
           const result = await query(
@@ -192,7 +202,7 @@ export default async function handler(
 
             // Get subscription to determine credits
             const subscription = await stripe.subscriptions.retrieve(
-              invoice.subscription as string
+              invoiceData.subscription as string
             );
             const priceId = subscription.items.data[0]?.price.id;
 
@@ -202,7 +212,7 @@ export default async function handler(
                 CREDIT_AMOUNTS[priceId],
                 'subscription',
                 'Monthly subscription credits renewal',
-                invoice.id
+                invoiceData.id
               );
               console.log(`[webhook] Added renewal credits for user ${userId}`);
             }
@@ -212,8 +222,8 @@ export default async function handler(
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice;
-        console.log('[webhook] Payment failed for invoice:', invoice.id);
+        const failedInvoice = event.data.object as { id: string };
+        console.log('[webhook] Payment failed for invoice:', failedInvoice.id);
         // Could send notification to user here
         break;
       }
