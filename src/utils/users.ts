@@ -9,6 +9,7 @@ import {
   getUserById as dbGetUserById,
   createUser as dbCreateUser,
   dbUpdateUser,
+  dbDeleteUser,
 } from './db';
 import { authLogger } from './logger';
 
@@ -309,13 +310,7 @@ export async function updateUser(id: string, updates: Partial<Pick<User, 'name'>
 export async function deleteUser(id: string): Promise<boolean> {
   // Use Postgres if available
   if (isPostgresAvailable()) {
-    try {
-      // For Postgres, we'd need to add a delete function to db.ts
-      // For now, we'll throw to indicate it's not implemented for Postgres
-      throw new Error('User deletion via Postgres not yet implemented');
-    } catch {
-      // Fall through to file storage or handle appropriately
-    }
+    return await dbDeleteUser(id);
   }
 
   // Fallback to file storage

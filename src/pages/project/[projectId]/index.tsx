@@ -172,29 +172,61 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
     setCurrentPrompt(data.prompt);
 
     try {
-      const imageResponse = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: data.prompt,
-          shotType: data.shotType,
-          style: data.style,
-          lighting: data.lighting,
-          mood: data.mood,
-          size: data.aspectRatio,
-          projectId: project.id,
-        }),
-      });
+      let mediaUrl: string;
+      let mediaType: 'image' | 'video' = 'image';
 
-      const imageResult = await imageResponse.json();
+      if (data.contentType === 'video') {
+        // Generate video
+        const videoResponse = await fetch('/api/generate-video', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: data.prompt,
+            aspectRatio: data.aspectRatio === '1792x1024' ? '16:9' : data.aspectRatio === '1024x1792' ? '9:16' : '1:1',
+          }),
+        });
 
-      if (!imageResult.success) {
-        throw new Error(imageResult.error || 'Failed to generate image');
-      }
+        const videoResult = await videoResponse.json();
 
-      // Show warning if image URL is temporary (storage not configured or failed)
-      if (imageResult.urlType === 'temporary' && imageResult.warning) {
-        setImageWarning(imageResult.warning);
+        if (!videoResult.success) {
+          throw new Error(videoResult.error || 'Failed to generate video');
+        }
+
+        // Handle async video generation (may still be processing)
+        if (videoResult.status === 'processing') {
+          throw new Error('Video generation is processing. Please check back later.');
+        }
+
+        mediaUrl = videoResult.videoUrl;
+        mediaType = 'video';
+      } else {
+        // Generate image
+        const imageResponse = await fetch('/api/generate-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: data.prompt,
+            shotType: data.shotType,
+            style: data.style,
+            lighting: data.lighting,
+            mood: data.mood,
+            size: data.aspectRatio,
+            projectId: project.id,
+          }),
+        });
+
+        const imageResult = await imageResponse.json();
+
+        if (!imageResult.success) {
+          throw new Error(imageResult.error || 'Failed to generate image');
+        }
+
+        // Show warning if image URL is temporary (storage not configured or failed)
+        if (imageResult.urlType === 'temporary' && imageResult.warning) {
+          setImageWarning(imageResult.warning);
+        }
+
+        mediaUrl = imageResult.imageUrl;
       }
 
       const sceneResponse = await fetch('/api/scenes', {
@@ -203,13 +235,14 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
         body: JSON.stringify({
           projectId: project.id,
           prompt: data.prompt,
-          imageUrl: imageResult.imageUrl,
+          imageUrl: mediaUrl,
           metadata: {
             shotType: data.shotType,
             style: data.style,
             lighting: data.lighting,
             mood: data.mood,
             aspectRatio: data.aspectRatio,
+            mediaType,
           },
           characterIds: data.characterIds,
         }),

@@ -683,6 +683,24 @@ export async function dbUpdateUser(
   };
 }
 
+/**
+ * Delete a user from the database.
+ * Note: This should be called after deleting associated data (projects, etc.)
+ * to avoid foreign key violations.
+ */
+export async function dbDeleteUser(id: string): Promise<boolean> {
+  if (!checkPostgresAvailable()) return false;
+
+  await initializeTables();
+
+  const result = await query(
+    'DELETE FROM users WHERE id = $1::uuid RETURNING id',
+    [id]
+  );
+
+  return result.rows.length > 0;
+}
+
 // ============================================================================
 // Project operations
 // ============================================================================
