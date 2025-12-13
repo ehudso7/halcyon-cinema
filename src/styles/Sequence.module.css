@@ -418,11 +418,20 @@
   gap: 32px;
 }
 
-.voiceoverSection {
-  margin-top: 16px;
+.audioSections {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.voiceoverToggle {
+.voiceoverSection,
+.musicSection {
+  /* Individual audio panel sections */
+}
+
+.voiceoverToggle,
+.musicToggle {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -435,13 +444,16 @@
   transition: all 0.2s;
   font-size: 0.95rem;
   margin-bottom: 16px;
+  width: 100%;
 }
 
-.voiceoverToggle:hover {
+.voiceoverToggle:hover,
+.musicToggle:hover {
   border-color: var(--color-primary);
 }
 
-.voiceoverToggle.active {
+.voiceoverToggle.active,
+.musicToggle.active {
   border-color: var(--color-primary);
   background: rgba(99, 102, 241, 0.1);
 }

@@ -33,6 +33,8 @@ export default function SceneCard({
     ? scene.prompt.slice(0, 100) + '...'
     : scene.prompt;
 
+  const isVideo = scene.metadata?.mediaType === 'video';
+
   const handleSelect = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -62,13 +64,23 @@ export default function SceneCard({
 
         <Link href={`/project/${scene.projectId}/scene/${scene.id}`} className={styles.listLink}>
           <div className={styles.listThumbnail}>
-            <ImageWithFallback
-              src={scene.imageUrl}
-              alt={`Scene ${index + 1}`}
-              fill
-              sizes="80px"
-              fallbackType="scene"
-            />
+            {isVideo && scene.imageUrl ? (
+              <video
+                src={scene.imageUrl}
+                className={styles.videoThumb}
+                muted
+                playsInline
+              />
+            ) : (
+              <ImageWithFallback
+                src={scene.imageUrl}
+                alt={`Scene ${index + 1}`}
+                fill
+                sizes="80px"
+                fallbackType="scene"
+              />
+            )}
+            {isVideo && <span className={styles.videoBadge}>VIDEO</span>}
           </div>
 
           <div className={styles.listContent}>
@@ -133,15 +145,28 @@ export default function SceneCard({
         className={styles.card}
       >
         <div className={styles.thumbnail}>
-          <ImageWithFallback
-            src={scene.imageUrl}
-            alt={`Scene ${index + 1}`}
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-            priority={index < 3}
-            fallbackType="scene"
-          />
+          {isVideo && scene.imageUrl ? (
+            <video
+              src={scene.imageUrl}
+              className={styles.videoThumb}
+              muted
+              playsInline
+              loop
+              onMouseEnter={(e) => e.currentTarget.play()}
+              onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+            />
+          ) : (
+            <ImageWithFallback
+              src={scene.imageUrl}
+              alt={`Scene ${index + 1}`}
+              fill
+              sizes="(max-width: 768px) 100vw, 33vw"
+              priority={index < 3}
+              fallbackType="scene"
+            />
+          )}
           <div className={styles.number}>Scene {index + 1}</div>
+          {isVideo && <span className={styles.videoBadge}>VIDEO</span>}
           {scene.imageUrl && (
             <div className={styles.aiBadge}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
