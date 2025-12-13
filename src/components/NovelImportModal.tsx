@@ -359,12 +359,21 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
           const existing = allCharacters.find(ec => ec.name.toLowerCase() === c.name.toLowerCase());
           if (existing) {
             // Update existing character with new appearances (deduplicated)
+            // Merge traits (union of both arrays, deduplicated)
+            const mergedTraits = Array.from(new Set([
+              ...(existing.traits || []),
+              ...(c.traits || []),
+            ]));
             return {
               ...existing,
               appearances: Array.from(new Set([...existing.appearances, chapterIndex])),
               description: c.description && c.description.length > existing.description.length
                 ? c.description
                 : existing.description,
+              traits: mergedTraits,
+              role: c.role && c.role.length > (existing.role?.length || 0)
+                ? c.role
+                : existing.role,
             };
           }
           return {
@@ -390,6 +399,9 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
               description: l.description && l.description.length > existing.description.length
                 ? l.description
                 : existing.description,
+              significance: l.significance && l.significance.length > (existing.significance?.length || 0)
+                ? l.significance
+                : existing.significance,
             };
           }
           return {
