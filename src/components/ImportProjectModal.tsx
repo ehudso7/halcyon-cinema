@@ -261,7 +261,6 @@ export default function ImportProjectModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           content: importContent.trim(),
-          extractAll: true,
         }),
       });
 

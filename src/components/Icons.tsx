@@ -373,6 +373,24 @@ export function ChartIcon({ size = 24, color = 'currentColor', className = '' }:
   );
 }
 
+// Chevron Left icon - for navigation
+export function ChevronLeftIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+// Chevron Right icon - for navigation
+export function ChevronRightIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 // Upload icon - for importing content
 export function UploadIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
   return (
@@ -453,6 +471,10 @@ export function getIcon(name: string, props: IconProps = defaultProps): React.Re
     chart: ChartIcon,
     metrics: ChartIcon,
     upload: UploadIcon,
+    chevronleft: ChevronLeftIcon,
+    chevronright: ChevronRightIcon,
+    back: ChevronLeftIcon,
+    next: ChevronRightIcon,
   };
 
   const IconComponent = icons[name.toLowerCase()];
@@ -494,6 +516,8 @@ export default {
   WavesIcon,
   PartyIcon,
   ChartIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   UploadIcon,
   getIcon,
 };

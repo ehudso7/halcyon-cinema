@@ -9,6 +9,7 @@ import Header from '@/components/Header';
 import ProjectCard from '@/components/ProjectCard';
 import CreateProjectModal from '@/components/CreateProjectModal';
 import ImportProjectModal, { QuickCreateData, ImportCreateData } from '@/components/ImportProjectModal';
+import NovelImportModal, { NovelImportData } from '@/components/NovelImportModal';
 import CinematicResults from '@/components/CinematicResults';
 import { useToast } from '@/components/Toast';
 import { FilmIcon, DocumentIcon, PaletteIcon, ExportIcon } from '@/components/Icons';
@@ -64,6 +65,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
 
   // Import Project Modal state (combines Quick Create, Import, and Blank)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isNovelImportOpen, setIsNovelImportOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState('');
   const [generatedStoryData, setGeneratedStoryData] = useState<{
@@ -649,6 +651,191 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
     }
   };
 
+  // Novel Import: Create project from full novel manuscript
+  const handleNovelImport = async (data: NovelImportData) => {
+    setIsGenerating(true);
+    setGenerationStep('Creating project...');
+
+    try {
+      // Step 1: Create the project
+      const projectResponse = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.title,
+          description: data.description,
+        }),
+      });
+
+      if (!projectResponse.ok) {
+        if (projectResponse.status === 401) {
+          router.push('/auth/signin');
+          return;
+        }
+        throw new Error('Failed to create project');
+      }
+
+      const newProject = await projectResponse.json();
+      const projectId = newProject.id;
+
+      let failedItems = 0;
+      let totalItems = 0;
+
+      // Step 2: Create characters
+      setGenerationStep(`Creating ${data.characters.length} characters...`);
+      for (const char of data.characters) {
+        totalItems++;
+        try {
+          const response = await fetch(`/api/projects/${projectId}/characters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: char.name,
+              description: char.description,
+              traits: char.traits || [],
+            }),
+          });
+          if (!response.ok) failedItems++;
+        } catch {
+          failedItems++;
+        }
+      }
+
+      // Step 3: Create lore/locations
+      setGenerationStep(`Creating ${data.lore.length + data.locations.length} world elements...`);
+      for (const loc of data.locations) {
+        totalItems++;
+        try {
+          const response = await fetch(`/api/projects/${projectId}/lore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'location',
+              name: loc.name,
+              summary: loc.description.slice(0, 200),
+              description: loc.description,
+            }),
+          });
+          if (!response.ok) failedItems++;
+        } catch {
+          failedItems++;
+        }
+      }
+
+      for (const lore of data.lore) {
+        totalItems++;
+        try {
+          const response = await fetch(`/api/projects/${projectId}/lore`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: lore.type || 'concept',
+              name: lore.name,
+              summary: lore.description.slice(0, 200),
+              description: lore.description,
+            }),
+          });
+          if (!response.ok) failedItems++;
+        } catch {
+          failedItems++;
+        }
+      }
+
+      // Step 4: Create scenes
+      setGenerationStep(`Creating ${data.scenes.length} scenes...`);
+      const createdSceneIds: string[] = [];
+
+      for (let i = 0; i < data.scenes.length; i++) {
+        const scene = data.scenes[i];
+        totalItems++;
+        try {
+          const response = await fetch('/api/scenes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              projectId,
+              prompt: scene.visualPrompt || scene.description,
+              metadata: {
+                title: scene.title,
+                description: scene.description,
+                sceneType: scene.sceneType,
+                emotionalBeat: scene.emotionalBeat,
+                characters: scene.characters,
+                location: scene.location,
+                genre: data.genre,
+                visualStyle: data.visualStyle,
+              },
+            }),
+          });
+          if (response.ok) {
+            const sceneData = await response.json();
+            createdSceneIds.push(sceneData.id);
+          } else {
+            failedItems++;
+          }
+        } catch {
+          failedItems++;
+        }
+      }
+
+      // Step 5: Generate images if requested
+      if (data.generateSceneImages && createdSceneIds.length > 0) {
+        setGenerationStep(`Generating images for ${createdSceneIds.length} scenes...`);
+        let imagesFailed = 0;
+
+        for (let i = 0; i < createdSceneIds.length; i++) {
+          const sceneId = createdSceneIds[i];
+          const scene = data.scenes[i];
+          setGenerationStep(`Generating image ${i + 1}/${createdSceneIds.length}...`);
+
+          try {
+            const genResponse = await fetch('/api/generate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: scene.visualPrompt || scene.description,
+                sceneId,
+                style: data.visualStyle,
+                genre: data.genre,
+              }),
+            });
+            if (!genResponse.ok) imagesFailed++;
+          } catch {
+            imagesFailed++;
+          }
+
+          // Small delay between generations
+          if (i < createdSceneIds.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+
+        if (imagesFailed > 0) {
+          showToast(`${imagesFailed} images failed to generate`, 'error');
+        }
+      }
+
+      // Update projects list
+      setProjects(prev => [newProject, ...prev]);
+      setIsNovelImportOpen(false);
+      setIsGenerating(false);
+      setGenerationStep('');
+
+      if (failedItems > 0) {
+        showToast(`Project created with ${failedItems} items failed`, 'error');
+      } else {
+        showToast('Novel imported successfully!', 'success');
+      }
+
+      router.push(`/project/${projectId}`);
+    } catch (error) {
+      console.error('Novel import error:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to import novel', 'error');
+      setIsGenerating(false);
+      setGenerationStep('');
+    }
+  };
+
   // Create project from generated story data
   const handleCreateFromResults = async (generateImages = true) => {
     if (!generatedStoryData) return;
@@ -944,6 +1131,17 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                 </svg>
                 {projects.length === 0 ? 'Start Your First Project' : 'Create Project'}
+              </button>
+              <button
+                onClick={() => setIsNovelImportOpen(true)}
+                className="btn btn-secondary"
+                disabled={isGenerating}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+                </svg>
+                Import Novel
               </button>
             </div>
           </div>
@@ -1245,6 +1443,13 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
         onBlankCreate={handleBlankCreate}
         isGenerating={isGenerating}
         generationStep={generationStep}
+      />
+
+      {/* Novel Import Modal (Full manuscript import with chapter detection) */}
+      <NovelImportModal
+        isOpen={isNovelImportOpen}
+        onClose={() => setIsNovelImportOpen(false)}
+        onComplete={handleNovelImport}
       />
 
       {/* Cinematic Results Modal */}
