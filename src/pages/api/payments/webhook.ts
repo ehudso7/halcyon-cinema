@@ -224,7 +224,19 @@ export default async function handler(
             const subscriptionId = typeof subscriptionDetails.subscription === 'string'
               ? subscriptionDetails.subscription
               : subscriptionDetails.subscription.id;
-            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+            let subscription: Stripe.Subscription;
+            try {
+              subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            } catch (retrieveError) {
+              console.error('[webhook] Failed to retrieve subscription:', {
+                invoiceId: invoice.id,
+                subscriptionId,
+                error: retrieveError,
+              });
+              break;
+            }
+
             const priceId = subscription.items.data[0]?.price.id;
 
             if (priceId && CREDIT_AMOUNTS[priceId]) {
