@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
+import { DocumentIcon, PaletteIcon, RobotIcon, UsersIcon, FilmIcon, ExportIcon, ImageIcon } from '@/components/Icons';
 import styles from '@/styles/Landing.module.css';
 
 // Typing animation texts
@@ -199,7 +200,7 @@ export default function LandingPage() {
                 </div>
                 <div className={styles.previewImage}>
                   <div className={styles.previewGlow} />
-                  <span className={styles.previewIcon}>🎨</span>
+                  <span className={styles.previewIcon}><ImageIcon size={48} color="#6366f1" /></span>
                   <span>AI-Generated Scene</span>
                 </div>
               </div>
@@ -239,42 +240,42 @@ export default function LandingPage() {
           <div className={styles.featureGrid}>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <span className={styles.featureIcon}>📝</span>
+                <DocumentIcon size={28} color="#6366f1" />
               </div>
               <h3>Natural Language Prompts</h3>
               <p>Describe your scene in plain English. Our AI transforms your words into stunning visuals.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <span className={styles.featureIcon}>🎨</span>
+                <PaletteIcon size={28} color="#6366f1" />
               </div>
               <h3>12+ Visual Styles</h3>
               <p>From Ghibli-inspired to Cyberpunk, Film Noir to Anime — choose your aesthetic.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <span className={styles.featureIcon}>🤖</span>
+                <RobotIcon size={28} color="#6366f1" />
               </div>
               <h3>AI Creative Assistant</h3>
               <p>Get real-time suggestions for lighting, mood, composition, and story elements.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <span className={styles.featureIcon}>👥</span>
+                <UsersIcon size={28} color="#6366f1" />
               </div>
               <h3>Character Tracking</h3>
               <p>Create characters and track their appearances across your entire project.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <span className={styles.featureIcon}>🎬</span>
+                <FilmIcon size={28} color="#6366f1" />
               </div>
               <h3>Sequence Mode</h3>
               <p>Arrange scenes into sequences and watch them flow like a cinematic trailer.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <span className={styles.featureIcon}>📄</span>
+                <ExportIcon size={28} color="#6366f1" />
               </div>
               <h3>Export Anywhere</h3>
               <p>Download as PDF storyboards or ZIP archives with all your images and prompts.</p>

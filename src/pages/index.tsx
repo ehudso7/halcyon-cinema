@@ -11,6 +11,7 @@ import CreateProjectModal from '@/components/CreateProjectModal';
 import QuickCreateModal, { QuickCreateData } from '@/components/QuickCreateModal';
 import CinematicResults from '@/components/CinematicResults';
 import { useToast } from '@/components/Toast';
+import { FilmIcon, DocumentIcon, PaletteIcon, ExportIcon } from '@/components/Icons';
 import { Project } from '@/types';
 import { getAllProjectsAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -1006,20 +1007,20 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
               </>
             ) : (
               <div className={styles.emptyState}>
-                <div className={styles.emptyIcon}>🎬</div>
+                <div className={styles.emptyIcon}><FilmIcon size={48} /></div>
                 <h3>Your studio is ready</h3>
                 <p>Start your first project and watch your vision come to life with AI-powered scene generation.</p>
                 <div className={styles.emptyFeatures}>
                   <div className={styles.emptyFeature}>
-                    <span>📝</span>
+                    <DocumentIcon size={20} />
                     <span>Describe scenes in plain English</span>
                   </div>
                   <div className={styles.emptyFeature}>
-                    <span>🎨</span>
+                    <PaletteIcon size={20} />
                     <span>Choose from 12+ visual styles</span>
                   </div>
                   <div className={styles.emptyFeature}>
-                    <span>📄</span>
+                    <ExportIcon size={20} />
                     <span>Export as PDF or ZIP</span>
                   </div>
                 </div>
@@ -1211,7 +1212,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
         <div className={styles.modalOverlay}>
           <div className={styles.welcomeModal}>
             <div className={styles.welcomeHeader}>
-              <span className={styles.welcomeIcon}>🎬</span>
+              <span className={styles.welcomeIcon}><FilmIcon size={40} /></span>
               <h2>Welcome to HALCYON-Cinema!</h2>
             </div>
             <div className={styles.welcomeBody}>
