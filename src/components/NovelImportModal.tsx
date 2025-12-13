@@ -359,11 +359,14 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
           const existing = allCharacters.find(ec => ec.name.toLowerCase() === c.name.toLowerCase());
           if (existing) {
             // Update existing character with new appearances (deduplicated)
-            // Merge traits (union of both arrays, deduplicated)
-            const mergedTraits = Array.from(new Set([
-              ...(existing.traits || []),
-              ...(c.traits || []),
-            ]));
+            // Merge traits (union of both arrays, deduplicated, normalized)
+            const mergedTraits = Array.from(
+              new Set(
+                [...(existing.traits || []), ...(c.traits || [])]
+                  .map(t => t.trim())
+                  .filter(Boolean)
+              )
+            );
             return {
               ...existing,
               appearances: Array.from(new Set([...existing.appearances, chapterIndex])),
@@ -569,11 +572,14 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
               if (c.description && c.description.length > existing.description.length) {
                 existing.description = c.description;
               }
-              // Merge traits (union of both arrays, deduplicated)
-              existing.traits = Array.from(new Set([
-                ...(existing.traits || []),
-                ...(c.traits || []),
-              ]));
+              // Merge traits (union of both arrays, deduplicated, normalized)
+              existing.traits = Array.from(
+                new Set(
+                  [...(existing.traits || []), ...(c.traits || [])]
+                    .map(t => t.trim())
+                    .filter(Boolean)
+                )
+              );
               // Prefer longer/non-empty role
               if (c.role && c.role.length > (existing.role?.length || 0)) {
                 existing.role = c.role;
