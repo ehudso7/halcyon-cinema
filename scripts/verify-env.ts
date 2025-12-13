@@ -1,4 +1,3 @@
-#!/usr/bin/env npx ts-node
 /**
  * Environment Variable Verification Script
  *
@@ -29,7 +28,7 @@ const results: CheckResult[] = [];
 function check(name: string, condition: boolean, passMsg: string, failMsg: string, isWarning = false): void {
   results.push({
     name,
-    status: condition ? 'pass' : isWarning ? 'warning' : 'fail',
+    status: isWarning ? 'warning' : condition ? 'pass' : 'fail',
     message: condition ? passMsg : failMsg,
   });
 }
@@ -49,17 +48,16 @@ async function verifyOpenAI(): Promise<void> {
   }
 
   // Test connectivity by listing models (lightweight API call)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+  try {
     const response = await fetch('https://api.openai.com/v1/models', {
       headers: {
         'Authorization': `Bearer ${apiKey}`,
       },
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
 
     if (response.ok) {
       check('OPENAI_API_KEY', true, 'Valid and connected', '');
@@ -71,6 +69,8 @@ async function verifyOpenAI(): Promise<void> {
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     check('OPENAI_API_KEY', false, '', `Connection failed: ${msg}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -83,17 +83,16 @@ async function verifyReplicate(): Promise<void> {
   }
 
   // Test connectivity by getting account info (lightweight API call)
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
+  try {
     const response = await fetch('https://api.replicate.com/v1/account', {
       headers: {
         'Authorization': `Token ${apiToken}`,
       },
       signal: controller.signal,
     });
-    clearTimeout(timeoutId);
 
     if (response.ok) {
       const data = await response.json() as { username?: string };
@@ -106,6 +105,8 @@ async function verifyReplicate(): Promise<void> {
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     check('REPLICATE_API_TOKEN', false, '', `Connection failed: ${msg}`);
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

@@ -119,11 +119,19 @@ export default async function handler(
     });
     // Credit integrity: fail the request if we cannot properly deduct credits
     // The image generation API call was made, but we must not return content without proper billing
-    if (error instanceof CreditError && error.code === 'INSUFFICIENT_CREDITS') {
-      return res.status(402).json({
-        error: 'Insufficient credits. Your credits may have been used elsewhere.',
-        creditsRemaining: 0,
-      });
+    if (error instanceof CreditError) {
+      if (error.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(402).json({
+          error: 'Insufficient credits. Your credits may have been used elsewhere.',
+          creditsRemaining: 0,
+        });
+      }
+      if (error.code === 'DB_UNAVAILABLE') {
+        return res.status(503).json({
+          success: false,
+          error: 'Credit service temporarily unavailable. Please try again later.',
+        });
+      }
     }
     return res.status(500).json({
       success: false,

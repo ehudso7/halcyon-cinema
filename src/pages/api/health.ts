@@ -27,6 +27,10 @@ interface HealthCheckResponse {
     api: {
       status: 'up';
     };
+    generation: {
+      openai: 'configured' | 'not_configured';
+      replicate: 'configured' | 'not_configured';
+    };
   };
   uptime: number;
   environment?: string;
@@ -50,6 +54,8 @@ export default async function handler(
 
   const usePostgres = isPostgresAvailable();
   const authConfigured = !!process.env.NEXTAUTH_SECRET;
+  const openaiConfigured = !!process.env.OPENAI_API_KEY;
+  const replicateConfigured = !!process.env.REPLICATE_API_TOKEN;
   let dbStatus: 'up' | 'down' | 'not_configured' = 'not_configured';
   let dbLatencyMs: number | undefined;
   let dbError: string | undefined;
@@ -66,6 +72,8 @@ export default async function handler(
       requestId,
       postgresConfigured: usePostgres,
       authConfigured,
+      openaiConfigured,
+      replicateConfigured,
       supabaseClientConfigured,
       supabaseAdminConfigured,
       nodeEnv: process.env.NODE_ENV,
@@ -79,6 +87,8 @@ export default async function handler(
         POSTGRES_DATABASE: !!process.env.POSTGRES_DATABASE,
         NEXTAUTH_SECRET: !!process.env.NEXTAUTH_SECRET,
         NEXTAUTH_URL: !!process.env.NEXTAUTH_URL,
+        OPENAI_API_KEY: openaiConfigured,
+        REPLICATE_API_TOKEN: replicateConfigured,
       },
     });
     configLoggedOnce = true;
@@ -146,6 +156,13 @@ export default async function handler(
     supabaseStatus = 'partial';
   }
 
+  // Generation APIs are degraded if not configured
+  if (process.env.NODE_ENV === 'production' && (!openaiConfigured || !replicateConfigured)) {
+    if (overallStatus === 'healthy') {
+      overallStatus = 'degraded';
+    }
+  }
+
   const healthCheck: HealthCheckResponse = {
     status: overallStatus,
     timestamp: new Date().toISOString(),
@@ -170,6 +187,10 @@ export default async function handler(
       api: {
         status: 'up',
       },
+      generation: {
+        openai: openaiConfigured ? 'configured' : 'not_configured',
+        replicate: replicateConfigured ? 'configured' : 'not_configured',
+      },
     },
     uptime: Math.floor((Date.now() - startTime) / 1000),
     environment: process.env.NODE_ENV || 'development',
@@ -182,6 +203,8 @@ export default async function handler(
     dbStatus,
     dbLatencyMs,
     authConfigured,
+    openaiConfigured,
+    replicateConfigured,
     supabaseStatus,
     uptime: healthCheck.uptime,
     ...(dbError && { dbError }),

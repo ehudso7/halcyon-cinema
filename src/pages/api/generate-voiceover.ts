@@ -37,9 +37,11 @@ const BUCKET_NAME = 'voiceovers';
 /**
  * Sanitize a path component to prevent path traversal attacks.
  * Only allows alphanumeric characters, hyphens, and underscores.
+ * Returns 'default' if sanitization results in an empty string.
  */
 function sanitizePathComponent(input: string): string {
-  return input.replace(/[^a-zA-Z0-9_-]/g, '');
+  const sanitized = input.replace(/[^a-zA-Z0-9_-]/g, '');
+  return sanitized || 'default';
 }
 
 export default async function handler(
@@ -227,11 +229,19 @@ export default async function handler(
         error: error instanceof CreditError ? { code: error.code, message: error.message } : error,
       });
       // Credit integrity: fail the request if we cannot properly deduct credits
-      if (error instanceof CreditError && error.code === 'INSUFFICIENT_CREDITS') {
-        return res.status(402).json({
-          error: 'Insufficient credits. Your credits may have been used elsewhere.',
-          creditsRemaining: 0,
-        });
+      if (error instanceof CreditError) {
+        if (error.code === 'INSUFFICIENT_CREDITS') {
+          return res.status(402).json({
+            error: 'Insufficient credits. Your credits may have been used elsewhere.',
+            creditsRemaining: 0,
+          });
+        }
+        if (error.code === 'DB_UNAVAILABLE') {
+          return res.status(503).json({
+            success: false,
+            error: 'Credit service temporarily unavailable. Please try again later.',
+          });
+        }
       }
       return res.status(500).json({
         success: false,
