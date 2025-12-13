@@ -16,7 +16,7 @@ export default function ProjectNavigation({ projectId, activeTab }: ProjectNavig
           href={getProjectTabHref(projectId, tab.id)}
           className={`${styles.navTab} ${tab.id === activeTab ? styles.active : ''}`}
         >
-          <span>{tab.icon}</span>
+          <span className={styles.navIcon}><tab.IconComponent size={18} /></span>
           <span>{tab.label}</span>
         </Link>
       ))}

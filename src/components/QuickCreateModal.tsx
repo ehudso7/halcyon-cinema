@@ -1,16 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { DocumentIcon, UsersIcon, GlobeIcon, FilmIcon, PaletteIcon, SparklesIcon } from './Icons';
+import { DocumentIcon, UsersIcon, GlobeIcon, FilmIcon, PaletteIcon, SparklesIcon, CheckCircleIcon } from './Icons';
 import styles from './QuickCreateModal.module.css';
-
-// Check icon for quality metrics
-function CheckIcon({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-      <polyline points="22,4 12,14.01 9,11.01" />
-    </svg>
-  );
-}
 
 interface QuickCreateModalProps {
   isOpen: boolean;
@@ -351,7 +341,7 @@ export default function QuickCreateModal({
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}><CheckIcon size={20} color="#10b981" /></span>
+                <span className={styles.deliverableIcon}><CheckCircleIcon size={20} color="#10b981" /></span>
                 <div>
                   <strong>Quality Metrics</strong>
                   <span>Professional grade scoring</span>

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { MusicIcon, CogIcon, FilmIcon, WavesIcon } from './Icons';
+import { MusicIcon, CogIcon } from './Icons';
 import styles from './MusicPanel.module.css';
 
 interface MusicPanelProps {
