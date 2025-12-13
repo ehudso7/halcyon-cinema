@@ -42,7 +42,7 @@ HALCYON-Cinema is a full-stack AI-powered creative studio that transforms natura
 ## Features
 
 ### Quick Create (New!)
-Generate a complete cinematic project from a single prompt - like Suno for visual storytelling:
+Generate a complete cinematic project from a single prompt — AI-powered end-to-end visual storytelling:
 - AI expands your idea into multiple scenes
 - Auto-generates characters with visual descriptions
 - Creates world lore (locations, events, systems)
