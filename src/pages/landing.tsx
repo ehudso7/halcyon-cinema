@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
@@ -81,17 +81,40 @@ const statsData = [
   { value: 4.9, suffix: '', label: 'User Rating' },
 ];
 
-// Hook for animated counter
-function useAnimatedCounter(end: number, duration: number = 2000) {
+/**
+ * Hook for animated counter that triggers when element enters viewport.
+ * Respects user's reduced-motion preferences.
+ * @param end - The final number to count up to
+ * @param duration - Animation duration in milliseconds (default: 2000)
+ * @returns Object containing current count value and ref to attach to element
+ */
+function useAnimatedCounter(end: number, duration: number = 2000): { count: number; ref: React.RefObject<HTMLDivElement | null> } {
   const [count, setCount] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const rafIdRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // Check for reduced motion preference
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ||
+        document.documentElement.getAttribute('data-reduced-motion') === 'true');
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !hasAnimated) {
+        const entry = entries[0];
+        if (!entry) return;
+
+        if (entry.isIntersecting && !hasAnimated) {
           setHasAnimated(true);
+
+          // Skip animation if user prefers reduced motion
+          if (prefersReducedMotion) {
+            setCount(end);
+            return;
+          }
+
           const startTime = Date.now();
           const isDecimal = !Number.isInteger(end);
 
@@ -104,13 +127,14 @@ function useAnimatedCounter(end: number, duration: number = 2000) {
             setCount(isDecimal ? Math.round(current * 10) / 10 : Math.floor(current));
 
             if (progress < 1) {
-              requestAnimationFrame(animate);
+              rafIdRef.current = requestAnimationFrame(animate);
             } else {
               setCount(end);
+              rafIdRef.current = null;
             }
           };
 
-          requestAnimationFrame(animate);
+          rafIdRef.current = requestAnimationFrame(animate);
         }
       },
       { threshold: 0.5 }
@@ -120,14 +144,23 @@ function useAnimatedCounter(end: number, duration: number = 2000) {
       observer.observe(ref.current);
     }
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      // Cancel any pending animation frame on cleanup
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
   }, [hasAnimated, end, duration]);
 
   return { count, ref };
 }
 
-// Animated stat component
-function AnimatedStat({ value, suffix, label }: { value: number; suffix: string; label: string }) {
+/**
+ * Animated statistic display component with count-up animation.
+ * Animation triggers when element scrolls into viewport.
+ */
+function AnimatedStat({ value, suffix, label }: { value: number; suffix: string; label: string }): React.ReactElement {
   const { count, ref } = useAnimatedCounter(value);
   return (
     <div className={styles.stat} ref={ref}>
@@ -182,15 +215,36 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Parallax scroll effect
+  // Parallax scroll effect with RAF throttling and reduced-motion support
   useEffect(() => {
+    // Check for reduced motion preference
+    const prefersReducedMotion =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ||
+      document.documentElement.getAttribute('data-reduced-motion') === 'true';
+
+    // Skip parallax if user prefers reduced motion
+    if (prefersReducedMotion) return;
+
+    let rafId: number | null = null;
+
     const handleScroll = () => {
-      const scroll = window.scrollY;
-      setScrollY(scroll);
+      // Throttle with RAF to prevent excessive re-renders
+      if (rafId !== null) return;
+
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        setScrollY(window.scrollY);
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, []);
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
@@ -306,10 +360,10 @@ export default function LandingPage() {
         <section className={styles.socialProof}>
           <div className={styles.socialProofContent}>
             {statsData.map((stat, index) => (
-              <div key={stat.label} style={{ display: 'contents' }}>
+              <React.Fragment key={stat.label}>
                 <AnimatedStat value={stat.value} suffix={stat.suffix} label={stat.label} />
                 {index < statsData.length - 1 && <div className={styles.statDivider} />}
-              </div>
+              </React.Fragment>
             ))}
           </div>
         </section>
