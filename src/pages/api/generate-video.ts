@@ -1,0 +1,203 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
+import { requireAuth, checkRateLimit } from '@/utils/api-auth';
+import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
+import { ApiError } from '@/types';
+
+// Replicate API for video generation
+const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
+
+// Credit cost for video generation (more expensive than images)
+const VIDEO_CREDIT_COST = 10;
+
+interface GenerateVideoResponse {
+  success: boolean;
+  videoUrl?: string;
+  error?: string;
+  creditsRemaining?: number;
+  status?: 'processing' | 'completed' | 'failed';
+  predictionId?: string;
+}
+
+interface ReplicatePrediction {
+  id: string;
+  status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+  output?: string | string[];
+  error?: string;
+}
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<GenerateVideoResponse | ApiError>
+) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).json({ error: `Method ${req.method} not allowed` });
+  }
+
+  if (!REPLICATE_API_TOKEN) {
+    return res.status(503).json({
+      error: 'Video generation is not configured. Please set REPLICATE_API_TOKEN.',
+    });
+  }
+
+  // Require authentication
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+
+  // Rate limiting: 2 video generations per minute per user
+  if (!checkRateLimit(`video:${userId}`, 2, 60000)) {
+    return res.status(429).json({
+      error: 'Rate limit exceeded. Please wait before generating more videos.',
+    });
+  }
+
+  // Server-side credits validation
+  const userCredits = await getUserCredits(userId);
+  if (!userCredits) {
+    return res.status(403).json({ error: 'User not found or credits not available' });
+  }
+
+  if (userCredits.creditsRemaining < VIDEO_CREDIT_COST) {
+    return res.status(402).json({
+      error: `Insufficient credits. Video generation requires ${VIDEO_CREDIT_COST} credits.`,
+      creditsRemaining: userCredits.creditsRemaining,
+    });
+  }
+
+  const { prompt, imageUrl, duration, aspectRatio } = req.body;
+
+  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+    return res.status(400).json({ error: 'Prompt is required' });
+  }
+
+  try {
+    // Use Stable Video Diffusion model on Replicate
+    // This model generates video from an image, so we need an image first
+    // If no imageUrl provided, we'll use a text-to-video model
+    const modelVersion = imageUrl
+      ? 'stability-ai/stable-video-diffusion:3f0457e4619daac51203dedb472816fd4af51f3149fa7a9e0b5ffcf1b8172438' // img2vid
+      : 'anotherjesse/zeroscope-v2-xl:9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351'; // txt2vid
+
+    const input = imageUrl
+      ? {
+          input_image: imageUrl,
+          motion_bucket_id: 127,
+          cond_aug: 0.02,
+          decoding_t: 14,
+          fps: 6,
+        }
+      : {
+          prompt: prompt.trim(),
+          negative_prompt: 'blurry, low quality, distorted, watermark',
+          num_frames: duration === 'long' ? 48 : 24,
+          width: aspectRatio === '16:9' ? 1024 : aspectRatio === '9:16' ? 576 : 768,
+          height: aspectRatio === '16:9' ? 576 : aspectRatio === '9:16' ? 1024 : 768,
+          fps: 8,
+        };
+
+    // Start the prediction
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Token ${REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        version: modelVersion.split(':')[1],
+        input,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[generate-video] Replicate API error:', errorText);
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to start video generation',
+      });
+    }
+
+    const prediction: ReplicatePrediction = await response.json();
+
+    // Poll for completion (with timeout)
+    const maxWaitTime = 120000; // 2 minutes
+    const pollInterval = 3000; // 3 seconds
+    const startTime = Date.now();
+
+    let finalPrediction = prediction;
+
+    while (
+      finalPrediction.status !== 'succeeded' &&
+      finalPrediction.status !== 'failed' &&
+      finalPrediction.status !== 'canceled' &&
+      Date.now() - startTime < maxWaitTime
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+      const pollResponse = await fetch(
+        `https://api.replicate.com/v1/predictions/${prediction.id}`,
+        {
+          headers: {
+            Authorization: `Token ${REPLICATE_API_TOKEN}`,
+          },
+        }
+      );
+
+      if (pollResponse.ok) {
+        finalPrediction = await pollResponse.json();
+      }
+    }
+
+    if (finalPrediction.status === 'succeeded' && finalPrediction.output) {
+      // Deduct credits for successful generation
+      let deductResult;
+      try {
+        deductResult = await deductCredits(
+          userId,
+          VIDEO_CREDIT_COST,
+          'Video generation',
+          prediction.id,
+          'generation'
+        );
+      } catch (error) {
+        console.error('[generate-video] Failed to deduct credits', {
+          userId,
+          error: error instanceof CreditError ? { code: error.code, message: error.message } : error,
+        });
+      }
+
+      const videoUrl = Array.isArray(finalPrediction.output)
+        ? finalPrediction.output[0]
+        : finalPrediction.output;
+
+      return res.status(200).json({
+        success: true,
+        videoUrl,
+        status: 'completed',
+        predictionId: prediction.id,
+        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - VIDEO_CREDIT_COST,
+      });
+    } else if (finalPrediction.status === 'failed') {
+      return res.status(500).json({
+        success: false,
+        error: finalPrediction.error || 'Video generation failed',
+        status: 'failed',
+        predictionId: prediction.id,
+      });
+    } else {
+      // Still processing - return the prediction ID for polling
+      return res.status(202).json({
+        success: true,
+        status: 'processing',
+        predictionId: prediction.id,
+        creditsRemaining: userCredits.creditsRemaining,
+      });
+    }
+  } catch (error) {
+    console.error('[generate-video] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to generate video',
+    });
+  }
+}

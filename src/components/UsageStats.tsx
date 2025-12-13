@@ -27,6 +27,17 @@ interface UsageStatsProps {
 // Store local stats in localStorage (for achievements/streaks only - credits come from server)
 const STORAGE_KEY = 'halcyon-usage-stats';
 
+/**
+ * Get the maximum credits for a subscription tier.
+ */
+function getMaxCredits(tier: 'free' | 'pro' | 'enterprise'): number {
+  switch (tier) {
+    case 'enterprise': return 10000;
+    case 'pro': return 500;
+    default: return 100;
+  }
+}
+
 // Credits are now fetched from the server API
 let cachedCredits: { creditsRemaining: number; subscriptionTier: string } | null = null;
 let creditsFetchPromise: Promise<{ creditsRemaining: number; subscriptionTier: string } | null> | null = null;
@@ -237,7 +248,7 @@ export default function UsageStats({ compact = false }: UsageStatsProps) {
     ) : null;
   }
 
-  const maxCredits = usage.subscriptionTier === 'pro' ? 500 : usage.subscriptionTier === 'enterprise' ? 10000 : 100;
+  const maxCredits = getMaxCredits(usage.subscriptionTier);
   const creditsPercent = Math.min(100, Math.max(0, (usage.creditsRemaining / maxCredits) * 100));
   const isLow = usage.creditsRemaining < 20;
 
@@ -269,7 +280,7 @@ export default function UsageStats({ compact = false }: UsageStatsProps) {
 }
 
 function UsageStatsContent({ usage }: { usage: UsageData }) {
-  const maxCredits = usage.subscriptionTier === 'pro' ? 500 : usage.subscriptionTier === 'enterprise' ? 10000 : 100;
+  const maxCredits = getMaxCredits(usage.subscriptionTier);
   const creditsPercent = Math.min(100, Math.max(0, (usage.creditsRemaining / maxCredits) * 100));
   const isLow = usage.creditsRemaining < 20;
 

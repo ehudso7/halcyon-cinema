@@ -3,7 +3,7 @@ import { generateImage, buildCinematicPrompt, sanitizePromptForImageGeneration }
 import { persistImage, isPersistedUrl } from '@/utils/image-storage';
 import { GenerateImageResponse, ApiError } from '@/types';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
-import { deductCredits, getUserCredits } from '@/utils/db';
+import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 
 // Valid parameter values for OpenAI API
 const VALID_SIZES = ['1024x1024', '1024x1792', '1792x1024'];
@@ -99,16 +99,25 @@ export default async function handler(
   }
 
   // Deduct 1 credit for successful image generation (atomic operation)
-  const deductResult = await deductCredits(
-    userId,
-    1,
-    `Image generation for scene ${sceneId || 'unknown'}`,
-    sceneId
-  );
-
-  if (!deductResult) {
-    // This shouldn't happen since we checked credits earlier, but handle gracefully
-    console.error('[generate-image] Failed to deduct credits after successful generation');
+  let deductResult;
+  try {
+    deductResult = await deductCredits(
+      userId,
+      1,
+      `Image generation for scene ${sceneId || 'unknown'}`,
+      sceneId,
+      'generation'
+    );
+  } catch (error) {
+    // Log detailed context for debugging
+    console.error('[generate-image] Failed to deduct credits after successful generation', {
+      userId,
+      sceneId,
+      projectId,
+      previousBalance: userCredits.creditsRemaining,
+      error: error instanceof CreditError ? { code: error.code, message: error.message } : error,
+    });
+    // Continue anyway - the image was generated, we'll manually reconcile credits if needed
   }
 
   // Persist the image to Supabase Storage for permanent access
