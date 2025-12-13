@@ -11,7 +11,7 @@ import CreateProjectModal from '@/components/CreateProjectModal';
 import ImportProjectModal, { QuickCreateData, ImportCreateData } from '@/components/ImportProjectModal';
 import CinematicResults from '@/components/CinematicResults';
 import { useToast } from '@/components/Toast';
-import { FilmIcon, DocumentIcon, PaletteIcon, ExportIcon, UploadIcon } from '@/components/Icons';
+import { FilmIcon, DocumentIcon, PaletteIcon, ExportIcon } from '@/components/Icons';
 import { Project } from '@/types';
 import { getAllProjectsAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -459,6 +459,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       });
 
       if (!projectResponse.ok) {
+        if (projectResponse.status === 401) {
+          router.push('/auth/signin');
+          return;
+        }
         throw new Error('Failed to create project');
       }
 
@@ -622,6 +626,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          router.push('/auth/signin');
+          return;
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to create project');
       }

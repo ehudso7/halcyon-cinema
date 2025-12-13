@@ -42,7 +42,7 @@ export interface ExtractedLocation {
 export interface ExtractedLore {
   name: string;
   description: string;
-  type: 'location' | 'event' | 'system' | 'object' | 'concept';
+  type: 'event' | 'system' | 'object' | 'concept';
   selected: boolean;
 }
 
@@ -78,7 +78,7 @@ export interface ImportCreateData {
   projectDescription: string;
   sourceContent: string;
   characters: ExtractedCharacter[];
-  lore: ExtractedLore[];
+  lore: (ExtractedLore | ExtractedLocation)[];
   scenes: ExtractedScene[];
   genre: string;
   mood: string;
