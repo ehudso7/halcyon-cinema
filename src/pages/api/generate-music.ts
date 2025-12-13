@@ -9,6 +9,9 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 // Credit cost for music generation
 const MUSIC_CREDIT_COST = 5;
 
+// Timeout for Replicate API calls (10 seconds for initial request)
+const REPLICATE_REQUEST_TIMEOUT_MS = 10000;
+
 interface GenerateMusicResponse {
   success: boolean;
   audioUrl?: string;
@@ -25,6 +28,19 @@ interface ReplicatePrediction {
   output?: string | string[];
   error?: string;
 }
+
+// Valid genres, moods, and tempos for music generation
+const VALID_GENRES = [
+  'ambient', 'cinematic', 'classical', 'electronic', 'folk', 'hip-hop',
+  'jazz', 'lo-fi', 'orchestral', 'pop', 'rock', 'synthwave', 'world',
+] as const;
+
+const VALID_MOODS = [
+  'calm', 'dark', 'dramatic', 'energetic', 'happy', 'hopeful',
+  'intense', 'melancholic', 'mysterious', 'peaceful', 'romantic', 'tense', 'uplifting',
+] as const;
+
+const VALID_TEMPOS = ['slow', 'moderate', 'fast', 'very fast'] as const;
 
 export default async function handler(
   req: NextApiRequest,
@@ -71,6 +87,25 @@ export default async function handler(
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
+  // Validate optional parameters
+  if (genre && !VALID_GENRES.includes(genre)) {
+    return res.status(400).json({
+      error: `Invalid genre. Must be one of: ${VALID_GENRES.join(', ')}`,
+    });
+  }
+
+  if (mood && !VALID_MOODS.includes(mood)) {
+    return res.status(400).json({
+      error: `Invalid mood. Must be one of: ${VALID_MOODS.join(', ')}`,
+    });
+  }
+
+  if (tempo && !VALID_TEMPOS.includes(tempo)) {
+    return res.status(400).json({
+      error: `Invalid tempo. Must be one of: ${VALID_TEMPOS.join(', ')}`,
+    });
+  }
+
   // Validate duration (5-30 seconds)
   const durationSeconds = Math.min(30, Math.max(5, Number(duration) || 10));
 
@@ -81,25 +116,34 @@ export default async function handler(
     if (mood) enhancedPrompt += `, ${mood} mood`;
     if (tempo) enhancedPrompt += `, ${tempo} tempo`;
 
-    // Use MusicGen model on Replicate
-    const response = await fetch('https://api.replicate.com/v1/predictions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${REPLICATE_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        // MusicGen stereo large model
-        version: 'b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6373b0d3d341ede46e59e2b38',
-        input: {
-          prompt: enhancedPrompt,
-          duration: durationSeconds,
-          model_version: 'stereo-large',
-          output_format: 'mp3',
-          normalization_strategy: 'loudness',
+    // Use MusicGen model on Replicate with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REPLICATE_REQUEST_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch('https://api.replicate.com/v1/predictions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Token ${REPLICATE_API_TOKEN}`,
+          'Content-Type': 'application/json',
         },
-      }),
-    });
+        body: JSON.stringify({
+          // MusicGen stereo large model
+          version: 'b05b1dff1d8c6dc63d14b0cdb42135378dcb87f6373b0d3d341ede46e59e2b38',
+          input: {
+            prompt: enhancedPrompt,
+            duration: durationSeconds,
+            model_version: 'stereo-large',
+            output_format: 'mp3',
+            normalization_strategy: 'loudness',
+          },
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -127,17 +171,26 @@ export default async function handler(
     ) {
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
-      const pollResponse = await fetch(
-        `https://api.replicate.com/v1/predictions/${prediction.id}`,
-        {
-          headers: {
-            Authorization: `Token ${REPLICATE_API_TOKEN}`,
-          },
-        }
-      );
+      const pollController = new AbortController();
+      const pollTimeoutId = setTimeout(() => pollController.abort(), REPLICATE_REQUEST_TIMEOUT_MS);
+      try {
+        const pollResponse = await fetch(
+          `https://api.replicate.com/v1/predictions/${prediction.id}`,
+          {
+            headers: {
+              Authorization: `Token ${REPLICATE_API_TOKEN}`,
+            },
+            signal: pollController.signal,
+          }
+        );
 
-      if (pollResponse.ok) {
-        finalPrediction = await pollResponse.json();
+        if (pollResponse.ok) {
+          finalPrediction = await pollResponse.json();
+        }
+      } catch {
+        // Ignore timeout errors during polling, will retry or timeout on max wait
+      } finally {
+        clearTimeout(pollTimeoutId);
       }
     }
 
@@ -155,7 +208,19 @@ export default async function handler(
       } catch (error) {
         console.error('[generate-music] Failed to deduct credits', {
           userId,
+          predictionId: prediction.id,
           error: error instanceof CreditError ? { code: error.code, message: error.message } : error,
+        });
+        // Credit integrity: fail the request if we cannot properly deduct credits
+        if (error instanceof CreditError && error.code === 'INSUFFICIENT_CREDITS') {
+          return res.status(402).json({
+            error: 'Insufficient credits. Your credits may have been used elsewhere.',
+            creditsRemaining: 0,
+          });
+        }
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to process credits. Please try again.',
         });
       }
 
@@ -169,7 +234,7 @@ export default async function handler(
         status: 'completed',
         predictionId: prediction.id,
         duration: durationSeconds,
-        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - MUSIC_CREDIT_COST,
+        creditsRemaining: deductResult.creditsRemaining,
       });
     } else if (finalPrediction.status === 'failed') {
       return res.status(500).json({

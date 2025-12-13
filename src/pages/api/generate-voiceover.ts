@@ -12,6 +12,9 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const VOICEOVER_CREDIT_COST_PER_1K = 2;
 const MAX_TEXT_LENGTH = 4096;
 
+// Timeout for OpenAI TTS API (30 seconds)
+const OPENAI_TTS_TIMEOUT_MS = 30000;
+
 // Available voices from OpenAI
 const VALID_VOICES = ['alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'] as const;
 type Voice = (typeof VALID_VOICES)[number];
@@ -30,6 +33,14 @@ interface GenerateVoiceoverResponse {
 }
 
 const BUCKET_NAME = 'voiceovers';
+
+/**
+ * Sanitize a path component to prevent path traversal attacks.
+ * Only allows alphanumeric characters, hyphens, and underscores.
+ */
+function sanitizePathComponent(input: string): string {
+  return input.replace(/[^a-zA-Z0-9_-]/g, '');
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -101,21 +112,30 @@ export default async function handler(
   }
 
   try {
-    // Generate audio using OpenAI TTS API
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model as TTSModel,
-        input: trimmedText,
-        voice: voice as Voice,
-        response_format: 'mp3',
-        speed: speedNum,
-      }),
-    });
+    // Generate audio using OpenAI TTS API with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), OPENAI_TTS_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch('https://api.openai.com/v1/audio/speech', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: model as TTSModel,
+          input: trimmedText,
+          voice: voice as Voice,
+          response_format: 'mp3',
+          speed: speedNum,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -149,13 +169,17 @@ export default async function handler(
           });
         }
 
-        // Upload the audio file
+        // Upload the audio file with sanitized path components
         const audioId = uuidv4();
-        const filename = projectId
-          ? sceneId
-            ? `${projectId}/${sceneId}/${audioId}.mp3`
-            : `${projectId}/${audioId}.mp3`
-          : `${userId}/${audioId}.mp3`;
+        const safeProjectId = projectId ? sanitizePathComponent(projectId) : null;
+        const safeSceneId = sceneId ? sanitizePathComponent(sceneId) : null;
+        const safeUserId = sanitizePathComponent(userId);
+
+        const filename = safeProjectId
+          ? safeSceneId
+            ? `${safeProjectId}/${safeSceneId}/${audioId}.mp3`
+            : `${safeProjectId}/${audioId}.mp3`
+          : `${safeUserId}/${audioId}.mp3`;
 
         const { error: uploadError } = await supabase.storage
           .from(BUCKET_NAME)
@@ -199,7 +223,19 @@ export default async function handler(
       console.error('[generate-voiceover] Failed to deduct credits', {
         userId,
         creditCost,
+        sceneId,
         error: error instanceof CreditError ? { code: error.code, message: error.message } : error,
+      });
+      // Credit integrity: fail the request if we cannot properly deduct credits
+      if (error instanceof CreditError && error.code === 'INSUFFICIENT_CREDITS') {
+        return res.status(402).json({
+          error: 'Insufficient credits. Your credits may have been used elsewhere.',
+          creditsRemaining: 0,
+        });
+      }
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to process credits. Please try again.',
       });
     }
 
@@ -212,7 +248,7 @@ export default async function handler(
       audioUrl,
       urlType,
       duration: estimatedDuration,
-      creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - creditCost,
+      creditsRemaining: deductResult.creditsRemaining,
     });
   } catch (error) {
     console.error('[generate-voiceover] Error:', error);

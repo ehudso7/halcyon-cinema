@@ -9,6 +9,9 @@ const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 // Credit cost for video generation (more expensive than images)
 const VIDEO_CREDIT_COST = 10;
 
+// Timeout for Replicate API calls (10 seconds for initial request)
+const REPLICATE_REQUEST_TIMEOUT_MS = 10000;
+
 interface GenerateVideoResponse {
   success: boolean;
   videoUrl?: string;
@@ -95,18 +98,27 @@ export default async function handler(
           fps: 8,
         };
 
-    // Start the prediction
-    const response = await fetch('https://api.replicate.com/v1/predictions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Token ${REPLICATE_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        version: modelVersion.split(':')[1],
-        input,
-      }),
-    });
+    // Start the prediction with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REPLICATE_REQUEST_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch('https://api.replicate.com/v1/predictions', {
+        method: 'POST',
+        headers: {
+          Authorization: `Token ${REPLICATE_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          version: modelVersion.split(':')[1],
+          input,
+        }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -134,17 +146,26 @@ export default async function handler(
     ) {
       await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
-      const pollResponse = await fetch(
-        `https://api.replicate.com/v1/predictions/${prediction.id}`,
-        {
-          headers: {
-            Authorization: `Token ${REPLICATE_API_TOKEN}`,
-          },
-        }
-      );
+      const pollController = new AbortController();
+      const pollTimeoutId = setTimeout(() => pollController.abort(), REPLICATE_REQUEST_TIMEOUT_MS);
+      try {
+        const pollResponse = await fetch(
+          `https://api.replicate.com/v1/predictions/${prediction.id}`,
+          {
+            headers: {
+              Authorization: `Token ${REPLICATE_API_TOKEN}`,
+            },
+            signal: pollController.signal,
+          }
+        );
 
-      if (pollResponse.ok) {
-        finalPrediction = await pollResponse.json();
+        if (pollResponse.ok) {
+          finalPrediction = await pollResponse.json();
+        }
+      } catch {
+        // Ignore timeout errors during polling, will retry or timeout on max wait
+      } finally {
+        clearTimeout(pollTimeoutId);
       }
     }
 
@@ -162,7 +183,19 @@ export default async function handler(
       } catch (error) {
         console.error('[generate-video] Failed to deduct credits', {
           userId,
+          predictionId: prediction.id,
           error: error instanceof CreditError ? { code: error.code, message: error.message } : error,
+        });
+        // Credit integrity: fail the request if we cannot properly deduct credits
+        if (error instanceof CreditError && error.code === 'INSUFFICIENT_CREDITS') {
+          return res.status(402).json({
+            error: 'Insufficient credits. Your credits may have been used elsewhere.',
+            creditsRemaining: 0,
+          });
+        }
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to process credits. Please try again.',
         });
       }
 
@@ -175,7 +208,7 @@ export default async function handler(
         videoUrl,
         status: 'completed',
         predictionId: prediction.id,
-        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - VIDEO_CREDIT_COST,
+        creditsRemaining: deductResult.creditsRemaining,
       });
     } else if (finalPrediction.status === 'failed') {
       return res.status(500).json({
