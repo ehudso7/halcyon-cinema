@@ -3,6 +3,7 @@ import { generateImage, buildCinematicPrompt, sanitizePromptForImageGeneration }
 import { persistImage, isPersistedUrl } from '@/utils/image-storage';
 import { GenerateImageResponse, ApiError } from '@/types';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
+import { deductCredits, getUserCredits } from '@/utils/db';
 
 // Valid parameter values for OpenAI API
 const VALID_SIZES = ['1024x1024', '1024x1792', '1792x1024'];
@@ -27,12 +28,18 @@ export default async function handler(
     return res.status(429).json({ error: 'Rate limit exceeded. Please wait before generating more images.' });
   }
 
-  // NOTE: Credits are currently tracked client-side in localStorage for UX purposes.
-  // For production-grade credits enforcement, implement:
-  // 1. Database-backed credits storage (e.g., user.creditsRemaining in Prisma schema)
-  // 2. Atomic credit deduction before generation (with transaction/optimistic locking)
-  // 3. Credit rollback on generation failure
-  // The current client-side credits serve as a UX hint, not a security measure.
+  // Server-side credits validation and deduction
+  const userCredits = await getUserCredits(userId);
+  if (!userCredits) {
+    return res.status(403).json({ error: 'User not found or credits not available' });
+  }
+
+  if (userCredits.creditsRemaining < 1) {
+    return res.status(402).json({
+      error: 'Insufficient credits. Please purchase more credits to continue generating images.',
+      creditsRemaining: 0,
+    });
+  }
 
   const { prompt, shotType, style, lighting, mood, size, quality, imageStyle, projectId, sceneId } = req.body;
 
@@ -91,6 +98,19 @@ export default async function handler(
     });
   }
 
+  // Deduct 1 credit for successful image generation (atomic operation)
+  const deductResult = await deductCredits(
+    userId,
+    1,
+    `Image generation for scene ${sceneId || 'unknown'}`,
+    sceneId
+  );
+
+  if (!deductResult) {
+    // This shouldn't happen since we checked credits earlier, but handle gracefully
+    console.error('[generate-image] Failed to deduct credits after successful generation');
+  }
+
   // Persist the image to Supabase Storage for permanent access
   // OpenAI DALL-E URLs expire after ~1 hour, so we need to store them
   try {
@@ -102,6 +122,7 @@ export default async function handler(
         success: true,
         imageUrl: persistedUrl,
         urlType: 'permanent',
+        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - 1,
       });
     } else {
       // persistImage returned the original URL (storage not configured or failed silently)
@@ -110,6 +131,7 @@ export default async function handler(
         imageUrl: persistedUrl,
         urlType: 'temporary',
         warning: 'Image storage not configured. The image URL is temporary and will expire in about 1 hour.',
+        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - 1,
       });
     }
   } catch (error) {
@@ -119,6 +141,7 @@ export default async function handler(
       ...result,
       urlType: 'temporary',
       warning: 'Image persistence failed. The image URL is temporary and will expire in about 1 hour.',
+      creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - 1,
     });
   }
 }

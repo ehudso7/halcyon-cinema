@@ -105,6 +105,7 @@ export interface ApiError {
   error: string;
   details?: string;
   code?: string;
+  creditsRemaining?: number;
 }
 
 // Lore Engine types
