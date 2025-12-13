@@ -1,0 +1,17 @@
+# HALCYON-Cinema Robots.txt
+# The Future of AI-Powered Cinematic Content Creation
+
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /pricing
+Allow: /terms
+Allow: /privacy
+
+# Disallow authentication and API routes
+Disallow: /api/
+Disallow: /auth/
+Disallow: /project/
+
+# Sitemap location
+Sitemap: https://halcyon-cinema.vercel.app/sitemap.xml
