@@ -2,23 +2,23 @@
  * Shared navigation constants for project pages
  */
 
-import React from 'react';
+import type { ComponentType } from 'react';
 import { FilmIcon, BookIcon, UserIcon, FilmStripIcon } from '@/components/Icons';
 
 export interface ProjectTab {
   id: string;
   label: string;
-  IconComponent: React.FC<{ size?: number; color?: string }>;
+  IconComponent: ComponentType<{ size?: number; color?: string }>;
 }
 
-export const PROJECT_TABS: ProjectTab[] = [
+export const PROJECT_TABS = [
   { id: 'scenes', label: 'Scenes', IconComponent: FilmIcon },
   { id: 'lore', label: 'World Lore', IconComponent: BookIcon },
   { id: 'characters', label: 'Characters', IconComponent: UserIcon },
   { id: 'sequence', label: 'Scene Flow', IconComponent: FilmStripIcon },
-];
+] as const satisfies readonly ProjectTab[];
 
-export type ProjectTabId = ProjectTab['id'];
+export type ProjectTabId = (typeof PROJECT_TABS)[number]['id'];
 
 /**
  * Helper to get the href for a project tab
