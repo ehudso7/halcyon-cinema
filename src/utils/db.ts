@@ -354,7 +354,7 @@ async function doInitializeTables(): Promise<void> {
     await query('SELECT 1');
     dbLogger.info('Database connectivity confirmed');
 
-    // Create users table
+    // Create users table with credits system
     await query(`
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -362,8 +362,53 @@ async function doInitializeTables(): Promise<void> {
         name VARCHAR(255) NOT NULL,
         image TEXT,
         password_hash TEXT,
+        credits_remaining INTEGER DEFAULT 100,
+        subscription_tier VARCHAR(20) DEFAULT 'free',
+        subscription_expires_at TIMESTAMP WITH TIME ZONE,
+        lifetime_credits_used INTEGER DEFAULT 0,
+        stripe_customer_id VARCHAR(255),
+        stripe_subscription_id VARCHAR(255),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+
+    // Add credits columns if they don't exist (for existing databases)
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'credits_remaining') THEN
+          ALTER TABLE users ADD COLUMN credits_remaining INTEGER DEFAULT 100;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'subscription_tier') THEN
+          ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) DEFAULT 'free';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'subscription_expires_at') THEN
+          ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP WITH TIME ZONE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lifetime_credits_used') THEN
+          ALTER TABLE users ADD COLUMN lifetime_credits_used INTEGER DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'stripe_customer_id') THEN
+          ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'stripe_subscription_id') THEN
+          ALTER TABLE users ADD COLUMN stripe_subscription_id VARCHAR(255);
+        END IF;
+      END $$;
+    `);
+
+    // Create credit transactions table for audit trail
+    await query(`
+      CREATE TABLE IF NOT EXISTS credit_transactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        amount INTEGER NOT NULL,
+        transaction_type VARCHAR(50) NOT NULL,
+        description TEXT,
+        reference_id VARCHAR(255),
+        balance_after INTEGER NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `);
 
@@ -449,6 +494,8 @@ async function doInitializeTables(): Promise<void> {
     await query('CREATE INDEX IF NOT EXISTS idx_characters_project_id ON characters(project_id)');
     await query('CREATE INDEX IF NOT EXISTS idx_lore_project_id ON lore(project_id)');
     await query('CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions(user_id)');
+    await query('CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id)');
 
     timer.end();
     dbLogger.info('Database tables initialized successfully');
@@ -1522,4 +1569,264 @@ export async function dbDeleteSequence(projectId: string, sequenceId: string): P
   }
 
   return deleted;
+}
+
+// ============================================================================
+// Credits operations
+// ============================================================================
+
+export interface UserCredits {
+  id: string;
+  creditsRemaining: number;
+  subscriptionTier: 'free' | 'pro' | 'enterprise';
+  subscriptionExpiresAt: string | null;
+  lifetimeCreditsUsed: number;
+}
+
+export interface CreditTransaction {
+  id: string;
+  userId: string;
+  amount: number;
+  transactionType: 'purchase' | 'subscription' | 'generation' | 'refund' | 'bonus' | 'adjustment';
+  description: string | null;
+  referenceId: string | null;
+  balanceAfter: number;
+  createdAt: string;
+}
+
+/**
+ * Get a user's credit information.
+ */
+export async function getUserCredits(userId: string): Promise<UserCredits | null> {
+  if (!checkPostgresAvailable()) return null;
+
+  await initializeTables();
+
+  const result = await query(
+    `SELECT id, credits_remaining, subscription_tier, subscription_expires_at, lifetime_credits_used
+     FROM users WHERE id = $1::uuid`,
+    [userId]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    creditsRemaining: (row.credits_remaining as number) ?? 100,
+    subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+    subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
+    lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
+  };
+}
+
+/**
+ * Deduct credits from a user atomically.
+ * Returns the updated credits info if successful, null if insufficient credits or user not found.
+ */
+export async function deductCredits(
+  userId: string,
+  amount: number,
+  description: string,
+  referenceId?: string
+): Promise<UserCredits | null> {
+  if (!checkPostgresAvailable()) return null;
+  if (amount <= 0) throw new Error('Amount must be positive');
+
+  await initializeTables();
+
+  // Use a transaction to ensure atomic deduction
+  const dbPool = getPool();
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Lock the user row and check credits
+    const checkResult = await client.query(
+      `SELECT id, credits_remaining, subscription_tier, subscription_expires_at, lifetime_credits_used
+       FROM users WHERE id = $1::uuid FOR UPDATE`,
+      [userId]
+    );
+
+    if (checkResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const currentCredits = (checkResult.rows[0] as Record<string, unknown>).credits_remaining as number;
+    if (currentCredits < amount) {
+      await client.query('ROLLBACK');
+      return null; // Insufficient credits
+    }
+
+    const newBalance = currentCredits - amount;
+
+    // Update user credits
+    await client.query(
+      `UPDATE users SET
+         credits_remaining = $1,
+         lifetime_credits_used = lifetime_credits_used + $2,
+         updated_at = NOW()
+       WHERE id = $3::uuid`,
+      [newBalance, amount, userId]
+    );
+
+    // Log the transaction
+    await client.query(
+      `INSERT INTO credit_transactions (user_id, amount, transaction_type, description, reference_id, balance_after)
+       VALUES ($1::uuid, $2, 'generation', $3, $4, $5)`,
+      [userId, -amount, description, referenceId || null, newBalance]
+    );
+
+    await client.query('COMMIT');
+
+    // Return updated credits
+    const row = checkResult.rows[0] as Record<string, unknown>;
+    return {
+      id: row.id as string,
+      creditsRemaining: newBalance,
+      subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+      subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
+      lifetimeCreditsUsed: ((row.lifetime_credits_used as number) ?? 0) + amount,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Add credits to a user (for purchases, bonuses, etc.).
+ */
+export async function addCredits(
+  userId: string,
+  amount: number,
+  transactionType: 'purchase' | 'subscription' | 'bonus' | 'refund' | 'adjustment',
+  description: string,
+  referenceId?: string
+): Promise<UserCredits | null> {
+  if (!checkPostgresAvailable()) return null;
+  if (amount <= 0) throw new Error('Amount must be positive');
+
+  await initializeTables();
+
+  const dbPool = getPool();
+  const client = await dbPool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Lock and update user credits
+    const result = await client.query(
+      `UPDATE users SET
+         credits_remaining = credits_remaining + $1,
+         updated_at = NOW()
+       WHERE id = $2::uuid
+       RETURNING id, credits_remaining, subscription_tier, subscription_expires_at, lifetime_credits_used`,
+      [amount, userId]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return null;
+    }
+
+    const row = result.rows[0] as Record<string, unknown>;
+    const newBalance = row.credits_remaining as number;
+
+    // Log the transaction
+    await client.query(
+      `INSERT INTO credit_transactions (user_id, amount, transaction_type, description, reference_id, balance_after)
+       VALUES ($1::uuid, $2, $3, $4, $5, $6)`,
+      [userId, amount, transactionType, description, referenceId || null, newBalance]
+    );
+
+    await client.query('COMMIT');
+
+    return {
+      id: row.id as string,
+      creditsRemaining: newBalance,
+      subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+      subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
+      lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Get credit transaction history for a user.
+ */
+export async function getCreditTransactions(
+  userId: string,
+  limit: number = 50,
+  offset: number = 0
+): Promise<CreditTransaction[]> {
+  if (!checkPostgresAvailable()) return [];
+
+  await initializeTables();
+
+  const result = await query(
+    `SELECT id, user_id, amount, transaction_type, description, reference_id, balance_after, created_at
+     FROM credit_transactions
+     WHERE user_id = $1::uuid
+     ORDER BY created_at DESC
+     LIMIT $2 OFFSET $3`,
+    [userId, limit, offset]
+  );
+
+  return result.rows.map(r => {
+    const row = r as Record<string, unknown>;
+    return {
+      id: row.id as string,
+      userId: row.user_id as string,
+      amount: row.amount as number,
+      transactionType: row.transaction_type as CreditTransaction['transactionType'],
+      description: row.description as string | null,
+      referenceId: row.reference_id as string | null,
+      balanceAfter: row.balance_after as number,
+      createdAt: (row.created_at as Date).toISOString(),
+    };
+  });
+}
+
+/**
+ * Update user subscription tier.
+ */
+export async function updateUserSubscription(
+  userId: string,
+  tier: 'free' | 'pro' | 'enterprise',
+  expiresAt: Date | null,
+  stripeSubscriptionId?: string
+): Promise<UserCredits | null> {
+  if (!checkPostgresAvailable()) return null;
+
+  await initializeTables();
+
+  const result = await query(
+    `UPDATE users SET
+       subscription_tier = $1,
+       subscription_expires_at = $2,
+       stripe_subscription_id = COALESCE($3, stripe_subscription_id),
+       updated_at = NOW()
+     WHERE id = $4::uuid
+     RETURNING id, credits_remaining, subscription_tier, subscription_expires_at, lifetime_credits_used`,
+    [tier, expiresAt, stripeSubscriptionId || null, userId]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as Record<string, unknown>;
+  return {
+    id: row.id as string,
+    creditsRemaining: (row.credits_remaining as number) ?? 100,
+    subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+    subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
+    lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
+  };
 }

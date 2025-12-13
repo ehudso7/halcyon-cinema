@@ -1,7 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
 import VisualStyleSelector, { getStyleModifier } from './VisualStyleSelector';
 import CharacterSelector from './CharacterSelector';
-import { getCreditsRemaining } from './UsageStats';
+import { getCreditsRemaining, invalidateCreditsCache } from './UsageStats';
 import { Character } from '@/types';
 import styles from './PromptBuilder.module.css';
 
@@ -93,7 +93,17 @@ export default function PromptBuilder({
 
   // Load credits on mount and after loading state changes
   useEffect(() => {
-    setCreditsRemaining(getCreditsRemaining());
+    // Invalidate cache when loading finishes (after generation completes)
+    if (!isLoading) {
+      invalidateCreditsCache();
+    }
+
+    // Fetch credits asynchronously
+    const loadCredits = async () => {
+      const credits = await getCreditsRemaining();
+      setCreditsRemaining(credits);
+    };
+    loadCredits();
   }, [isLoading]);
 
   const handlePromptChange = (value: string) => {
