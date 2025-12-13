@@ -183,16 +183,48 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
 
         const videoResult = await videoResponse.json();
 
-        if (!videoResult.success) {
+        if (!videoResult.success && videoResult.status !== 'processing') {
           throw new Error(videoResult.error || 'Failed to generate video');
         }
 
         // Handle async video generation (may still be processing)
         if (videoResult.status === 'processing') {
-          throw new Error('Video generation is processing. Please check back later.');
-        }
+          // Poll for completion
+          const maxAttempts = 60; // 2 minutes total (2s intervals)
+          let attempts = 0;
+          let finalVideoUrl: string | null = null;
 
-        mediaUrl = videoResult.videoUrl;
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            attempts++;
+
+            try {
+              const statusResponse = await fetch(`/api/prediction-status/${videoResult.predictionId}`);
+              const statusResult = await statusResponse.json();
+
+              if (statusResult.status === 'succeeded' && statusResult.output) {
+                finalVideoUrl = statusResult.output;
+                break;
+              } else if (statusResult.status === 'failed') {
+                throw new Error(statusResult.error || 'Video generation failed');
+              } else if (statusResult.status === 'canceled') {
+                throw new Error('Video generation was canceled');
+              }
+            } catch (err) {
+              if (err instanceof Error && (err.message === 'Video generation failed' || err.message === 'Video generation was canceled')) {
+                throw err;
+              }
+              // Network error, continue polling
+            }
+          }
+
+          if (!finalVideoUrl) {
+            throw new Error('Video generation timed out. Please try again.');
+          }
+          mediaUrl = finalVideoUrl;
+        } else {
+          mediaUrl = videoResult.videoUrl;
+        }
         mediaType = 'video';
       } else {
         // Generate image
@@ -727,13 +759,25 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
                 {imageHistory.map((item, index) => (
                   <div key={index} className={styles.historyItem}>
                     <div className={styles.historyImage}>
-                      <ImageWithFallback
-                        src={item.imageUrl}
-                        alt={`Version ${index + 1}`}
-                        fill
-                        sizes="200px"
-                        fallbackType="scene"
-                      />
+                      {item.metadata?.mediaType === 'video' ? (
+                        <video
+                          src={item.imageUrl}
+                          className={styles.historyVideo}
+                          muted
+                          playsInline
+                        />
+                      ) : (
+                        <ImageWithFallback
+                          src={item.imageUrl}
+                          alt={`Version ${index + 1}`}
+                          fill
+                          sizes="200px"
+                          fallbackType="scene"
+                        />
+                      )}
+                      {item.metadata?.mediaType === 'video' && (
+                        <span className={styles.historyVideoBadge}>VIDEO</span>
+                      )}
                       {showCompare && compareIndex === index && (
                         <div className={styles.compareOverlay}>Comparing</div>
                       )}
@@ -825,14 +869,24 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
             onClick={e => e.stopPropagation()}
             style={{ transform: `scale(${zoomLevel})` }}
           >
-            <ImageWithFallback
-              src={scene.imageUrl}
-              alt={`Scene ${sceneIndex + 1}`}
-              fill
-              sizes="100vw"
-              priority
-              fallbackType="scene"
-            />
+            {scene.metadata?.mediaType === 'video' && scene.imageUrl ? (
+              <video
+                src={scene.imageUrl}
+                className={styles.fullscreenVideo}
+                controls
+                playsInline
+                autoPlay
+              />
+            ) : (
+              <ImageWithFallback
+                src={scene.imageUrl}
+                alt={`Scene ${sceneIndex + 1}`}
+                fill
+                sizes="100vw"
+                priority
+                fallbackType="scene"
+              />
+            )}
           </div>
           <div className={styles.fullscreenNav}>
             {prevScene && (
@@ -876,13 +930,23 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
               <div className={styles.compareItem}>
                 <h4>Previous</h4>
                 <div className={styles.compareImage}>
-                  <ImageWithFallback
-                    src={imageHistory[compareIndex].imageUrl}
-                    alt="Previous version"
-                    fill
-                    sizes="50vw"
-                    fallbackType="scene"
-                  />
+                  {imageHistory[compareIndex].metadata?.mediaType === 'video' ? (
+                    <video
+                      src={imageHistory[compareIndex].imageUrl}
+                      className={styles.compareVideo}
+                      controls
+                      playsInline
+                      muted
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={imageHistory[compareIndex].imageUrl}
+                      alt="Previous version"
+                      fill
+                      sizes="50vw"
+                      fallbackType="scene"
+                    />
+                  )}
                 </div>
                 <p className={styles.comparePrompt}>{imageHistory[compareIndex].prompt}</p>
               </div>
@@ -894,13 +958,23 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
               <div className={styles.compareItem}>
                 <h4>Current</h4>
                 <div className={styles.compareImage}>
-                  <ImageWithFallback
-                    src={scene.imageUrl}
-                    alt="Current version"
-                    fill
-                    sizes="50vw"
-                    fallbackType="scene"
-                  />
+                  {scene.metadata?.mediaType === 'video' && scene.imageUrl ? (
+                    <video
+                      src={scene.imageUrl}
+                      className={styles.compareVideo}
+                      controls
+                      playsInline
+                      muted
+                    />
+                  ) : (
+                    <ImageWithFallback
+                      src={scene.imageUrl}
+                      alt="Current version"
+                      fill
+                      sizes="50vw"
+                      fallbackType="scene"
+                    />
+                  )}
                 </div>
                 <p className={styles.comparePrompt}>{scene.prompt}</p>
               </div>

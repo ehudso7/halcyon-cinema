@@ -134,12 +134,29 @@ export default function MusicPanel({
       attempts++;
 
       try {
-        // Re-check by calling the API with the same parameters
-        // In a real implementation, you'd have a status endpoint
-        // For now, we'll show progress and rely on the initial response
+        const statusResponse = await fetch(`/api/prediction-status/${predictionId}`);
+        const statusResult = await statusResponse.json();
+
         setProgress(`Generating music... (${Math.round((attempts / maxAttempts) * 100)}%)`);
-      } catch {
-        // Continue polling
+
+        if (statusResult.status === 'succeeded' && statusResult.output) {
+          setGeneratedAudioUrl(statusResult.output);
+          onMusicGenerated?.(statusResult.output);
+          setProgress(null);
+          return;
+        } else if (statusResult.status === 'failed') {
+          throw new Error(statusResult.error || 'Music generation failed');
+        } else if (statusResult.status === 'canceled') {
+          throw new Error('Music generation was canceled');
+        }
+        // Continue polling for 'starting' or 'processing' status
+      } catch (err) {
+        if (err instanceof Error && err.message !== 'Music generation failed' && err.message !== 'Music generation was canceled') {
+          // Network error, continue polling
+          console.error('Polling error:', err);
+        } else {
+          throw err;
+        }
       }
     }
 
@@ -154,8 +171,12 @@ export default function MusicPanel({
       audioRef.current.pause();
       setIsPlaying(false);
     } else {
-      audioRef.current.play();
-      setIsPlaying(true);
+      audioRef.current.play()
+        .then(() => setIsPlaying(true))
+        .catch((err) => {
+          setError('Failed to play audio. Please try again.');
+          console.error('Audio playback error:', err);
+        });
     }
   };
 
