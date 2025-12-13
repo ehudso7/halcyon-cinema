@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import styles from '@/styles/Landing.module.css';
@@ -131,7 +132,7 @@ export default function LandingPage() {
         <nav className={styles.nav}>
           <div className={styles.navContent}>
             <Link href="/" className={styles.logo}>
-              <span className={styles.logoIcon}>🎬</span>
+              <Image src="/images/logo.svg" alt="HALCYON" width={32} height={32} />
               <span className={styles.logoText}>HALCYON</span>
             </Link>
             <div className={styles.navLinks}>
@@ -582,7 +583,7 @@ export default function LandingPage() {
           <div className={styles.footerContent}>
             <div className={styles.footerTop}>
               <div className={styles.footerBrand}>
-                <span className={styles.logoIcon}>🎬</span>
+                <Image src="/images/logo.svg" alt="HALCYON" width={28} height={28} />
                 <span>HALCYON-Cinema</span>
               </div>
               <div className={styles.footerLinks}>

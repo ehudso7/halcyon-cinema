@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+  </defs>
+  <!-- Film reel outer ring -->
+  <circle cx="24" cy="24" r="22" stroke="url(#logoGradient)" stroke-width="3" fill="none"/>
+  <!-- Inner circle -->
+  <circle cx="24" cy="24" r="8" fill="url(#logoGradient)"/>
+  <!-- Film sprocket holes -->
+  <circle cx="24" cy="6" r="3" fill="url(#accentGradient)"/>
+  <circle cx="24" cy="42" r="3" fill="url(#accentGradient)"/>
+  <circle cx="6" cy="24" r="3" fill="url(#accentGradient)"/>
+  <circle cx="42" cy="24" r="3" fill="url(#accentGradient)"/>
+  <!-- Diagonal sprockets -->
+  <circle cx="11.3" cy="11.3" r="2.5" fill="url(#accentGradient)"/>
+  <circle cx="36.7" cy="11.3" r="2.5" fill="url(#accentGradient)"/>
+  <circle cx="11.3" cy="36.7" r="2.5" fill="url(#accentGradient)"/>
+  <circle cx="36.7" cy="36.7" r="2.5" fill="url(#accentGradient)"/>
+  <!-- Play triangle in center -->
+  <path d="M21 18L30 24L21 30V18Z" fill="white"/>
+</svg>

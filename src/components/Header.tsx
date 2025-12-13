@@ -3,6 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signOut } from 'next-auth/react';
 import UsageStats from './UsageStats';
+import BrandLogo from './BrandLogo';
 import styles from './Header.module.css';
 
 interface HeaderProps {
@@ -29,8 +30,7 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
           )}
         </div>
         <Link href="/" className={styles.logo}>
-          <span className={styles.logoIcon}>🎬</span>
-          <span className={styles.logoText}>HALCYON-Cinema</span>
+          <BrandLogo size="small" />
         </Link>
         <div className={styles.right}>
           <Link href="/" className={styles.navLink}>
