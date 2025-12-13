@@ -217,6 +217,9 @@ export default function LandingPage() {
 
   // Parallax scroll effect with RAF throttling and reduced-motion support
   useEffect(() => {
+    // Guard for SSR
+    if (typeof window === 'undefined') return;
+
     // Check for reduced motion preference
     const prefersReducedMotion =
       window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ||
