@@ -11,6 +11,17 @@ interface PricingPageProps {
   isLoggedIn: boolean;
   currentTier?: string;
   creditsRemaining?: number;
+  stripeConfigured: boolean;
+  priceIds: {
+    starter: string;
+    creator: string;
+    studio: string;
+    credits50: string;
+    credits100: string;
+    credits250: string;
+    credits500: string;
+    credits1000: string;
+  };
 }
 
 interface PricingPlan {
@@ -25,6 +36,13 @@ interface PricingPlan {
   popular?: boolean;
 }
 
+interface CreditPack {
+  credits: number;
+  price: number;
+  priceId: string;
+}
+
+export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining, stripeConfigured, priceIds }: PricingPageProps) {
 // Sweet-spot pricing with clear value progression
 // Monthly: Starter $12, Creator $29, Studio $79
 // Yearly: ~17% discount (2 months free)
@@ -101,6 +119,66 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining 
   const [showCreditPacks, setShowCreditPacks] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
+  // Build plans with actual price IDs from server
+  const plans: PricingPlan[] = [
+    {
+      id: 'starter',
+      name: 'Starter',
+      price: 9,
+      priceId: priceIds.starter,
+      credits: 100,
+      features: [
+        '100 generation credits',
+        'Image generation (DALL-E 3)',
+        'All visual styles',
+        'Project management',
+        'Scene organization',
+        'Export to PDF/ZIP',
+      ],
+    },
+    {
+      id: 'creator',
+      name: 'Creator',
+      price: 29,
+      priceId: priceIds.creator,
+      credits: 500,
+      features: [
+        '500 generation credits',
+        'Everything in Starter',
+        'Video generation',
+        'Music generation',
+        'Voiceover generation',
+        'Priority support',
+        'Advanced AI controls',
+      ],
+      popular: true,
+    },
+    {
+      id: 'studio',
+      name: 'Studio',
+      price: 99,
+      priceId: priceIds.studio,
+      credits: 2000,
+      features: [
+        '2,000 generation credits',
+        'Everything in Creator',
+        'Unlimited projects',
+        'Team collaboration (coming soon)',
+        'API access (coming soon)',
+        'Custom style training (coming soon)',
+        'Dedicated support',
+      ],
+    },
+  ];
+
+  const creditPacks = [
+    { credits: 50, price: 5, priceId: priceIds.credits50 },
+    { credits: 100, price: 9, priceId: priceIds.credits100 },
+    { credits: 250, price: 19, priceId: priceIds.credits250 },
+    { credits: 500, price: 35, priceId: priceIds.credits500 },
+    { credits: 1000, price: 65, priceId: priceIds.credits1000 },
+  ];
+
   const handleSubscribe = async (plan: PricingPlan) => {
     if (!isLoggedIn) {
       router.push('/auth/signin?callbackUrl=/pricing');
@@ -136,7 +214,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining 
     }
   };
 
-  const handleBuyCredits = async (pack: typeof CREDIT_PACKS[0]) => {
+  const handleBuyCredits = async (pack: CreditPack) => {
     if (!isLoggedIn) {
       router.push('/auth/signin?callbackUrl=/pricing');
       return;
@@ -197,6 +275,17 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining 
             )}
           </div>
 
+          {!stripeConfigured && (
+            <div className={styles.error}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Payment processing is being set up. Please check back soon.
+            </div>
+          )}
+
           {error && (
             <div className={styles.error}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -227,6 +316,49 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining 
 
           {/* Subscription Plans */}
           <div className={styles.plans}>
+            {plans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`${styles.plan} ${plan.popular ? styles.popular : ''}`}
+              >
+                {plan.popular && <span className={styles.badge}>Most Popular</span>}
+                <h2 className={styles.planName}>{plan.name}</h2>
+                <div className={styles.price}>
+                  <span className={styles.currency}>$</span>
+                  <span className={styles.amount}>{plan.price}</span>
+                  <span className={styles.period}>/month</span>
+                </div>
+                <p className={styles.credits}>
+                  <strong>{plan.credits}</strong> credits/month
+                </p>
+
+                <ul className={styles.features}>
+                  {plan.features.map((feature, index) => (
+                    <li key={index}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  className={`btn ${plan.popular ? 'btn-primary' : 'btn-secondary'} btn-full`}
+                  onClick={() => handleSubscribe(plan)}
+                  disabled={isLoading === plan.id || !stripeConfigured}
+                >
+                  {isLoading === plan.id ? (
+                    <>
+                      <span className={styles.spinner} />
+                      Processing...
+                    </>
+                  ) : currentTier === plan.id ? (
+                    'Current Plan'
+                  ) : !stripeConfigured ? (
+                    'Coming Soon'
+                  ) : (
+                    'Get Started'
             {PRICING_PLANS.map((plan) => {
               const displayPrice = billingPeriod === 'yearly'
                 ? Math.round(plan.yearlyPrice / 12)
@@ -312,7 +444,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining 
 
             {showCreditPacks && (
               <div className={styles.creditPacks}>
-                {CREDIT_PACKS.map((pack) => (
+                {creditPacks.map((pack) => (
                   <div key={pack.credits} className={styles.creditPack}>
                     <div className={styles.packInfo}>
                       <span className={styles.packCredits}>{pack.credits} credits</span>
@@ -321,10 +453,12 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining 
                     <button
                       className="btn btn-secondary"
                       onClick={() => handleBuyCredits(pack)}
-                      disabled={isLoading === `credits-${pack.credits}`}
+                      disabled={isLoading === `credits-${pack.credits}` || !stripeConfigured}
                     >
                       {isLoading === `credits-${pack.credits}` ? (
                         <span className={styles.spinner} />
+                      ) : !stripeConfigured ? (
+                        'Soon'
                       ) : (
                         'Buy'
                       )}
@@ -383,10 +517,25 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining 
 export const getServerSideProps: GetServerSideProps<PricingPageProps> = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions);
 
+  // Get Stripe configuration status and price IDs from server-side env vars
+  const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
+  const priceIds = {
+    starter: process.env.STRIPE_PRICE_STARTER || 'price_starter',
+    creator: process.env.STRIPE_PRICE_CREATOR || 'price_creator',
+    studio: process.env.STRIPE_PRICE_STUDIO || 'price_studio',
+    credits50: process.env.STRIPE_PRICE_CREDITS_50 || 'price_50_credits',
+    credits100: process.env.STRIPE_PRICE_CREDITS_100 || 'price_100_credits',
+    credits250: process.env.STRIPE_PRICE_CREDITS_250 || 'price_250_credits',
+    credits500: process.env.STRIPE_PRICE_CREDITS_500 || 'price_500_credits',
+    credits1000: process.env.STRIPE_PRICE_CREDITS_1000 || 'price_1000_credits',
+  };
+
   if (!session?.user?.id) {
     return {
       props: {
         isLoggedIn: false,
+        stripeConfigured,
+        priceIds,
       },
     };
   }
@@ -401,6 +550,8 @@ export const getServerSideProps: GetServerSideProps<PricingPageProps> = async (c
         isLoggedIn: true,
         currentTier: credits?.subscriptionTier || 'free',
         creditsRemaining: credits?.creditsRemaining || 0,
+        stripeConfigured,
+        priceIds,
       },
     };
   } catch {
@@ -408,6 +559,8 @@ export const getServerSideProps: GetServerSideProps<PricingPageProps> = async (c
       props: {
         isLoggedIn: true,
         creditsRemaining: 0,
+        stripeConfigured,
+        priceIds,
       },
     };
   }
