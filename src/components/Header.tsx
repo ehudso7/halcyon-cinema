@@ -36,6 +36,12 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
           <Link href="/" className={styles.navLink}>
             Projects
           </Link>
+          <Link href="/library" className={styles.navLink}>
+            Library
+          </Link>
+          <Link href="/pricing" className={styles.navLink}>
+            Pricing
+          </Link>
 
           {status === 'loading' ? (
             <div className={styles.authLoading}>

@@ -288,7 +288,7 @@ export async function closePool(): Promise<void> {
 /**
  * Execute a query with parameters
  */
-async function query<T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
+export async function query<T extends QueryResultRow = QueryResultRow>(text: string, params?: unknown[]): Promise<QueryResult<T>> {
   const client = getPool();
   const timer = dbLogger.startTimer('query', {
     // Extract first word of query for operation type (SELECT, INSERT, etc.)
