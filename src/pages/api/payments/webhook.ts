@@ -136,9 +136,11 @@ export default async function handler(
 
         if (priceId && SUBSCRIPTION_TIERS[priceId]) {
           const tier = SUBSCRIPTION_TIERS[priceId];
-          // Access current_period_end safely - it exists on the subscription object
-          const periodEnd = (subscription as unknown as { current_period_end: number }).current_period_end;
-          const expiresAt = new Date(periodEnd * 1000);
+          // In Stripe v20+, current_period_end is on SubscriptionItem, not Subscription
+          const subscriptionItem = subscription.items.data[0];
+          const expiresAt = subscriptionItem?.current_period_end
+            ? new Date(subscriptionItem.current_period_end * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Fallback to 30 days
 
           await updateUserSubscription(userId, tier, expiresAt, subscription.id);
           console.log(`[webhook] Updated subscription for user ${userId} to ${tier}`);
@@ -177,19 +179,19 @@ export default async function handler(
       }
 
       case 'invoice.payment_succeeded': {
-        // Use type assertion for invoice properties that may vary by Stripe version
-        const invoiceData = event.data.object as {
-          id: string;
-          subscription?: string | null;
-          billing_reason?: string;
-          customer: string | { id: string };
-        };
+        const invoice = event.data.object as Stripe.Invoice;
 
-        // Handle subscription renewal
-        if (invoiceData.subscription && invoiceData.billing_reason === 'subscription_cycle') {
-          const customerId = typeof invoiceData.customer === 'string'
-            ? invoiceData.customer
-            : invoiceData.customer.id;
+        // Handle subscription renewal - in Stripe v20+, subscription is in parent.subscription_details
+        const subscriptionDetails = invoice.parent?.subscription_details;
+        if (subscriptionDetails?.subscription && invoice.billing_reason === 'subscription_cycle') {
+          const customerId = typeof invoice.customer === 'string'
+            ? invoice.customer
+            : invoice.customer?.id;
+
+          if (!customerId) {
+            console.error('[webhook] No customer ID on invoice');
+            break;
+          }
 
           const { query } = await import('@/utils/db');
           const result = await query(
@@ -201,9 +203,10 @@ export default async function handler(
             const userId = result.rows[0].id as string;
 
             // Get subscription to determine credits
-            const subscription = await stripe.subscriptions.retrieve(
-              invoiceData.subscription as string
-            );
+            const subscriptionId = typeof subscriptionDetails.subscription === 'string'
+              ? subscriptionDetails.subscription
+              : subscriptionDetails.subscription.id;
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
             const priceId = subscription.items.data[0]?.price.id;
 
             if (priceId && CREDIT_AMOUNTS[priceId]) {
@@ -212,7 +215,7 @@ export default async function handler(
                 CREDIT_AMOUNTS[priceId],
                 'subscription',
                 'Monthly subscription credits renewal',
-                invoiceData.id
+                invoice.id
               );
               console.log(`[webhook] Added renewal credits for user ${userId}`);
             }
@@ -222,8 +225,8 @@ export default async function handler(
       }
 
       case 'invoice.payment_failed': {
-        const failedInvoice = event.data.object as { id: string };
-        console.log('[webhook] Payment failed for invoice:', failedInvoice.id);
+        const invoice = event.data.object as Stripe.Invoice;
+        console.log('[webhook] Payment failed for invoice:', invoice.id);
         // Could send notification to user here
         break;
       }
