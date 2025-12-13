@@ -19,33 +19,51 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 // Price IDs from environment variables with fallbacks for development
 // In production, set STRIPE_PRICE_* environment variables to actual Stripe price IDs
 const PRICE_IDS = {
-  CREDITS_50: process.env.STRIPE_PRICE_CREDITS_50 || 'price_50_credits',
-  CREDITS_100: process.env.STRIPE_PRICE_CREDITS_100 || 'price_100_credits',
-  CREDITS_250: process.env.STRIPE_PRICE_CREDITS_250 || 'price_250_credits',
-  CREDITS_500: process.env.STRIPE_PRICE_CREDITS_500 || 'price_500_credits',
-  CREDITS_1000: process.env.STRIPE_PRICE_CREDITS_1000 || 'price_1000_credits',
-  STARTER: process.env.STRIPE_PRICE_STARTER || 'price_starter',
-  CREATOR: process.env.STRIPE_PRICE_CREATOR || 'price_creator',
-  STUDIO: process.env.STRIPE_PRICE_STUDIO || 'price_studio',
+  // One-time credit packs
+  CREDITS_50: process.env.STRIPE_PRICE_CREDITS_50 || 'price_1SdvEiCpgicnCSJyguGIyASn',
+  CREDITS_100: process.env.STRIPE_PRICE_CREDITS_100 || 'price_1SdvGkCpgicnCSJykwN4kzak',
+  CREDITS_250: process.env.STRIPE_PRICE_CREDITS_250 || 'price_1SdvIWCpgicnCSJyWoaJDCzK',
+  CREDITS_500: process.env.STRIPE_PRICE_CREDITS_500 || 'price_1SdvKLCpgicnCSJyFADi6pY2',
+  CREDITS_1000: process.env.STRIPE_PRICE_CREDITS_1000 || 'price_1SdvNqCpgicnCSJyv5IcflSN',
+  // Monthly subscriptions
+  STARTER_MONTHLY: process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1SdusgCpgicnCSJySUHiE8I8',
+  CREATOR_MONTHLY: process.env.STRIPE_PRICE_CREATOR_MONTHLY || 'price_1Sdv6uCpgicnCSJyE8EulnlU',
+  STUDIO_MONTHLY: process.env.STRIPE_PRICE_STUDIO_MONTHLY || 'price_1SdvCICpgicnCSJy3gYXGiHR',
+  // Yearly subscriptions
+  STARTER_YEARLY: process.env.STRIPE_PRICE_STARTER_YEARLY || 'price_1Sdv1gCpgicnCSJyM3kJ07mS',
+  CREATOR_YEARLY: process.env.STRIPE_PRICE_CREATOR_YEARLY || 'price_1Sdv8iCpgicnCSJyeaO0loGi',
+  STUDIO_YEARLY: process.env.STRIPE_PRICE_STUDIO_YEARLY || 'price_1SdvCpCpgicnCSJyPa06d2kW',
 };
 
 // Credit amounts for different price IDs - dynamically built from env vars
+// Monthly subscriptions give credits each month, yearly gives same monthly credits
 const CREDIT_AMOUNTS: Record<string, number> = {
+  // One-time credit packs
   [PRICE_IDS.CREDITS_50]: 50,
   [PRICE_IDS.CREDITS_100]: 100,
   [PRICE_IDS.CREDITS_250]: 250,
   [PRICE_IDS.CREDITS_500]: 500,
   [PRICE_IDS.CREDITS_1000]: 1000,
-  [PRICE_IDS.STARTER]: 100,
-  [PRICE_IDS.CREATOR]: 500,
-  [PRICE_IDS.STUDIO]: 2000,
+  // Monthly subscriptions (credits per month)
+  [PRICE_IDS.STARTER_MONTHLY]: 100,
+  [PRICE_IDS.CREATOR_MONTHLY]: 500,
+  [PRICE_IDS.STUDIO_MONTHLY]: 2000,
+  // Yearly subscriptions (credits per month - same as monthly)
+  [PRICE_IDS.STARTER_YEARLY]: 100,
+  [PRICE_IDS.CREATOR_YEARLY]: 500,
+  [PRICE_IDS.STUDIO_YEARLY]: 2000,
 };
 
-// Subscription tiers for price IDs
+// Subscription tiers for price IDs (both monthly and yearly)
 const SUBSCRIPTION_TIERS: Record<string, 'free' | 'pro' | 'enterprise'> = {
-  [PRICE_IDS.STARTER]: 'free',
-  [PRICE_IDS.CREATOR]: 'pro',
-  [PRICE_IDS.STUDIO]: 'enterprise',
+  // Monthly
+  [PRICE_IDS.STARTER_MONTHLY]: 'free',
+  [PRICE_IDS.CREATOR_MONTHLY]: 'pro',
+  [PRICE_IDS.STUDIO_MONTHLY]: 'enterprise',
+  // Yearly (same tiers)
+  [PRICE_IDS.STARTER_YEARLY]: 'free',
+  [PRICE_IDS.CREATOR_YEARLY]: 'pro',
+  [PRICE_IDS.STUDIO_YEARLY]: 'enterprise',
 };
 
 export default async function handler(
