@@ -743,7 +743,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
 
       // Step 4: Create scenes
       setGenerationStep(`Creating ${data.scenes.length} scenes...`);
-      const createdSceneIds: string[] = [];
+      // Track both scene ID and its associated prompt for image generation
+      const createdScenes: Array<{ id: string; visualPrompt: string }> = [];
 
       for (let i = 0; i < data.scenes.length; i++) {
         const scene = data.scenes[i];
@@ -769,7 +770,10 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
           });
           if (response.ok) {
             const sceneData = await response.json();
-            createdSceneIds.push(sceneData.id);
+            createdScenes.push({
+              id: sceneData.id,
+              visualPrompt: scene.visualPrompt || scene.description,
+            });
           } else {
             failedItems++;
           }
@@ -779,22 +783,21 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
       }
 
       // Step 5: Generate images if requested
-      if (data.generateSceneImages && createdSceneIds.length > 0) {
-        setGenerationStep(`Generating images for ${createdSceneIds.length} scenes...`);
+      if (data.generateSceneImages && createdScenes.length > 0) {
+        setGenerationStep(`Generating images for ${createdScenes.length} scenes...`);
         let imagesFailed = 0;
 
-        for (let i = 0; i < createdSceneIds.length; i++) {
-          const sceneId = createdSceneIds[i];
-          const scene = data.scenes[i];
-          setGenerationStep(`Generating image ${i + 1}/${createdSceneIds.length}...`);
+        for (let i = 0; i < createdScenes.length; i++) {
+          const createdScene = createdScenes[i];
+          setGenerationStep(`Generating image ${i + 1}/${createdScenes.length}...`);
 
           try {
             const genResponse = await fetch('/api/generate', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                prompt: scene.visualPrompt || scene.description,
-                sceneId,
+                prompt: createdScene.visualPrompt,
+                sceneId: createdScene.id,
                 style: data.visualStyle,
                 genre: data.genre,
               }),
@@ -805,7 +808,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
           }
 
           // Small delay between generations
-          if (i < createdSceneIds.length - 1) {
+          if (i < createdScenes.length - 1) {
             await new Promise(resolve => setTimeout(resolve, 500));
           }
         }

@@ -85,6 +85,11 @@
   color: white;
 }
 
+.closeButton:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 .closeButton:disabled {
   opacity: 0.3;
   cursor: not-allowed;
@@ -180,6 +185,11 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+.changeFile:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 .spinner {
   width: 48px;
   height: 48px;
@@ -269,6 +279,12 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+.cancelBtn:focus-visible,
+.backBtn:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 .primaryBtn {
   display: flex;
   align-items: center;
@@ -287,6 +303,11 @@
 .primaryBtn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.primaryBtn:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
 }
 
 .primaryBtn:disabled {
@@ -519,6 +540,11 @@
   color: white;
 }
 
+.reviewTab:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
 .selectionActions {
   display: flex;
   gap: 0.5rem;
@@ -538,6 +564,11 @@
 
 .selectionActions button:hover {
   background: rgba(255, 255, 255, 0.15);
+}
+
+.selectionActions button:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
 }
 
 .reviewContent {

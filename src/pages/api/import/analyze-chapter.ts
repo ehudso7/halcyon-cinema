@@ -92,8 +92,14 @@ export default async function handler(
     novelContext = '',
   } = req.body;
 
+  // Validate chapterIndex
+  const parsedChapterIndex = typeof chapterIndex === 'number' ? chapterIndex : parseInt(chapterIndex, 10);
+  if (isNaN(parsedChapterIndex) || parsedChapterIndex < 0) {
+    return res.status(400).json({ success: false, chapterIndex: -1, error: 'Valid chapterIndex is required' });
+  }
+
   if (!content || typeof content !== 'string') {
-    return res.status(400).json({ success: false, chapterIndex: -1, error: 'Content is required' });
+    return res.status(400).json({ success: false, chapterIndex: parsedChapterIndex, error: 'Content is required' });
   }
 
   try {
@@ -112,7 +118,7 @@ ${novelContext ? `NOVEL CONTEXT:\n${novelContext}\n\n` : ''}
 ${previousCharacterNames ? `KNOWN CHARACTERS FROM PREVIOUS CHAPTERS: ${previousCharacterNames}\n` : ''}
 ${previousLocationNames ? `KNOWN LOCATIONS FROM PREVIOUS CHAPTERS: ${previousLocationNames}\n` : ''}
 
-Analyze this chapter (${chapterTitle || `Chapter ${chapterIndex + 1}`}) and extract:
+Analyze this chapter (${chapterTitle || `Chapter ${parsedChapterIndex + 1}`}) and extract:
 
 1. **Summary**: 2-3 sentence chapter summary
 2. **Characters**: All characters appearing in this chapter
@@ -197,7 +203,7 @@ Return JSON:
       console.error('[analyze-chapter] Failed to parse JSON:', analysisText.substring(0, 500));
       return res.status(500).json({
         success: false,
-        chapterIndex,
+        chapterIndex: parsedChapterIndex,
         error: 'Failed to parse analysis results',
       });
     }
@@ -205,7 +211,7 @@ Return JSON:
     // Validate and sanitize response
     const response: ChapterAnalysis = {
       success: true,
-      chapterIndex,
+      chapterIndex: parsedChapterIndex,
       summary: analysis.summary || '',
       characters: Array.isArray(analysis.characters) ? analysis.characters.map((c: Partial<ExtractedCharacter>) => ({
         name: c.name || 'Unknown',
@@ -244,7 +250,7 @@ Return JSON:
       pacing: ['slow', 'moderate', 'fast'].includes(analysis.pacing) ? analysis.pacing : 'moderate',
     };
 
-    console.log(`[analyze-chapter] Chapter ${chapterIndex}: ${response.characters?.length || 0} chars, ${response.scenes?.length || 0} scenes`);
+    console.log(`[analyze-chapter] Chapter ${parsedChapterIndex}: ${response.characters?.length || 0} chars, ${response.scenes?.length || 0} scenes`);
 
     return res.status(200).json(response);
   } catch (error) {
@@ -254,7 +260,7 @@ Return JSON:
       if (error.status === 429) {
         return res.status(429).json({
           success: false,
-          chapterIndex,
+          chapterIndex: parsedChapterIndex,
           error: 'Rate limit exceeded. Please wait a moment.',
         });
       }
@@ -262,7 +268,7 @@ Return JSON:
 
     return res.status(500).json({
       success: false,
-      chapterIndex,
+      chapterIndex: parsedChapterIndex,
       error: error instanceof Error ? error.message : 'Failed to analyze chapter',
     });
   }

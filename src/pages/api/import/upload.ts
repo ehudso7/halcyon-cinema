@@ -127,21 +127,10 @@ async function parseEpub(buffer: Buffer): Promise<string> {
   const JSZip = (await import('jszip')).default;
   const zip = await JSZip.loadAsync(buffer);
 
-  // Find the content files (usually in OEBPS or similar)
+  // Find the content files
   const textParts: string[] = [];
 
-  // Get container.xml to find content location
-  const containerXml = await zip.file('META-INF/container.xml')?.async('string');
-  let contentPath = 'OEBPS/';
-
-  if (containerXml) {
-    const rootfileMatch = containerXml.match(/full-path="([^"]+)"/);
-    if (rootfileMatch) {
-      contentPath = rootfileMatch[1].replace(/[^/]+$/, '');
-    }
-  }
-
-  // Process all HTML/XHTML files
+  // Process all HTML/XHTML files (sorted alphabetically - note: may not match spine order)
   const files = Object.keys(zip.files).filter(
     name => name.endsWith('.html') || name.endsWith('.xhtml') || name.endsWith('.htm')
   ).sort();
@@ -194,20 +183,22 @@ export default async function handler(
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
+  let uploadedFile: File | undefined;
+
   try {
     const form = new IncomingForm({
       maxFileSize: 50 * 1024 * 1024, // 50MB
       keepExtensions: true,
     });
 
-    const [fields, files] = await new Promise<[Record<string, unknown>, Record<string, File | File[]>]>((resolve, reject) => {
+    const [, files] = await new Promise<[Record<string, unknown>, Record<string, File | File[]>]>((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
         if (err) reject(err);
         else resolve([fields, files as Record<string, File | File[]>]);
       });
     });
 
-    const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
+    uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
 
     if (!uploadedFile) {
       return res.status(400).json({ success: false, error: 'No file uploaded' });
@@ -220,13 +211,6 @@ export default async function handler(
 
     // Parse the file
     const content = await parseFile(uploadedFile);
-
-    // Clean up temp file
-    try {
-      fs.unlinkSync(uploadedFile.filepath);
-    } catch {
-      // Ignore cleanup errors
-    }
 
     // Calculate statistics
     const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
@@ -247,5 +231,14 @@ export default async function handler(
       success: false,
       error: error instanceof Error ? error.message : 'Failed to process file',
     });
+  } finally {
+    // Clean up temp file regardless of success or failure
+    if (uploadedFile?.filepath) {
+      try {
+        fs.unlinkSync(uploadedFile.filepath);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
   }
 }
