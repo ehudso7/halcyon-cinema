@@ -44,7 +44,9 @@
 
 /* Light theme */
 [data-theme="light"] {
-  /* Primary color palette - Cinematic Gold adjusted for light mode */
+  /* Primary color palette - Cinematic Gold adjusted for light mode
+     Note: --color-primary is darker than --color-primary-light intentionally
+     for better contrast on light backgrounds (WCAG accessibility) */
   --color-primary: #B8960C;
   --color-primary-hover: #9A7D0A;
   --color-primary-light: #D4AF37;
@@ -56,10 +58,10 @@
   --color-surface: #ffffff;
   --color-surface-hover: #FFF8E7;
 
-  /* Border and text */
+  /* Border and text - darkened for WCAG AA contrast compliance */
   --color-border: #e5dcc8;
   --color-text: #1e1a14;
-  --color-text-secondary: #5c5448;
+  --color-text-secondary: #4a4235;
 
   /* Status colors - slightly adjusted for light mode contrast */
   --color-error: #dc2626;
@@ -67,7 +69,11 @@
   --color-success: #16a34a;
   --color-info: #2563eb;
 
-  /* Aliases */
+  /* Aliases for backward compatibility */
+  --primary-color: var(--color-primary);
+  --primary: var(--color-primary);
+  --primary-light: var(--color-primary-light);
+  --accent-color: var(--color-secondary);
   --card-bg: var(--color-surface);
   --border-color: var(--color-border);
   --text-primary: var(--color-text);
