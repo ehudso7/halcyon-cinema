@@ -153,6 +153,76 @@ export async function createUser(email: string, password: string, name: string):
   return safeUser as User;
 }
 
+// Special marker for OAuth users who don't have a password
+const OAUTH_PASSWORD_MARKER = '__OAUTH_USER__';
+
+export async function createOAuthUser(email: string, name: string, provider: string): Promise<User> {
+  logStorageMode();
+  const normalizedEmail = email.toLowerCase().trim();
+
+  authLogger.debug('createOAuthUser called', {
+    emailDomain: normalizedEmail.split('@')[1],
+    provider,
+    postgresAvailable: isPostgresAvailable(),
+  });
+
+  // Use Postgres if available
+  if (isPostgresAvailable()) {
+    // Check if user already exists
+    const existingUser = await dbGetUserByEmail(normalizedEmail);
+    if (existingUser) {
+      authLogger.debug('OAuth user already exists', { userId: existingUser.id });
+      return {
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
+        image: existingUser.image || undefined,
+        createdAt: existingUser.createdAt,
+        updatedAt: existingUser.updatedAt,
+      };
+    }
+
+    // Use special marker instead of empty password - no hash needed since it's not a real password
+    authLogger.debug('Creating OAuth user in database');
+    const dbUser = await dbCreateUser(normalizedEmail, name, OAUTH_PASSWORD_MARKER);
+    authLogger.info('OAuth user created successfully', { userId: dbUser.id, provider });
+
+    return {
+      id: dbUser.id,
+      email: dbUser.email,
+      name: dbUser.name,
+      createdAt: dbUser.createdAt,
+      updatedAt: dbUser.updatedAt,
+    };
+  }
+
+  // Fallback to file storage for local development
+  loadFromFile();
+
+  const existingUser = users.find(u => u.email.toLowerCase() === normalizedEmail);
+  if (existingUser) {
+    const { passwordHash: _, ...safeUser } = existingUser;
+    return safeUser as User;
+  }
+
+  const now = new Date().toISOString();
+
+  const user: User = {
+    id: uuidv4(),
+    email: normalizedEmail,
+    name,
+    passwordHash: OAUTH_PASSWORD_MARKER,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  users.push(user);
+  saveToFile();
+
+  const { passwordHash: _, ...safeUser } = user;
+  return safeUser as User;
+}
+
 export async function validateUser(email: string, password: string): Promise<User | null> {
   const normalizedEmail = email.toLowerCase().trim();
 
@@ -166,6 +236,12 @@ export async function validateUser(email: string, password: string): Promise<Use
     const dbUser = await dbGetUserByEmail(normalizedEmail);
     if (!dbUser || !dbUser.passwordHash) {
       authLogger.debug('User not found or no password hash');
+      return null;
+    }
+
+    // Reject OAuth users trying to login with password
+    if (dbUser.passwordHash === OAUTH_PASSWORD_MARKER) {
+      authLogger.debug('OAuth user attempted password login');
       return null;
     }
 
@@ -194,6 +270,11 @@ export async function validateUser(email: string, password: string): Promise<Use
 
   const user = users.find(u => u.email.toLowerCase() === normalizedEmail);
   if (!user || !user.passwordHash) {
+    return null;
+  }
+
+  // Reject OAuth users trying to login with password
+  if (user.passwordHash === OAUTH_PASSWORD_MARKER) {
     return null;
   }
 

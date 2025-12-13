@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './GenerationControls.module.css';
 
 export interface GenerationSettings {
@@ -68,18 +68,26 @@ export default function GenerationControls({
   const [newPresetName, setNewPresetName] = useState('');
   const [showSavePreset, setShowSavePreset] = useState(false);
 
+  // Use ref to avoid infinite re-render loop when calling onChange
+  const onChangeRef = useRef(onChange);
+
+  // Keep ref in sync with latest onChange callback
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
   // Load settings from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('generation_settings');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        onChange({ ...DEFAULT_SETTINGS, ...parsed });
+        onChangeRef.current({ ...DEFAULT_SETTINGS, ...parsed });
       } catch {
         // Invalid JSON, use defaults
       }
     }
-  }, [onChange]);
+  }, []);
 
   // Save settings to localStorage when changed
   useEffect(() => {
