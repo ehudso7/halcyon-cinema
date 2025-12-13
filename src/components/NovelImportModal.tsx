@@ -565,8 +565,20 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
             const existing = accumulatedCharacters.get(c.name.toLowerCase());
             if (existing) {
               existing.appearances.push(chapter.index);
+              // Update description if new one is longer
               if (c.description && c.description.length > existing.description.length) {
                 existing.description = c.description;
+              }
+              // Merge traits (union of both arrays, deduplicated)
+              if (c.traits && c.traits.length > 0) {
+                existing.traits = Array.from(new Set([
+                  ...(existing.traits || []),
+                  ...c.traits,
+                ]));
+              }
+              // Prefer longer/non-empty role
+              if (c.role && c.role.length > (existing.role?.length || 0)) {
+                existing.role = c.role;
               }
               return existing;
             }
@@ -589,6 +601,14 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
             const existing = accumulatedLocations.get(l.name.toLowerCase());
             if (existing) {
               existing.appearances.push(chapter.index);
+              // Update description if new one is longer
+              if (l.description && l.description.length > existing.description.length) {
+                existing.description = l.description;
+              }
+              // Prefer longer/non-empty significance
+              if (l.significance && l.significance.length > (existing.significance?.length || 0)) {
+                existing.significance = l.significance;
+              }
               return existing;
             }
             const newLoc: ExtractedLocation = {
