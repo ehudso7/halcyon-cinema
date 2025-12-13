@@ -13,6 +13,17 @@ vi.mock('@/utils/api-auth', () => ({
   checkRateLimit: vi.fn(),
 }));
 
+vi.mock('@/utils/db', () => ({
+  getUserCredits: vi.fn(),
+  deductCredits: vi.fn(),
+  CreditError: class CreditError extends Error {
+    constructor(message: string, public code: string) {
+      super(message);
+      this.name = 'CreditError';
+    }
+  },
+}));
+
 vi.mock('@/utils/openai', () => ({
   generateImage: vi.fn(),
   buildCinematicPrompt: vi.fn((prompt: string) => prompt),
@@ -33,6 +44,7 @@ vi.mock('@/utils/image-storage', () => ({
 
 import handler from '@/pages/api/generate-image';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
+import { getUserCredits, deductCredits } from '@/utils/db';
 import { generateImage } from '@/utils/openai';
 import { persistImage, isPersistedUrl } from '@/utils/image-storage';
 
@@ -96,6 +108,13 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   it('should reject requests without required parameters', async () => {
     vi.mocked(requireAuth).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
+    vi.mocked(getUserCredits).mockResolvedValue({
+      id: 'user-123',
+      creditsRemaining: 100,
+      subscriptionTier: 'free',
+      subscriptionExpiresAt: null,
+      lifetimeCreditsUsed: 0,
+    });
 
     mockReq.body = {};
 
@@ -122,6 +141,20 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   it('should successfully generate an image with valid prompt', async () => {
     vi.mocked(requireAuth).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
+    vi.mocked(getUserCredits).mockResolvedValue({
+      id: 'user-123',
+      creditsRemaining: 100,
+      subscriptionTier: 'free',
+      subscriptionExpiresAt: null,
+      lifetimeCreditsUsed: 0,
+    });
+    vi.mocked(deductCredits).mockResolvedValue({
+      id: 'user-123',
+      creditsRemaining: 99,
+      subscriptionTier: 'free',
+      subscriptionExpiresAt: null,
+      lifetimeCreditsUsed: 1,
+    });
     vi.mocked(generateImage).mockResolvedValue({
       success: true,
       imageUrl: 'https://example.com/generated-image.png',
@@ -179,6 +212,20 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   it('should return temporary urlType when storage is not configured', async () => {
     vi.mocked(requireAuth).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
+    vi.mocked(getUserCredits).mockResolvedValue({
+      id: 'user-123',
+      creditsRemaining: 100,
+      subscriptionTier: 'free',
+      subscriptionExpiresAt: null,
+      lifetimeCreditsUsed: 0,
+    });
+    vi.mocked(deductCredits).mockResolvedValue({
+      id: 'user-123',
+      creditsRemaining: 99,
+      subscriptionTier: 'free',
+      subscriptionExpiresAt: null,
+      lifetimeCreditsUsed: 1,
+    });
     vi.mocked(generateImage).mockResolvedValue({
       success: true,
       imageUrl: 'https://openai.com/temp-image.png',
@@ -209,6 +256,20 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   it('should return temporary urlType when persistence fails', async () => {
     vi.mocked(requireAuth).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
+    vi.mocked(getUserCredits).mockResolvedValue({
+      id: 'user-123',
+      creditsRemaining: 100,
+      subscriptionTier: 'free',
+      subscriptionExpiresAt: null,
+      lifetimeCreditsUsed: 0,
+    });
+    vi.mocked(deductCredits).mockResolvedValue({
+      id: 'user-123',
+      creditsRemaining: 99,
+      subscriptionTier: 'free',
+      subscriptionExpiresAt: null,
+      lifetimeCreditsUsed: 1,
+    });
     vi.mocked(generateImage).mockResolvedValue({
       success: true,
       imageUrl: 'https://openai.com/temp-image.png',
