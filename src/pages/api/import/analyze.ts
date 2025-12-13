@@ -28,7 +28,7 @@ interface ExtractedLocation {
 interface ExtractedLore {
   name: string;
   description: string;
-  type: 'location' | 'event' | 'system' | 'object' | 'concept';
+  type: 'event' | 'system' | 'object' | 'concept';
 }
 
 interface ExtractedScene {
@@ -69,7 +69,7 @@ export default async function handler(
     return res.status(503).json({ error: 'AI analysis is not configured' });
   }
 
-  const { content, extractAll = true } = req.body;
+  const { content } = req.body;
 
   if (!content || typeof content !== 'string') {
     return res.status(400).json({ error: 'Content is required' });

@@ -452,6 +452,7 @@ export function getIcon(name: string, props: IconProps = defaultProps): React.Re
     celebration: PartyIcon,
     chart: ChartIcon,
     metrics: ChartIcon,
+    upload: UploadIcon,
   };
 
   const IconComponent = icons[name.toLowerCase()];
@@ -493,5 +494,6 @@ export default {
   WavesIcon,
   PartyIcon,
   ChartIcon,
+  UploadIcon,
   getIcon,
 };
