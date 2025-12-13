@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import Head from 'next/head';
 import { DocumentIcon, PaletteIcon, RobotIcon, UsersIcon, FilmIcon, ExportIcon, ImageIcon } from '@/components/Icons';
 import styles from '@/styles/Landing.module.css';
+
+// Brand color
+const CINEMA_GOLD = '#D4AF37';
 
 // Typing animation texts
 const typingTexts = [
@@ -60,6 +63,80 @@ const faqs = [
   },
 ];
 
+// Gallery styles showcase
+const galleryStyles = [
+  { name: 'Cinematic Realism', description: 'Hollywood-grade photorealistic scenes' },
+  { name: 'Film Noir', description: 'Classic shadows and dramatic lighting' },
+  { name: 'Cyberpunk', description: 'Neon-soaked futuristic aesthetics' },
+  { name: 'Studio Ghibli', description: 'Whimsical hand-painted wonder' },
+  { name: 'Anime', description: 'Dynamic Japanese animation style' },
+  { name: 'Watercolor', description: 'Soft, artistic impressions' },
+];
+
+// Stats for animated counters
+const statsData = [
+  { value: 10000, suffix: '+', label: 'Scenes Generated' },
+  { value: 2000, suffix: '+', label: 'Creators' },
+  { value: 12, suffix: '+', label: 'Visual Styles' },
+  { value: 4.9, suffix: '', label: 'User Rating' },
+];
+
+// Hook for animated counter
+function useAnimatedCounter(end: number, duration: number = 2000) {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          const startTime = Date.now();
+          const isDecimal = !Number.isInteger(end);
+
+          const animate = () => {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const current = easeOut * end;
+
+            setCount(isDecimal ? Math.round(current * 10) / 10 : Math.floor(current));
+
+            if (progress < 1) {
+              requestAnimationFrame(animate);
+            } else {
+              setCount(end);
+            }
+          };
+
+          requestAnimationFrame(animate);
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (ref.current) {
+      observer.observe(ref.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasAnimated, end, duration]);
+
+  return { count, ref };
+}
+
+// Animated stat component
+function AnimatedStat({ value, suffix, label }: { value: number; suffix: string; label: string }) {
+  const { count, ref } = useAnimatedCounter(value);
+  return (
+    <div className={styles.stat} ref={ref}>
+      <span className={styles.statNumber}>{count.toLocaleString()}{suffix}</span>
+      <span className={styles.statLabel}>{label}</span>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const { data: session } = useSession();
   const [currentText, setCurrentText] = useState(0);
@@ -69,6 +146,8 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const heroRef = useRef<HTMLElement>(null);
 
   // Typing animation effect
   useEffect(() => {
@@ -101,6 +180,17 @@ export default function LandingPage() {
       setActiveTestimonial((prev) => (prev + 1) % testimonials.length);
     }, 5000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Parallax scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      const scroll = window.scrollY;
+      setScrollY(scroll);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
@@ -154,8 +244,12 @@ export default function LandingPage() {
         </nav>
 
         {/* Hero Section */}
-        <header className={styles.hero}>
-          <div className={styles.heroContent}>
+        <header
+          ref={heroRef}
+          className={styles.hero}
+          style={{ transform: `translateY(${scrollY * 0.3}px)` }}
+        >
+          <div className={styles.heroContent} style={{ transform: `translateY(${scrollY * -0.1}px)` }}>
             <div className={styles.badge}>
               <span className={styles.badgeDot} />
               Pioneering AI-Native Filmmaking
@@ -182,7 +276,7 @@ export default function LandingPage() {
               )}
             </div>
           </div>
-          <div className={styles.heroVisual}>
+          <div className={styles.heroVisual} style={{ transform: `translateY(${scrollY * 0.15}px)` }}>
             <div className={styles.previewCard}>
               <div className={styles.previewHeader}>
                 <span className={styles.dot} style={{ background: '#ef4444' }} />
@@ -200,7 +294,7 @@ export default function LandingPage() {
                 </div>
                 <div className={styles.previewImage}>
                   <div className={styles.previewGlow} />
-                  <span className={styles.previewIcon}><ImageIcon size={48} color="#6366f1" /></span>
+                  <span className={styles.previewIcon}><ImageIcon size={48} color={CINEMA_GOLD} /></span>
                   <span>AI-Generated Scene</span>
                 </div>
               </div>
@@ -211,25 +305,30 @@ export default function LandingPage() {
         {/* Social Proof */}
         <section className={styles.socialProof}>
           <div className={styles.socialProofContent}>
-            <div className={styles.stat}>
-              <span className={styles.statNumber}>10K+</span>
-              <span className={styles.statLabel}>Scenes Generated</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNumber}>2K+</span>
-              <span className={styles.statLabel}>Creators</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNumber}>12+</span>
-              <span className={styles.statLabel}>Visual Styles</span>
-            </div>
-            <div className={styles.statDivider} />
-            <div className={styles.stat}>
-              <span className={styles.statNumber}>4.9</span>
-              <span className={styles.statLabel}>User Rating</span>
-            </div>
+            {statsData.map((stat, index) => (
+              <div key={stat.label} style={{ display: 'contents' }}>
+                <AnimatedStat value={stat.value} suffix={stat.suffix} label={stat.label} />
+                {index < statsData.length - 1 && <div className={styles.statDivider} />}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Style Gallery */}
+        <section className={styles.gallery}>
+          <h2 className={styles.sectionTitle}>Visual Styles Gallery</h2>
+          <p className={styles.sectionSubtitle}>Choose from diverse cinematic aesthetics</p>
+          <div className={styles.galleryGrid}>
+            {galleryStyles.map((style) => (
+              <div key={style.name} className={styles.galleryCard}>
+                <div className={styles.galleryPreview}>
+                  <div className={styles.galleryGlow} />
+                  <FilmIcon size={32} color={CINEMA_GOLD} />
+                </div>
+                <h3 className={styles.galleryTitle}>{style.name}</h3>
+                <p className={styles.galleryDesc}>{style.description}</p>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -240,42 +339,42 @@ export default function LandingPage() {
           <div className={styles.featureGrid}>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <DocumentIcon size={28} color="#6366f1" />
+                <DocumentIcon size={28} color={CINEMA_GOLD} />
               </div>
               <h3>Natural Language Prompts</h3>
               <p>Describe your scene in plain English. Our AI transforms your words into stunning visuals.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <PaletteIcon size={28} color="#6366f1" />
+                <PaletteIcon size={28} color={CINEMA_GOLD} />
               </div>
               <h3>12+ Visual Styles</h3>
               <p>From Ghibli-inspired to Cyberpunk, Film Noir to Anime — choose your aesthetic.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <RobotIcon size={28} color="#6366f1" />
+                <RobotIcon size={28} color={CINEMA_GOLD} />
               </div>
               <h3>AI Creative Assistant</h3>
               <p>Get real-time suggestions for lighting, mood, composition, and story elements.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <UsersIcon size={28} color="#6366f1" />
+                <UsersIcon size={28} color={CINEMA_GOLD} />
               </div>
               <h3>Character Tracking</h3>
               <p>Create characters and track their appearances across your entire project.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <FilmIcon size={28} color="#6366f1" />
+                <FilmIcon size={28} color={CINEMA_GOLD} />
               </div>
               <h3>Sequence Mode</h3>
               <p>Arrange scenes into sequences and watch them flow like a cinematic trailer.</p>
             </div>
             <div className={styles.feature}>
               <div className={styles.featureIconWrapper}>
-                <ExportIcon size={28} color="#6366f1" />
+                <ExportIcon size={28} color={CINEMA_GOLD} />
               </div>
               <h3>Export Anywhere</h3>
               <p>Download as PDF storyboards or ZIP archives with all your images and prompts.</p>

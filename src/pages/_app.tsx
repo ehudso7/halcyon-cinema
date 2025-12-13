@@ -8,7 +8,7 @@ import Footer from '@/components/Footer';
 import '@/styles/globals.css';
 
 // Pages that should not show the footer
-const noFooterPages = ['/auth/signin', '/auth/signup', '/auth/error'];
+const noFooterPages = ['/auth/signin', '/auth/signup', '/auth/error', '/landing'];
 
 // Apply saved preferences on app load
 function usePreferencesInitialization() {
