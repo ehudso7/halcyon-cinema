@@ -112,14 +112,18 @@ export default function LandingPage() {
   return (
     <>
       <Head>
-        <title>HALCYON-Cinema | From Story to Screen — Instantly</title>
-        <meta name="description" content="HALCYON is your AI-powered cinematic studio. Build entire movies, shows, and visual universes from nothing but your imagination." />
-        <meta name="keywords" content="AI movie maker, storyboard app, cinematic AI, DALL-E director, film creator, GPT filmmaking, concept art, prompt-based visuals" />
+        <title>HALCYON-Cinema | The Future of Visual Storytelling</title>
+        <meta name="description" content="HALCYON is the AI-native cinematic studio redefining how stories are visualized. Transform imagination into cinema-quality storyboards, scenes, and visual narratives in seconds." />
+        <meta name="keywords" content="AI movie maker, storyboard generator, cinematic AI, DALL-E 3, film production, GPT-4 filmmaking, concept art AI, visual storytelling, next-gen content creation" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta property="og:title" content="HALCYON-Cinema | AI Cinematic Studio" />
-        <meta property="og:description" content="Build films, series, storyboards & trailers from natural language." />
+        <meta property="og:title" content="HALCYON-Cinema | The Future of Visual Storytelling" />
+        <meta property="og:description" content="The pioneering AI studio for filmmakers, creators, and visionaries. Build cinema-quality visuals from natural language." />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="HALCYON-Cinema" />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="HALCYON-Cinema | The Future of Visual Storytelling" />
+        <meta name="twitter:description" content="Transform your imagination into cinema. AI-powered storyboards, scenes, and visual narratives." />
+        <link rel="canonical" href="https://halcyon-cinema.vercel.app/landing" />
       </Head>
 
       <div className={styles.page}>
@@ -152,12 +156,12 @@ export default function LandingPage() {
           <div className={styles.heroContent}>
             <div className={styles.badge}>
               <span className={styles.badgeDot} />
-              Now with DALL-E 3 Integration
+              Pioneering AI-Native Filmmaking
             </div>
             <h1 className={styles.title}>HALCYON</h1>
-            <p className={styles.tagline}>From Story to Screen — Instantly.</p>
+            <p className={styles.tagline}>The Future of Visual Storytelling Starts Here.</p>
             <p className={styles.subhead}>
-              HALCYON is your AI-first cinematic studio. Build films, series, storyboards & trailers from natural language.
+              HALCYON is the visionary AI studio redefining cinematic creation. Transform imagination into cinema-quality storyboards, scenes, and visual narratives — powered by GPT-4 and DALL-E 3.
             </p>
             <div className={styles.buttons}>
               {session ? (
@@ -362,57 +366,110 @@ export default function LandingPage() {
 
         {/* Pricing Section */}
         <section id="pricing" className={styles.pricing}>
-          <h2 className={styles.sectionTitle}>Simple, Transparent Pricing</h2>
-          <p className={styles.sectionSubtitle}>Start free, upgrade when you need more</p>
+          <h2 className={styles.sectionTitle}>Invest in Your Vision</h2>
+          <p className={styles.sectionSubtitle}>Premium tools at accessible prices. Save 17% with yearly billing.</p>
           <div className={styles.pricingGrid}>
             <div className={styles.pricingCard}>
               <div className={styles.pricingHeader}>
-                <h3>Free</h3>
+                <h3>Starter</h3>
                 <div className={styles.pricingPrice}>
-                  <span className={styles.pricingAmount}>$0</span>
+                  <span className={styles.pricingAmount}>$12</span>
                   <span className={styles.pricingPeriod}>/month</span>
                 </div>
               </div>
+              <p className={styles.pricingCredits}>100 credits/month</p>
               <ul className={styles.pricingFeatures}>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  5 projects
+                  DALL-E 3 image generation
                 </li>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  50 scene generations/month
+                  All 12+ visual styles
                 </li>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  All visual styles
+                  Project & scene management
                 </li>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  PDF export
+                  PDF & ZIP export
                 </li>
               </ul>
-              <Link href="/auth/signup" className={styles.pricingBtn}>
+              <Link href="/pricing" className={styles.pricingBtn}>
                 Get Started
               </Link>
             </div>
             <div className={`${styles.pricingCard} ${styles.featured}`}>
               <div className={styles.pricingBadge}>Most Popular</div>
               <div className={styles.pricingHeader}>
-                <h3>Pro</h3>
+                <h3>Creator</h3>
                 <div className={styles.pricingPrice}>
-                  <span className={styles.pricingAmount}>$19</span>
+                  <span className={styles.pricingAmount}>$29</span>
                   <span className={styles.pricingPeriod}>/month</span>
                 </div>
               </div>
+              <p className={styles.pricingCredits}>500 credits/month</p>
               <ul className={styles.pricingFeatures}>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Everything in Starter
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Video generation
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Music & voiceover generation
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Advanced AI controls
+                </li>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Priority support
+                </li>
+              </ul>
+              <Link href="/pricing" className={`${styles.pricingBtn} ${styles.primary}`}>
+                Start Creating
+              </Link>
+            </div>
+            <div className={styles.pricingCard}>
+              <div className={styles.pricingHeader}>
+                <h3>Studio</h3>
+                <div className={styles.pricingPrice}>
+                  <span className={styles.pricingAmount}>$79</span>
+                  <span className={styles.pricingPeriod}>/month</span>
+                </div>
+              </div>
+              <p className={styles.pricingCredits}>2,000 credits/month</p>
+              <ul className={styles.pricingFeatures}>
+                <li>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Everything in Creator
+                </li>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
@@ -423,73 +480,23 @@ export default function LandingPage() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  500 scene generations/month
+                  Team collaboration (soon)
                 </li>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  Priority generation queue
+                  API access (soon)
                 </li>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  HD image exports
-                </li>
-                <li>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Custom watermarks
+                  Dedicated support
                 </li>
               </ul>
-              <Link href="/auth/signup" className={`${styles.pricingBtn} ${styles.primary}`}>
-                Start Pro Trial
-              </Link>
-            </div>
-            <div className={styles.pricingCard}>
-              <div className={styles.pricingHeader}>
-                <h3>Studio</h3>
-                <div className={styles.pricingPrice}>
-                  <span className={styles.pricingAmount}>$49</span>
-                  <span className={styles.pricingPeriod}>/month</span>
-                </div>
-              </div>
-              <ul className={styles.pricingFeatures}>
-                <li>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Everything in Pro
-                </li>
-                <li>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Unlimited generations
-                </li>
-                <li>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Team collaboration
-                </li>
-                <li>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  API access
-                </li>
-                <li>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  Priority support
-                </li>
-              </ul>
-              <Link href="/auth/signup" className={styles.pricingBtn}>
-                Contact Sales
+              <Link href="/pricing" className={styles.pricingBtn}>
+                Go Studio
               </Link>
             </div>
           </div>
@@ -563,10 +570,10 @@ export default function LandingPage() {
 
         {/* CTA Section */}
         <section className={styles.cta}>
-          <h2>See Your Story Come to Life</h2>
-          <p>Join thousands of creators using HALCYON to visualize their cinematic visions.</p>
+          <h2>Ready to Redefine What&apos;s Possible?</h2>
+          <p>Join the next generation of filmmakers, storytellers, and visionaries building the future of media.</p>
           <Link href="/auth/signup" className={styles.btnPrimary}>
-            Build Your First Scene — Free
+            Start Your Vision Today
           </Link>
         </section>
 
@@ -600,10 +607,10 @@ export default function LandingPage() {
             </div>
             <div className={styles.footerBottom}>
               <p className={styles.footerText}>
-                Powered by GPT-4, DALL-E 3, and Next.js
+                Powered by GPT-4 Vision, DALL-E 3 & Next.js 16
               </p>
               <p className={styles.footerCopy}>
-                © {new Date().getFullYear()} HALCYON-Cinema. Built by creators, for creators.
+                © {new Date().getFullYear()} HALCYON-Cinema. Pioneering the future of visual storytelling.
               </p>
             </div>
           </div>

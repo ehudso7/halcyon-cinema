@@ -626,6 +626,14 @@
   color: #666;
 }
 
+.pricingCredits {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #10b981;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
 .pricingFeatures {
   list-style: none;
   padding: 0;
