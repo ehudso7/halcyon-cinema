@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import React from 'react';
+import { FilmIcon, FilmStripIcon, UsersIcon, GlobeIcon, PaletteIcon, DocumentIcon, BookIcon, LocationIcon, CalendarIcon, CogIcon, BoxIcon, LightbulbIcon, ChartIcon } from './Icons';
 import styles from './CinematicResults.module.css';
 
 interface Character {
@@ -77,12 +79,12 @@ interface CinematicResultsProps {
 
 type TabType = 'overview' | 'scenes' | 'characters' | 'world' | 'style';
 
-const LORE_TYPE_ICONS: Record<string, string> = {
-  location: '📍',
-  event: '📅',
-  system: '⚙️',
-  object: '🔮',
-  concept: '💡',
+const LORE_TYPE_ICON_COMPONENTS: Record<string, React.FC<{ size?: number; color?: string }>> = {
+  location: LocationIcon,
+  event: CalendarIcon,
+  system: CogIcon,
+  object: BoxIcon,
+  concept: LightbulbIcon,
 };
 
 export default function CinematicResults({
@@ -119,12 +121,12 @@ export default function CinematicResults({
     return { grade: 'D', color: '#ef4444' };
   };
 
-  const tabs: { id: TabType; label: string; icon: string; count?: number }[] = [
-    { id: 'overview', label: 'Overview', icon: '🎬' },
-    { id: 'scenes', label: 'Scenes', icon: '🎞️', count: scenes.length },
-    { id: 'characters', label: 'Characters', icon: '👥', count: characters.length },
-    { id: 'world', label: 'World', icon: '🌍', count: lore.length },
-    { id: 'style', label: 'Style Guide', icon: '🎨' },
+  const tabs: { id: TabType; label: string; IconComponent: React.FC<{ size?: number; color?: string }>; count?: number }[] = [
+    { id: 'overview', label: 'Overview', IconComponent: FilmIcon },
+    { id: 'scenes', label: 'Scenes', IconComponent: FilmStripIcon, count: scenes.length },
+    { id: 'characters', label: 'Characters', IconComponent: UsersIcon, count: characters.length },
+    { id: 'world', label: 'World', IconComponent: GlobeIcon, count: lore.length },
+    { id: 'style', label: 'Style Guide', IconComponent: PaletteIcon },
   ];
 
   return (
@@ -165,7 +167,7 @@ export default function CinematicResults({
               className={`${styles.tab} ${activeTab === tab.id ? styles.activeTab : ''}`}
               onClick={() => setActiveTab(tab.id)}
             >
-              <span className={styles.tabIcon}>{tab.icon}</span>
+              <span className={styles.tabIcon}><tab.IconComponent size={18} /></span>
               <span className={styles.tabLabel}>{tab.label}</span>
               {tab.count !== undefined && <span className={styles.tabCount}>{tab.count}</span>}
             </button>
@@ -180,7 +182,7 @@ export default function CinematicResults({
               {logline && (
                 <section className={styles.section}>
                   <h3 className={styles.sectionTitle}>
-                    <span className={styles.sectionIcon}>📝</span>
+                    <span className={styles.sectionIcon}><DocumentIcon size={20} /></span>
                     Logline
                   </h3>
                   <p className={styles.logline}>{logline}</p>
@@ -190,7 +192,7 @@ export default function CinematicResults({
               {projectDescription && (
                 <section className={styles.section}>
                   <h3 className={styles.sectionTitle}>
-                    <span className={styles.sectionIcon}>📖</span>
+                    <span className={styles.sectionIcon}><BookIcon size={20} /></span>
                     Synopsis
                   </h3>
                   <p className={styles.description}>{projectDescription}</p>
@@ -200,7 +202,7 @@ export default function CinematicResults({
               {directorsConcept && (
                 <section className={styles.section}>
                   <h3 className={styles.sectionTitle}>
-                    <span className={styles.sectionIcon}>🎬</span>
+                    <span className={styles.sectionIcon}><FilmIcon size={20} /></span>
                     Director&apos;s Vision
                   </h3>
                   <blockquote className={styles.directorsConcept}>{directorsConcept}</blockquote>
@@ -210,18 +212,18 @@ export default function CinematicResults({
               {qualityMetrics && (
                 <section className={styles.section}>
                   <h3 className={styles.sectionTitle}>
-                    <span className={styles.sectionIcon}>📊</span>
+                    <span className={styles.sectionIcon}><ChartIcon size={20} /></span>
                     Quality Metrics
                   </h3>
                   <div className={styles.metricsGrid}>
                     {[
-                      { label: 'Narrative', value: qualityMetrics.narrativeCoherence, icon: '📝' },
-                      { label: 'Characters', value: qualityMetrics.characterDepth, icon: '👥' },
-                      { label: 'World', value: qualityMetrics.worldBuilding, icon: '🌍' },
-                      { label: 'Visuals', value: qualityMetrics.visualClarity, icon: '🎨' },
+                      { label: 'Narrative', value: qualityMetrics.narrativeCoherence, IconComponent: DocumentIcon },
+                      { label: 'Characters', value: qualityMetrics.characterDepth, IconComponent: UsersIcon },
+                      { label: 'World', value: qualityMetrics.worldBuilding, IconComponent: GlobeIcon },
+                      { label: 'Visuals', value: qualityMetrics.visualClarity, IconComponent: PaletteIcon },
                     ].map((metric) => (
                       <div key={metric.label} className={styles.metricCard}>
-                        <span className={styles.metricIcon}>{metric.icon}</span>
+                        <span className={styles.metricIcon}><metric.IconComponent size={18} /></span>
                         <span className={styles.metricLabel}>{metric.label}</span>
                         <div className={styles.metricBar}>
                           <div
@@ -415,14 +417,14 @@ export default function CinematicResults({
             <div className={styles.worldTab}>
               {lore.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <span className={styles.emptyIcon}>🌍</span>
+                  <span className={styles.emptyIcon}><GlobeIcon size={32} /></span>
                   <p>No world lore entries generated</p>
                 </div>
               ) : (
                 lore.map((entry) => (
                   <div key={entry.name} className={styles.loreCard}>
                     <div className={styles.loreHeader}>
-                      <span className={styles.loreTypeIcon}>{LORE_TYPE_ICONS[entry.type] || '📄'}</span>
+                      <span className={styles.loreTypeIcon}>{React.createElement(LORE_TYPE_ICON_COMPONENTS[entry.type] || DocumentIcon, { size: 20 })}</span>
                       <div className={styles.loreInfo}>
                         <h4 className={styles.loreName}>{entry.name}</h4>
                         <span className={styles.loreType}>{entry.type}</span>
@@ -449,7 +451,7 @@ export default function CinematicResults({
             <div className={styles.styleTab}>
               {!styleGuide ? (
                 <div className={styles.emptyState}>
-                  <span className={styles.emptyIcon}>🎨</span>
+                  <span className={styles.emptyIcon}><PaletteIcon size={32} /></span>
                   <p>No style guide generated</p>
                 </div>
               ) : (

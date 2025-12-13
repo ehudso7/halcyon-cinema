@@ -33,10 +33,11 @@ export async function exportProjectAsPDF(
   pdf.setFillColor(15, 15, 15);
   pdf.rect(0, 0, pageWidth, pageHeight, 'F');
 
-  // Logo/emoji
+  // Logo/brand
   pdf.setFontSize(48);
-  pdf.setTextColor(255, 255, 255);
-  pdf.text('🎬', pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
+  pdf.setTextColor(99, 102, 241); // Brand indigo color
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('HC', pageWidth / 2, pageHeight / 2 - 30, { align: 'center' });
 
   // Title
   pdf.setFontSize(32);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { LoreEntry } from '@/types';
+import { UserIcon, LocationIcon, CalendarIcon, CogIcon, FilmIcon } from './Icons';
 import styles from './LoreCard.module.css';
 
 type ViewMode = 'grid' | 'list';
@@ -15,11 +16,11 @@ interface LoreCardProps {
   onLinkScene?: (id: string) => void;
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  character: '👤',
-  location: '🏛️',
-  event: '📅',
-  system: '⚙️',
+const TYPE_ICON_COMPONENTS: Record<string, React.FC<{ size?: number; color?: string }>> = {
+  character: UserIcon,
+  location: LocationIcon,
+  event: CalendarIcon,
+  system: CogIcon,
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -69,7 +70,7 @@ export default function LoreCard({
             'aria-label': `View ${entry.name} details`,
           })}
         >
-          {TYPE_ICONS[entry.type]}
+          {React.createElement(TYPE_ICON_COMPONENTS[entry.type] || UserIcon, { size: 24, color: TYPE_COLORS[entry.type] })}
         </div>
 
         <div
@@ -105,7 +106,7 @@ export default function LoreCard({
             )}
             {entry.associatedScenes && entry.associatedScenes.length > 0 && (
               <span className={styles.sceneCount}>
-                🎬 {entry.associatedScenes.length}
+                <FilmIcon size={14} /> {entry.associatedScenes.length}
               </span>
             )}
           </div>
@@ -173,7 +174,7 @@ export default function LoreCard({
             className={styles.typeIcon}
             style={{ backgroundColor: TYPE_COLORS[entry.type] + '20', color: TYPE_COLORS[entry.type] }}
           >
-            {TYPE_ICONS[entry.type]}
+            {React.createElement(TYPE_ICON_COMPONENTS[entry.type] || UserIcon, { size: 20, color: TYPE_COLORS[entry.type] })}
           </div>
           <div className={styles.headerContent}>
             <h3 className={styles.name}>{entry.name}</h3>
@@ -198,7 +199,7 @@ export default function LoreCard({
         {entry.associatedScenes && entry.associatedScenes.length > 0 && (
           <div className={styles.scenes}>
             <span className={styles.sceneCount}>
-              🎬 {entry.associatedScenes.length} linked scene{entry.associatedScenes.length !== 1 ? 's' : ''}
+              <FilmIcon size={14} /> {entry.associatedScenes.length} linked scene{entry.associatedScenes.length !== 1 ? 's' : ''}
             </span>
           </div>
         )}

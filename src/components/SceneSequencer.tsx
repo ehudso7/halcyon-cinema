@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { Scene, ShotBlock } from '@/types';
+import { FilmIcon } from './Icons';
 import styles from './SceneSequencer.module.css';
 
 interface SceneSequencerProps {
@@ -181,7 +182,7 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport,
                     sizes="120px"
                   />
                 ) : (
-                  <div className={styles.noImage}>🎬</div>
+                  <div className={styles.noImage}><FilmIcon size={32} color="#6366f1" /></div>
                 )}
               </div>
 
@@ -294,7 +295,7 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport,
                     sizes="80px"
                   />
                 ) : (
-                  <div className={styles.noImage}>🎬</div>
+                  <div className={styles.noImage}><FilmIcon size={32} color="#6366f1" /></div>
                 )}
                 <span>+ Add</span>
               </div>

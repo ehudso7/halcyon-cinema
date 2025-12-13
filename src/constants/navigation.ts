@@ -3,10 +3,10 @@
  */
 
 export const PROJECT_TABS = [
-  { id: 'scenes', label: 'Scenes', icon: '🎬' },
-  { id: 'lore', label: 'World Lore', icon: '📚' },
-  { id: 'characters', label: 'Characters', icon: '👤' },
-  { id: 'sequence', label: 'Scene Flow', icon: '🎞️' },
+  { id: 'scenes', label: 'Scenes', icon: 'film' },
+  { id: 'lore', label: 'World Lore', icon: 'book' },
+  { id: 'characters', label: 'Characters', icon: 'user' },
+  { id: 'sequence', label: 'Scene Flow', icon: 'filmstrip' },
 ] as const;
 
 export type ProjectTabId = typeof PROJECT_TABS[number]['id'];

@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import React from 'react';
 import { AISuggestion } from '@/types';
+import { LightbulbIcon, MasksIcon, LayoutIcon, BookIcon, PaletteIcon, RobotIcon, ZapIcon } from './Icons';
 import styles from './AIAssistant.module.css';
 
 interface AIAssistantProps {
@@ -10,11 +12,11 @@ interface AIAssistantProps {
 }
 
 const SUGGESTION_CATEGORIES = [
-  { id: 'lighting', name: 'Lighting', icon: '💡' },
-  { id: 'mood', name: 'Mood', icon: '🎭' },
-  { id: 'composition', name: 'Composition', icon: '📐' },
-  { id: 'story', name: 'Story', icon: '📖' },
-  { id: 'style', name: 'Style', icon: '🎨' },
+  { id: 'lighting', name: 'Lighting', IconComponent: LightbulbIcon },
+  { id: 'mood', name: 'Mood', IconComponent: MasksIcon },
+  { id: 'composition', name: 'Composition', IconComponent: LayoutIcon },
+  { id: 'story', name: 'Story', IconComponent: BookIcon },
+  { id: 'style', name: 'Style', IconComponent: PaletteIcon },
 ];
 
 const SUGGESTIONS: Record<string, AISuggestion[]> = {
@@ -93,7 +95,7 @@ export default function AIAssistant({ currentPrompt, onApplySuggestion, isOpen, 
   if (!isOpen) {
     return (
       <button onClick={onToggle} className={styles.toggleButton} title="Open AI Assistant">
-        <span className={styles.toggleIcon}>🤖</span>
+        <span className={styles.toggleIcon}><RobotIcon size={20} /></span>
         <span className={styles.toggleLabel}>AI Assistant</span>
       </button>
     );
@@ -107,7 +109,7 @@ export default function AIAssistant({ currentPrompt, onApplySuggestion, isOpen, 
     <div className={styles.sidebar}>
       <div className={styles.header}>
         <h3 className={styles.title}>
-          <span>🤖</span> AI Creative Assistant
+          <span><RobotIcon size={20} /></span> AI Creative Assistant
         </h3>
         <button onClick={onToggle} className={styles.closeButton}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -123,7 +125,7 @@ export default function AIAssistant({ currentPrompt, onApplySuggestion, isOpen, 
             onClick={() => setActiveCategory(cat.id)}
             className={`${styles.categoryBtn} ${activeCategory === cat.id ? styles.active : ''}`}
           >
-            <span>{cat.icon}</span>
+            <span><cat.IconComponent size={16} /></span>
             <span>{cat.name}</span>
           </button>
         ))}
@@ -176,7 +178,7 @@ export default function AIAssistant({ currentPrompt, onApplySuggestion, isOpen, 
 
       <div className={styles.footer}>
         <p className={styles.tip}>
-          💡 Combine multiple suggestions to create unique cinematic moments!
+          <ZapIcon size={16} /> Combine multiple suggestions to create unique cinematic moments!
         </p>
       </div>
     </div>

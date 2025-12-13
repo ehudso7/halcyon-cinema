@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { useSession } from 'next-auth/react';
+import { FilmIcon, FireIcon, PaletteIcon, StarIcon, TrophyIcon, CrownIcon } from './Icons';
 import styles from './UsageStats.module.css';
 
 interface UsageData {
@@ -299,7 +301,7 @@ function UsageStatsContent({ usage }: { usage: UsageData }) {
         </div>
         {usage.streak > 0 && (
           <div className={styles.streakBadge}>
-            <span className={styles.streakFire}>🔥</span>
+            <span className={styles.streakFire}><FireIcon size={16} color="#f97316" /></span>
             {usage.streak} day streak
           </div>
         )}
@@ -351,32 +353,32 @@ function UsageStatsContent({ usage }: { usage: UsageData }) {
         <h4 className={styles.achievementsTitle}>Achievements</h4>
         <div className={styles.achievementsList}>
           <AchievementBadge
-            icon="🎬"
+            IconComponent={FilmIcon}
             label="First Scene"
             unlocked={usage.totalScenes >= 1}
           />
           <AchievementBadge
-            icon="🔥"
+            IconComponent={FireIcon}
             label="3-Day Streak"
             unlocked={usage.longestStreak >= 3}
           />
           <AchievementBadge
-            icon="🎨"
+            IconComponent={PaletteIcon}
             label="10 Creations"
             unlocked={usage.totalGenerations >= 10}
           />
           <AchievementBadge
-            icon="⭐"
+            IconComponent={StarIcon}
             label="50 Scenes"
             unlocked={usage.totalScenes >= 50}
           />
           <AchievementBadge
-            icon="🏆"
+            IconComponent={TrophyIcon}
             label="Week Warrior"
             unlocked={usage.longestStreak >= 7}
           />
           <AchievementBadge
-            icon="👑"
+            IconComponent={CrownIcon}
             label="Century Club"
             unlocked={usage.totalGenerations >= 100}
           />
@@ -392,19 +394,25 @@ function UsageStatsContent({ usage }: { usage: UsageData }) {
 }
 
 function AchievementBadge({
-  icon,
+  IconComponent,
   label,
   unlocked,
 }: {
-  icon: string;
+  IconComponent: React.FC<{ size?: number; color?: string }>;
   label: string;
   unlocked: boolean;
 }) {
   return (
     <div className={`${styles.achievement} ${unlocked ? styles.unlocked : ''}`}>
-      <span className={styles.achievementIcon}>{icon}</span>
+      <span className={styles.achievementIcon}><IconComponent size={18} /></span>
       <span className={styles.achievementLabel}>{label}</span>
-      {unlocked && <span className={styles.achievementCheck}>✓</span>}
+      {unlocked && (
+        <span className={styles.achievementCheck}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </span>
+      )}
     </div>
   );
 }

@@ -1,5 +1,16 @@
 import { useState, useEffect, FormEvent } from 'react';
+import { DocumentIcon, UsersIcon, GlobeIcon, FilmIcon, PaletteIcon, SparklesIcon } from './Icons';
 import styles from './QuickCreateModal.module.css';
+
+// Check icon for quality metrics
+function CheckIcon({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+      <polyline points="22,4 12,14.01 9,11.01" />
+    </svg>
+  );
+}
 
 interface QuickCreateModalProps {
   isOpen: boolean;
@@ -17,18 +28,18 @@ export interface QuickCreateData {
 }
 
 const GENRES = [
-  { value: 'cinematic-realism', label: 'Cinematic Realism', icon: '🎬' },
-  { value: 'film-noir', label: 'Film Noir', icon: '🌙' },
-  { value: 'sci-fi', label: 'Science Fiction', icon: '🚀' },
-  { value: 'fantasy', label: 'Fantasy', icon: '🐉' },
-  { value: 'anime', label: 'Anime', icon: '⚡' },
-  { value: 'horror', label: 'Horror', icon: '👻' },
-  { value: 'western', label: 'Western', icon: '🤠' },
-  { value: 'cyberpunk', label: 'Cyberpunk', icon: '🌃' },
-  { value: 'steampunk', label: 'Steampunk', icon: '⚙️' },
-  { value: 'documentary', label: 'Documentary', icon: '📹' },
-  { value: 'a24-indie', label: 'A24 Indie', icon: '🎭' },
-  { value: 'thriller', label: 'Thriller', icon: '🔪' },
+  { value: 'cinematic-realism', label: 'Cinematic Realism' },
+  { value: 'film-noir', label: 'Film Noir' },
+  { value: 'sci-fi', label: 'Science Fiction' },
+  { value: 'fantasy', label: 'Fantasy' },
+  { value: 'anime', label: 'Anime' },
+  { value: 'horror', label: 'Horror' },
+  { value: 'western', label: 'Western' },
+  { value: 'cyberpunk', label: 'Cyberpunk' },
+  { value: 'steampunk', label: 'Steampunk' },
+  { value: 'documentary', label: 'Documentary' },
+  { value: 'a24-indie', label: 'A24 Indie' },
+  { value: 'thriller', label: 'Thriller' },
 ];
 
 const MOODS = [
@@ -58,12 +69,12 @@ const EXAMPLE_PROMPTS = [
 ];
 
 const GENERATION_STEPS = [
-  { id: 'story', label: 'Weaving narrative threads...', icon: '📝' },
-  { id: 'characters', label: 'Breathing life into characters...', icon: '👥' },
-  { id: 'world', label: 'Building your world...', icon: '🌍' },
-  { id: 'scenes', label: 'Crafting cinematic scenes...', icon: '🎬' },
-  { id: 'style', label: 'Defining visual language...', icon: '🎨' },
-  { id: 'polish', label: 'Adding final polish...', icon: '✨' },
+  { id: 'story', label: 'Weaving narrative threads...', IconComponent: DocumentIcon },
+  { id: 'characters', label: 'Breathing life into characters...', IconComponent: UsersIcon },
+  { id: 'world', label: 'Building your world...', IconComponent: GlobeIcon },
+  { id: 'scenes', label: 'Crafting cinematic scenes...', IconComponent: FilmIcon },
+  { id: 'style', label: 'Defining visual language...', IconComponent: PaletteIcon },
+  { id: 'polish', label: 'Adding final polish...', IconComponent: SparklesIcon },
 ];
 
 export default function QuickCreateModal({
@@ -148,7 +159,7 @@ export default function QuickCreateModal({
               <div className={styles.pulseRing} style={{ animationDelay: '0.5s' }} />
               <div className={styles.pulseRing} style={{ animationDelay: '1s' }} />
               <div className={styles.generatingIcon}>
-                <span className={styles.stepIcon}>{currentStep.icon}</span>
+                <span className={styles.stepIcon}><currentStep.IconComponent size={32} color="#6366f1" /></span>
               </div>
             </div>
 
@@ -172,7 +183,7 @@ export default function QuickCreateModal({
             <div className={styles.generatingPreview}>
               <p className={styles.previewPrompt}>&ldquo;{prompt.slice(0, 100)}{prompt.length > 100 ? '...' : ''}&rdquo;</p>
               <div className={styles.previewTags}>
-                <span className={styles.previewTag}>{selectedGenre?.icon} {selectedGenre?.label}</span>
+                <span className={styles.previewTag}>{selectedGenre?.label}</span>
                 <span className={styles.previewTag} style={{ borderColor: selectedMood?.color }}>{selectedMood?.label}</span>
                 <span className={styles.previewTag}>{sceneCount} Scenes</span>
               </div>
@@ -252,7 +263,6 @@ export default function QuickCreateModal({
                     onClick={() => setGenre(g.value)}
                     disabled={isGenerating}
                   >
-                    <span className={styles.genreIcon}>{g.icon}</span>
                     <span className={styles.genreLabel}>{g.label}</span>
                   </button>
                 ))}
@@ -306,42 +316,42 @@ export default function QuickCreateModal({
             <h4 className={styles.deliverablesTitle}>Your Cinematic Package Includes:</h4>
             <div className={styles.deliverablesList}>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}>📝</span>
+                <span className={styles.deliverableIcon}><DocumentIcon size={20} color="#6366f1" /></span>
                 <div>
                   <strong>Logline & Tagline</strong>
                   <span>Marketable pitch materials</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}>🎬</span>
+                <span className={styles.deliverableIcon}><FilmIcon size={20} color="#6366f1" /></span>
                 <div>
                   <strong>{sceneCount} Screenplay Scenes</strong>
                   <span>With sluglines & action</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}>👥</span>
+                <span className={styles.deliverableIcon}><UsersIcon size={20} color="#6366f1" /></span>
                 <div>
                   <strong>Character Profiles</strong>
                   <span>Arcs, traits & visuals</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}>🌍</span>
+                <span className={styles.deliverableIcon}><GlobeIcon size={20} color="#6366f1" /></span>
                 <div>
                   <strong>World Lore</strong>
                   <span>Locations, events & systems</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}>🎨</span>
+                <span className={styles.deliverableIcon}><PaletteIcon size={20} color="#6366f1" /></span>
                 <div>
                   <strong>Visual Style Guide</strong>
                   <span>Colors, lighting & motifs</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}>✅</span>
+                <span className={styles.deliverableIcon}><CheckIcon size={20} color="#10b981" /></span>
                 <div>
                   <strong>Quality Metrics</strong>
                   <span>Professional grade scoring</span>

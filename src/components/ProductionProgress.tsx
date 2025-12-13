@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import React from 'react';
 import { Project } from '@/types';
+import { FilmIcon, UserIcon, BookIcon, FilmStripIcon, PartyIcon } from './Icons';
 import styles from './ProductionProgress.module.css';
 
 interface ProductionProgressProps {
@@ -9,7 +11,7 @@ interface ProductionProgressProps {
 interface ProgressStep {
   id: string;
   label: string;
-  icon: string;
+  IconComponent: React.FC<{ size?: number; color?: string }>;
   href: string;
   count: number;
   isComplete: boolean;
@@ -21,7 +23,7 @@ export default function ProductionProgress({ project }: ProductionProgressProps)
     {
       id: 'scenes',
       label: 'Scenes',
-      icon: '🎬',
+      IconComponent: FilmIcon,
       href: `/project/${project.id}`,
       count: project.scenes.length,
       isComplete: project.scenes.length > 0,
@@ -30,7 +32,7 @@ export default function ProductionProgress({ project }: ProductionProgressProps)
     {
       id: 'characters',
       label: 'Characters',
-      icon: '👤',
+      IconComponent: UserIcon,
       href: `/project/${project.id}/characters`,
       count: project.characters?.length || 0,
       isComplete: (project.characters?.length || 0) > 0,
@@ -39,7 +41,7 @@ export default function ProductionProgress({ project }: ProductionProgressProps)
     {
       id: 'lore',
       label: 'World Lore',
-      icon: '📚',
+      IconComponent: BookIcon,
       href: `/project/${project.id}/lore`,
       count: project.lore?.length || 0,
       isComplete: (project.lore?.length || 0) > 0,
@@ -48,7 +50,7 @@ export default function ProductionProgress({ project }: ProductionProgressProps)
     {
       id: 'sequence',
       label: 'Scene Flow',
-      icon: '🎞️',
+      IconComponent: FilmStripIcon,
       href: `/project/${project.id}/sequence`,
       count: project.sequences?.length || 0,
       isComplete: (project.sequences?.length || 0) > 0,
@@ -126,7 +128,7 @@ export default function ProductionProgress({ project }: ProductionProgressProps)
             </div>
             <div className={styles.stepContent}>
               <div className={styles.stepHeader}>
-                <span className={styles.stepIcon}>{step.icon}</span>
+                <span className={styles.stepIcon}><step.IconComponent size={18} /></span>
                 <span className={styles.stepLabel}>{step.label}</span>
                 {step.count > 0 && (
                   <span className={styles.stepCount}>{step.count}</span>
@@ -143,7 +145,7 @@ export default function ProductionProgress({ project }: ProductionProgressProps)
 
       {completedSteps === steps.length && (
         <div className={styles.readyBanner}>
-          <span className={styles.readyIcon}>🎉</span>
+          <span className={styles.readyIcon}><PartyIcon size={24} /></span>
           <div>
             <strong>Ready to Export!</strong>
             <p>Your production has all the essential elements.</p>

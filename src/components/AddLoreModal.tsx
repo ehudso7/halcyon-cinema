@@ -1,5 +1,7 @@
 import { useState, useEffect, FormEvent } from 'react';
+import React from 'react';
 import { LoreType, LoreEntry } from '@/types';
+import { UserIcon, LocationIcon, CalendarIcon, CogIcon } from './Icons';
 import styles from './AddLoreModal.module.css';
 
 interface AddLoreModalProps {
@@ -9,11 +11,11 @@ interface AddLoreModalProps {
   editEntry?: LoreEntry | null;
 }
 
-const LORE_TYPES: { value: LoreType; label: string; icon: string; description: string }[] = [
-  { value: 'character', label: 'Character', icon: '👤', description: 'A person, creature, or entity in your world' },
-  { value: 'location', label: 'Location', icon: '🏛️', description: 'A place, setting, or environment' },
-  { value: 'event', label: 'Event', icon: '📅', description: 'A historical moment, battle, or occurrence' },
-  { value: 'system', label: 'System', icon: '⚙️', description: 'Magic systems, technology, or rules of your world' },
+const LORE_TYPES: { value: LoreType; label: string; IconComponent: React.FC<{ size?: number; color?: string }>; description: string }[] = [
+  { value: 'character', label: 'Character', IconComponent: UserIcon, description: 'A person, creature, or entity in your world' },
+  { value: 'location', label: 'Location', IconComponent: LocationIcon, description: 'A place, setting, or environment' },
+  { value: 'event', label: 'Event', IconComponent: CalendarIcon, description: 'A historical moment, battle, or occurrence' },
+  { value: 'system', label: 'System', IconComponent: CogIcon, description: 'Magic systems, technology, or rules of your world' },
 ];
 
 export default function AddLoreModal({ isOpen, onClose, onSave, editEntry }: AddLoreModalProps) {
@@ -81,7 +83,7 @@ export default function AddLoreModal({ isOpen, onClose, onSave, editEntry }: Add
                   className={`${styles.typeOption} ${type === loreType.value ? styles.selected : ''}`}
                   onClick={() => setType(loreType.value)}
                 >
-                  <span className={styles.typeIcon}>{loreType.icon}</span>
+                  <span className={styles.typeIcon}><loreType.IconComponent size={20} /></span>
                   <span className={styles.typeLabel}>{loreType.label}</span>
                 </button>
               ))}

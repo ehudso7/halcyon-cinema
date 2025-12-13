@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { MicrophoneIcon, CogIcon } from './Icons';
 import styles from './VoiceoverPanel.module.css';
 
 interface VoiceoverPanelProps {
@@ -157,7 +158,7 @@ export default function VoiceoverPanel({
     <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.icon}>🎙️</span>
+          <span className={styles.icon}><MicrophoneIcon size={20} /></span>
           <h3 className={styles.title}>AI Voiceover</h3>
           {sceneTitle && <span className={styles.sceneTag}>{sceneTitle}</span>}
         </div>
@@ -166,7 +167,7 @@ export default function VoiceoverPanel({
           onClick={() => setShowSettings(!showSettings)}
           title="Voice settings"
         >
-          ⚙️
+          <CogIcon size={18} />
         </button>
       </div>
 

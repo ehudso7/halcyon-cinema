@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import BrandLogo from './BrandLogo';
 import styles from './Footer.module.css';
 
 export default function Footer() {
@@ -14,11 +15,10 @@ export default function Footer() {
         <div className={styles.main}>
           <div className={styles.brand}>
             <Link href="/" className={styles.logo}>
-              <span className={styles.logoIcon}>🎬</span>
-              <span className={styles.logoText}>HALCYON-Cinema</span>
+              <BrandLogo size="medium" />
             </Link>
             <p className={styles.tagline}>
-              AI-powered cinematic content creation studio
+              The future of visual storytelling
             </p>
           </div>
 

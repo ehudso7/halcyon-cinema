@@ -1,0 +1,63 @@
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--color-text);
+}
+
+.logoWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo {
+  display: block;
+}
+
+.text {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.halcyon {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.cinema {
+  color: #10b981;
+  font-weight: 500;
+}
+
+/* Size variants */
+.small .text {
+  font-size: 1rem;
+}
+
+.medium .text {
+  font-size: 1.25rem;
+}
+
+.large .text {
+  font-size: 1.75rem;
+}
+
+.small .cinema {
+  font-size: 0.85rem;
+}
+
+.medium .cinema {
+  font-size: 1rem;
+}
+
+.large .cinema {
+  font-size: 1.4rem;
+}
