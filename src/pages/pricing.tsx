@@ -27,8 +27,10 @@ interface PricingPageProps {
 interface PricingPlan {
   id: string;
   name: string;
-  price: number;
-  priceId: string;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  monthlyPriceId: string;
+  yearlyPriceId: string;
   credits: number;
   features: string[];
   popular?: boolean;
@@ -41,10 +43,81 @@ interface CreditPack {
 }
 
 export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining, stripeConfigured, priceIds }: PricingPageProps) {
+// Sweet-spot pricing with clear value progression
+// Monthly: Starter $12, Creator $29, Studio $79
+// Yearly: ~17% discount (2 months free)
+const PRICING_PLANS: PricingPlan[] = [
+  {
+    id: 'starter',
+    name: 'Starter',
+    monthlyPrice: 12,
+    yearlyPrice: 120, // $10/mo effective (2 months free)
+    monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_MONTHLY || 'price_1SdusgCpgicnCSJySUHiE8I8',
+    yearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER_YEARLY || 'price_1Sdv1gCpgicnCSJyM3kJ07mS',
+    credits: 100,
+    features: [
+      '100 generation credits/month',
+      'Image generation (DALL-E 3)',
+      'All visual styles',
+      'Project management',
+      'Scene organization',
+      'Export to PDF/ZIP',
+    ],
+  },
+  {
+    id: 'creator',
+    name: 'Creator',
+    monthlyPrice: 29,
+    yearlyPrice: 290, // $24.17/mo effective (2 months free)
+    monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREATOR_MONTHLY || 'price_1Sdv6uCpgicnCSJyE8EulnlU',
+    yearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREATOR_YEARLY || 'price_1Sdv8iCpgicnCSJyeaO0loGi',
+    credits: 500,
+    features: [
+      '500 generation credits/month',
+      'Everything in Starter',
+      'Video generation',
+      'Music generation',
+      'Voiceover generation',
+      'Priority support',
+      'Advanced AI controls',
+    ],
+    popular: true,
+  },
+  {
+    id: 'studio',
+    name: 'Studio',
+    monthlyPrice: 79,
+    yearlyPrice: 790, // $65.83/mo effective (2 months free)
+    monthlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDIO_MONTHLY || 'price_1SdvCICpgicnCSJy3gYXGiHR',
+    yearlyPriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STUDIO_YEARLY || 'price_1SdvCpCpgicnCSJyPa06d2kW',
+    credits: 2000,
+    features: [
+      '2,000 generation credits/month',
+      'Everything in Creator',
+      'Unlimited projects',
+      'Team collaboration (coming soon)',
+      'API access (coming soon)',
+      'Custom style training (coming soon)',
+      'Dedicated support',
+    ],
+  },
+];
+
+// Credit packs with volume discounts: 50 @ $0.10, scaling down to 1000 @ $0.06
+const CREDIT_PACKS = [
+  { credits: 50, price: 5, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_50 || 'price_1SdvEiCpgicnCSJyguGIyASn' },
+  { credits: 100, price: 9, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_100 || 'price_1SdvGkCpgicnCSJykwN4kzak' },
+  { credits: 250, price: 20, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_250 || 'price_1SdvIWCpgicnCSJyWoaJDCzK' },
+  { credits: 500, price: 35, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_500 || 'price_1SdvKLCpgicnCSJyFADi6pY2' },
+  { credits: 1000, price: 60, priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_CREDITS_1000 || 'price_1SdvNqCpgicnCSJyv5IcflSN' },
+];
+
+export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining }: PricingPageProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreditPacks, setShowCreditPacks] = useState(false);
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
   // Build plans with actual price IDs from server
   const plans: PricingPlan[] = [
@@ -115,12 +188,14 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
     setIsLoading(plan.id);
     setError(null);
 
+    const priceId = billingPeriod === 'yearly' ? plan.yearlyPriceId : plan.monthlyPriceId;
+
     try {
       const response = await fetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: plan.priceId,
+          priceId,
           mode: 'subscription',
         }),
       });
@@ -222,6 +297,23 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
             </div>
           )}
 
+          {/* Billing Toggle */}
+          <div className={styles.billingToggle}>
+            <button
+              className={`${styles.toggleBtn} ${billingPeriod === 'monthly' ? styles.active : ''}`}
+              onClick={() => setBillingPeriod('monthly')}
+            >
+              Monthly
+            </button>
+            <button
+              className={`${styles.toggleBtn} ${billingPeriod === 'yearly' ? styles.active : ''}`}
+              onClick={() => setBillingPeriod('yearly')}
+            >
+              Yearly
+              <span className={styles.saveBadge}>Save 17%</span>
+            </button>
+          </div>
+
           {/* Subscription Plans */}
           <div className={styles.plans}>
             {plans.map((plan) => (
@@ -267,10 +359,63 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
                     'Coming Soon'
                   ) : (
                     'Get Started'
+            {PRICING_PLANS.map((plan) => {
+              const displayPrice = billingPeriod === 'yearly'
+                ? Math.round(plan.yearlyPrice / 12)
+                : plan.monthlyPrice;
+              const totalYearlyPrice = plan.yearlyPrice;
+
+              return (
+                <div
+                  key={plan.id}
+                  className={`${styles.plan} ${plan.popular ? styles.popular : ''}`}
+                >
+                  {plan.popular && <span className={styles.badge}>Most Popular</span>}
+                  <h2 className={styles.planName}>{plan.name}</h2>
+                  <div className={styles.price}>
+                    <span className={styles.currency}>$</span>
+                    <span className={styles.amount}>{displayPrice}</span>
+                    <span className={styles.period}>/month</span>
+                  </div>
+                  {billingPeriod === 'yearly' && (
+                    <p className={styles.yearlyTotal}>
+                      ${totalYearlyPrice} billed annually
+                    </p>
                   )}
-                </button>
-              </div>
-            ))}
+                  <p className={styles.credits}>
+                    <strong>{plan.credits.toLocaleString()}</strong> credits/month
+                  </p>
+
+                  <ul className={styles.features}>
+                    {plan.features.map((feature, index) => (
+                      <li key={index}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    className={`btn ${plan.popular ? 'btn-primary' : 'btn-secondary'} btn-full`}
+                    onClick={() => handleSubscribe(plan)}
+                    disabled={isLoading === plan.id}
+                  >
+                    {isLoading === plan.id ? (
+                      <>
+                        <span className={styles.spinner} />
+                        Processing...
+                      </>
+                    ) : currentTier === plan.id ? (
+                      'Current Plan'
+                    ) : (
+                      'Get Started'
+                    )}
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           {/* Credit Packs */}
