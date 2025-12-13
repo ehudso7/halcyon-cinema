@@ -188,16 +188,48 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
         const videoResult = await videoResponse.json();
 
-        if (!videoResult.success) {
+        if (!videoResult.success && videoResult.status !== 'processing') {
           throw new Error(videoResult.error || 'Failed to generate video');
         }
 
         // Handle async video generation (may still be processing)
         if (videoResult.status === 'processing') {
-          throw new Error('Video generation is processing. Please check back later.');
-        }
+          // Poll for completion
+          const maxAttempts = 60; // 2 minutes total (2s intervals)
+          let attempts = 0;
+          let finalVideoUrl: string | null = null;
 
-        mediaUrl = videoResult.videoUrl;
+          while (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            attempts++;
+
+            try {
+              const statusResponse = await fetch(`/api/prediction-status/${videoResult.predictionId}`);
+              const statusResult = await statusResponse.json();
+
+              if (statusResult.status === 'succeeded' && statusResult.output) {
+                finalVideoUrl = statusResult.output;
+                break;
+              } else if (statusResult.status === 'failed') {
+                throw new Error(statusResult.error || 'Video generation failed');
+              } else if (statusResult.status === 'canceled') {
+                throw new Error('Video generation was canceled');
+              }
+            } catch (err) {
+              if (err instanceof Error && (err.message === 'Video generation failed' || err.message === 'Video generation was canceled')) {
+                throw err;
+              }
+              // Network error, continue polling
+            }
+          }
+
+          if (!finalVideoUrl) {
+            throw new Error('Video generation timed out. Please try again.');
+          }
+          mediaUrl = finalVideoUrl;
+        } else {
+          mediaUrl = videoResult.videoUrl;
+        }
         mediaType = 'video';
       } else {
         // Generate image

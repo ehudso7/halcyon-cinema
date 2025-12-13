@@ -685,8 +685,8 @@ export async function dbUpdateUser(
 
 /**
  * Delete a user from the database.
- * Note: This should be called after deleting associated data (projects, etc.)
- * to avoid foreign key violations.
+ * Associated data (projects, credit transactions, etc.) is automatically
+ * deleted via ON DELETE CASCADE foreign key constraints.
  */
 export async function dbDeleteUser(id: string): Promise<boolean> {
   if (!checkPostgresAvailable()) return false;
