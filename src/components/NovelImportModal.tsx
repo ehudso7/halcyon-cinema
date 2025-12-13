@@ -209,6 +209,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
       setError('');
       setAnalyzingIndex(-1);
       setAnalysisProgress(0);
+      setTotalWordCount(0);
       // Reset sequential mode state
       setImportMode('full');
       setSequentialChapters([]);
@@ -357,10 +358,10 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
           const id = `char-${chapterIndex}-${idx}`;
           const existing = allCharacters.find(ec => ec.name.toLowerCase() === c.name.toLowerCase());
           if (existing) {
-            // Update existing character with new appearances
+            // Update existing character with new appearances (deduplicated)
             return {
               ...existing,
-              appearances: [...existing.appearances, chapterIndex],
+              appearances: Array.from(new Set([...existing.appearances, chapterIndex])),
               description: c.description && c.description.length > existing.description.length
                 ? c.description
                 : existing.description,
@@ -382,9 +383,13 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
           const id = `loc-${chapterIndex}-${idx}`;
           const existing = allLocations.find(el => el.name.toLowerCase() === l.name.toLowerCase());
           if (existing) {
+            // Update existing location with new appearances (deduplicated) and description
             return {
               ...existing,
-              appearances: [...existing.appearances, chapterIndex],
+              appearances: Array.from(new Set([...existing.appearances, chapterIndex])),
+              description: l.description && l.description.length > existing.description.length
+                ? l.description
+                : existing.description,
             };
           }
           return {
@@ -690,7 +695,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
         content: ch.content,
       }));
       fullContent = sequentialChapters.map(ch => ch.content).join('\n\n---\n\n');
-      projectTitle = novelTitle || sequentialChapters[0]?.title || 'Untitled Novel';
+      projectTitle = novelTitle || 'Untitled Novel';
     } else {
       // Full mode: use detected chapters
       selectedChapterContents = chapters
@@ -838,7 +843,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
                   type="text"
                   value={currentChapterTitle}
                   onChange={e => setCurrentChapterTitle(e.target.value)}
-                  placeholder={`e.g., ${sequentialChapters.length === 0 ? 'Prologue' : `Chapter ${sequentialChapters.length}`}`}
+                  placeholder={`e.g., ${sequentialChapters.length === 0 ? 'Prologue' : `Chapter ${sequentialChapters.length + 1}`}`}
                   className={styles.titleInput}
                 />
               </div>
