@@ -1579,7 +1579,7 @@ export interface CreditTransaction {
 export class CreditError extends Error {
   constructor(
     message: string,
-    public code: 'USER_NOT_FOUND' | 'INSUFFICIENT_CREDITS' | 'INVALID_AMOUNT'
+    public code: 'USER_NOT_FOUND' | 'INSUFFICIENT_CREDITS' | 'INVALID_AMOUNT' | 'DB_UNAVAILABLE'
   ) {
     super(message);
     this.name = 'CreditError';
@@ -1615,6 +1615,7 @@ export async function getUserCredits(userId: string): Promise<UserCredits | null
 /**
  * Deduct credits from a user atomically.
  * Returns the updated credits info if successful.
+ * @throws CreditError with code 'DB_UNAVAILABLE' if database is not configured
  * @throws CreditError with code 'USER_NOT_FOUND' if user doesn't exist
  * @throws CreditError with code 'INSUFFICIENT_CREDITS' if user doesn't have enough credits
  * @throws CreditError with code 'INVALID_AMOUNT' if amount is not positive
@@ -1627,7 +1628,7 @@ export async function deductCredits(
   transactionType: 'generation' | 'adjustment' = 'generation'
 ): Promise<UserCredits> {
   if (!checkPostgresAvailable()) {
-    throw new CreditError('Database not available', 'USER_NOT_FOUND');
+    throw new CreditError('Database not available', 'DB_UNAVAILABLE');
   }
   if (amount <= 0) {
     throw new CreditError('Amount must be positive', 'INVALID_AMOUNT');

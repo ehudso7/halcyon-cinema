@@ -117,7 +117,18 @@ export default async function handler(
       previousBalance: userCredits.creditsRemaining,
       error: error instanceof CreditError ? { code: error.code, message: error.message } : error,
     });
-    // Continue anyway - the image was generated, we'll manually reconcile credits if needed
+    // Credit integrity: fail the request if we cannot properly deduct credits
+    // The image generation API call was made, but we must not return content without proper billing
+    if (error instanceof CreditError && error.code === 'INSUFFICIENT_CREDITS') {
+      return res.status(402).json({
+        error: 'Insufficient credits. Your credits may have been used elsewhere.',
+        creditsRemaining: 0,
+      });
+    }
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to process credits. Please try again.',
+    });
   }
 
   // Persist the image to Supabase Storage for permanent access
