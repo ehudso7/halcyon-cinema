@@ -8,10 +8,10 @@ import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import ProjectCard from '@/components/ProjectCard';
 import CreateProjectModal from '@/components/CreateProjectModal';
-import QuickCreateModal, { QuickCreateData } from '@/components/QuickCreateModal';
+import ImportProjectModal, { QuickCreateData, ImportCreateData } from '@/components/ImportProjectModal';
 import CinematicResults from '@/components/CinematicResults';
 import { useToast } from '@/components/Toast';
-import { FilmIcon, DocumentIcon, PaletteIcon, ExportIcon } from '@/components/Icons';
+import { FilmIcon, DocumentIcon, PaletteIcon, ExportIcon, UploadIcon } from '@/components/Icons';
 import { Project } from '@/types';
 import { getAllProjectsAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
@@ -62,8 +62,8 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Quick Create state
-  const [isQuickCreateOpen, setIsQuickCreateOpen] = useState(false);
+  // Import Project Modal state (combines Quick Create, Import, and Blank)
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState('');
   const [generatedStoryData, setGeneratedStoryData] = useState<{
@@ -157,7 +157,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
           break;
         case 'q':
           e.preventDefault();
-          setIsQuickCreateOpen(true);
+          setIsImportModalOpen(true);
           break;
         case '/':
           e.preventDefault();
@@ -431,12 +431,211 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
 
       // Store generated data and show results
       setGeneratedStoryData(storyData);
-      setIsQuickCreateOpen(false);
+      setIsImportModalOpen(false);
       setIsGenerating(false);
       setGenerationStep('');
     } catch (error) {
       console.error('Quick create error:', error);
       showToast(error instanceof Error ? error.message : 'Failed to generate story', 'error');
+      setIsGenerating(false);
+      setGenerationStep('');
+    }
+  };
+
+  // Import Create: Create project from imported content analysis
+  const handleImportCreate = async (data: ImportCreateData) => {
+    setIsGenerating(true);
+    setGenerationStep('Creating project...');
+
+    try {
+      // Step 1: Create the project
+      const projectResponse = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: data.projectName,
+          description: data.projectDescription,
+        }),
+      });
+
+      if (!projectResponse.ok) {
+        throw new Error('Failed to create project');
+      }
+
+      const newProject = await projectResponse.json();
+      const projectId = newProject.id;
+
+      let failedCharacters = 0;
+      let failedLore = 0;
+      let failedScenes = 0;
+      let failedImages = 0;
+
+      // Step 2: Create characters
+      if (data.characters.length > 0) {
+        setGenerationStep('Creating characters...');
+        for (const char of data.characters) {
+          try {
+            const response = await fetch(`/api/projects/${projectId}/characters`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: char.name,
+                description: char.description,
+                traits: char.traits || [],
+                role: char.role,
+              }),
+            });
+            if (!response.ok) failedCharacters++;
+          } catch {
+            failedCharacters++;
+          }
+        }
+      }
+
+      // Step 3: Create lore entries
+      if (data.lore.length > 0) {
+        setGenerationStep('Building world lore...');
+        for (const lore of data.lore) {
+          try {
+            const response = await fetch(`/api/projects/${projectId}/lore`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: lore.type || 'concept',
+                name: lore.name,
+                summary: lore.description.slice(0, 200),
+                description: lore.description,
+              }),
+            });
+            if (!response.ok) failedLore++;
+          } catch {
+            failedLore++;
+          }
+        }
+      }
+
+      // Step 4: Create scenes
+      const createdScenes: Array<{ id: string; prompt: string }> = [];
+      if (data.scenes.length > 0) {
+        for (let i = 0; i < data.scenes.length; i++) {
+          const scene = data.scenes[i];
+          setGenerationStep(`Creating scene ${i + 1} of ${data.scenes.length}...`);
+          try {
+            const response = await fetch('/api/scenes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                projectId,
+                prompt: scene.visualPrompt || scene.description,
+                title: scene.title,
+                metadata: {
+                  style: data.genre,
+                  mood: data.mood,
+                  description: scene.description,
+                },
+              }),
+            });
+            if (response.ok) {
+              const createdScene = await response.json();
+              createdScenes.push({ id: createdScene.id, prompt: scene.visualPrompt });
+            } else {
+              failedScenes++;
+            }
+          } catch {
+            failedScenes++;
+          }
+        }
+      }
+
+      // Step 5: Generate images if enabled
+      if (data.generateImages && createdScenes.length > 0) {
+        for (let i = 0; i < createdScenes.length; i++) {
+          const scene = createdScenes[i];
+          setGenerationStep(`Generating image ${i + 1} of ${createdScenes.length}...`);
+          try {
+            const imageResponse = await fetch('/api/generate-image', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                prompt: scene.prompt,
+                projectId,
+                sceneId: scene.id,
+                style: data.genre,
+                mood: data.mood,
+                size: '1024x1024',
+                quality: 'standard',
+              }),
+            });
+
+            if (imageResponse.ok) {
+              const imageData = await imageResponse.json();
+              if (imageData.imageUrl) {
+                const queryParams = new URLSearchParams({ projectId: String(projectId) }).toString();
+                await fetch(`/api/scenes/${scene.id}?${queryParams}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ imageUrl: imageData.imageUrl }),
+                });
+              }
+            } else {
+              failedImages++;
+            }
+          } catch {
+            failedImages++;
+          }
+        }
+      }
+
+      // Refresh projects list
+      setProjects(prev => [newProject, ...prev]);
+      setIsImportModalOpen(false);
+      setIsGenerating(false);
+      setGenerationStep('');
+
+      // Provide feedback
+      const totalFailures = failedCharacters + failedLore + failedScenes;
+      if (totalFailures > 0 || failedImages > 0) {
+        showToast(`Project created with some issues`, 'warning');
+      } else {
+        showToast('Project imported successfully!', 'success');
+      }
+
+      router.push(`/project/${projectId}`);
+    } catch (error) {
+      console.error('Import create error:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to create project', 'error');
+      setIsGenerating(false);
+      setGenerationStep('');
+    }
+  };
+
+  // Blank Create: Create empty project
+  const handleBlankCreate = async (name: string, description: string) => {
+    setIsGenerating(true);
+    setGenerationStep('Creating project...');
+
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, description }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to create project');
+      }
+
+      const newProject = await response.json();
+      setProjects(prev => [newProject, ...prev]);
+      setIsImportModalOpen(false);
+      setIsGenerating(false);
+      setGenerationStep('');
+      showToast('Project created successfully!', 'success');
+      router.push(`/project/${newProject.id}`);
+    } catch (error) {
+      console.error('Blank create error:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to create project', 'error');
       setIsGenerating(false);
       setGenerationStep('');
     }
@@ -670,7 +869,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
   const handleRegenerate = () => {
     if (quickCreateData) {
       setGeneratedStoryData(null);
-      setIsQuickCreateOpen(true);
+      setIsImportModalOpen(true);
       // Auto-submit after a short delay to let modal render
       setTimeout(() => {
         handleQuickCreate(quickCreateData);
@@ -729,24 +928,14 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
                 </Link>
               )}
               <button
-                onClick={() => setIsQuickCreateOpen(true)}
+                onClick={() => setIsImportModalOpen(true)}
                 className="btn btn-primary"
                 disabled={isGenerating}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                 </svg>
-                Quick Create
-              </button>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="btn btn-secondary"
-                disabled={isCreating}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-                {projects.length === 0 ? 'Start Your First Project' : 'Create New Project'}
+                {projects.length === 0 ? 'Start Your First Project' : 'Create Project'}
               </button>
             </div>
           </div>
@@ -1039,11 +1228,13 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
         externalError={createError}
       />
 
-      {/* Quick Create Modal */}
-      <QuickCreateModal
-        isOpen={isQuickCreateOpen}
-        onClose={() => setIsQuickCreateOpen(false)}
-        onGenerate={handleQuickCreate}
+      {/* Import Project Modal (Quick Create, Import Existing, Start Blank) */}
+      <ImportProjectModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onQuickCreate={handleQuickCreate}
+        onImportCreate={handleImportCreate}
+        onBlankCreate={handleBlankCreate}
         isGenerating={isGenerating}
         generationStep={generationStep}
       />
