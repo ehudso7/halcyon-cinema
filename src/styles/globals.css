@@ -1,19 +1,19 @@
 :root,
 [data-theme="dark"] {
-  /* Primary color palette */
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
-  --color-primary-light: #818cf8;
-  --color-primary-rgb: 99, 102, 241;
+  /* Primary color palette - Cinematic Gold */
+  --color-primary: #D4AF37;
+  --color-primary-hover: #B8960C;
+  --color-primary-light: #F4D03F;
+  --color-primary-rgb: 212, 175, 55;
   --color-secondary: #10b981;
 
-  /* Background colors */
-  --color-background: #0f0f0f;
-  --color-surface: #1a1a1a;
-  --color-surface-hover: #252525;
+  /* Background colors - Warm cinematic blacks */
+  --color-background: #0d0a08;
+  --color-surface: #1a1510;
+  --color-surface-hover: #252015;
 
   /* Border and text */
-  --color-border: #333333;
+  --color-border: #3d3530;
   --color-text: #ffffff;
   --color-text-secondary: #a0a0a0;
 
@@ -44,22 +44,22 @@
 
 /* Light theme */
 [data-theme="light"] {
-  /* Primary color palette - slightly adjusted for light mode */
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-primary-light: #6366f1;
-  --color-primary-rgb: 79, 70, 229;
+  /* Primary color palette - Cinematic Gold adjusted for light mode */
+  --color-primary: #B8960C;
+  --color-primary-hover: #9A7D0A;
+  --color-primary-light: #D4AF37;
+  --color-primary-rgb: 184, 150, 12;
   --color-secondary: #059669;
 
-  /* Background colors */
-  --color-background: #f8fafc;
+  /* Background colors - Warm cream tones */
+  --color-background: #FAF3E0;
   --color-surface: #ffffff;
-  --color-surface-hover: #f1f5f9;
+  --color-surface-hover: #FFF8E7;
 
   /* Border and text */
-  --color-border: #e2e8f0;
-  --color-text: #1e293b;
-  --color-text-secondary: #64748b;
+  --color-border: #e5dcc8;
+  --color-text: #1e1a14;
+  --color-text-secondary: #5c5448;
 
   /* Status colors - slightly adjusted for light mode contrast */
   --color-error: #dc2626;
