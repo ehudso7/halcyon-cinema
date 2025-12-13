@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcryptjs';
 import { verifyResetToken, invalidateResetToken } from './forgot-password';
-import { getUserByEmail } from '@/utils/db';
 import { updateUserPassword } from '@/utils/users';
 
 interface ResetPasswordResponse {
@@ -38,30 +37,21 @@ export default async function handler(
     });
   }
 
-  // Verify the token
-  const tokenData = verifyResetToken(token);
-  if (!tokenData) {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid or expired reset link'
-    });
-  }
-
   try {
-    // Get the user
-    const user = await getUserByEmail(tokenData.email);
-    if (!user) {
-      return res.status(404).json({
+    // Verify the token (now async since it queries the database)
+    const tokenData = await verifyResetToken(token);
+    if (!tokenData) {
+      return res.status(400).json({
         success: false,
-        error: 'User not found'
+        error: 'Invalid or expired reset link'
       });
     }
 
     // Hash the new password
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Update the password
-    const updated = await updateUserPassword(user.id, passwordHash);
+    // Update the password using the userId from the token
+    const updated = await updateUserPassword(tokenData.userId, passwordHash);
     if (!updated) {
       return res.status(500).json({
         success: false,
@@ -70,7 +60,7 @@ export default async function handler(
     }
 
     // Invalidate the token so it can't be reused
-    invalidateResetToken(token);
+    await invalidateResetToken(token);
 
     return res.status(200).json({
       success: true,

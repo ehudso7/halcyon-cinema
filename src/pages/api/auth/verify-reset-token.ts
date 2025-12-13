@@ -27,14 +27,22 @@ export default async function handler(
     });
   }
 
-  const result = verifyResetToken(token);
+  try {
+    const result = await verifyResetToken(token);
 
-  if (!result) {
-    return res.status(200).json({
+    if (!result) {
+      return res.status(200).json({
+        valid: false,
+        error: 'Invalid or expired reset link'
+      });
+    }
+
+    return res.status(200).json({ valid: true });
+  } catch (error) {
+    console.error('[verify-reset-token] Error:', error);
+    return res.status(500).json({
       valid: false,
-      error: 'Invalid or expired reset link'
+      error: 'An error occurred verifying the token'
     });
   }
-
-  return res.status(200).json({ valid: true });
 }

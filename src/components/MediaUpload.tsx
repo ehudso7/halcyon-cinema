@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from 'react';
 import styles from './MediaUpload.module.css';
 
 interface MediaUploadProps {
@@ -51,34 +51,17 @@ export default function MediaUpload({
   const [uploadedFile, setUploadedFile] = useState<{ name: string; type: string; url?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFile(files[0]);
-    }
-  }, []);
-
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      handleFile(files[0]);
-    }
-  }, []);
-
-  const handleFile = async (file: File) => {
+  const handleFile = useCallback(async (file: File) => {
     setError(null);
 
     // Validate file size
@@ -127,7 +110,24 @@ export default function MediaUpload({
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [maxSize, projectId, onUpload]);
+
+  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleFile(files[0]);
+    }
+  }, [handleFile]);
+
+  const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFile(files[0]);
+    }
+  }, [handleFile]);
 
   const handleAnalyzeDocument = async () => {
     if (!uploadedFile?.url || !onAnalyze) return;

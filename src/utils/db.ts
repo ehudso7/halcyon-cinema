@@ -1724,6 +1724,7 @@ export async function deductCredits(
 
 /**
  * Add credits to a user (for purchases, bonuses, etc.).
+ * Uses reference_id for idempotency - duplicate transactions with same reference_id are skipped.
  */
 export async function addCredits(
   userId: string,
@@ -1741,6 +1742,20 @@ export async function addCredits(
   const client = await dbPool.connect();
   try {
     await client.query('BEGIN');
+
+    // Check for duplicate transaction (idempotency)
+    if (referenceId) {
+      const existingTx = await client.query(
+        `SELECT id FROM credit_transactions WHERE reference_id = $1`,
+        [referenceId]
+      );
+      if (existingTx.rows.length > 0) {
+        // Transaction already processed, return current user credits
+        await client.query('ROLLBACK');
+        dbLogger.info('Duplicate credit transaction skipped', { referenceId, userId });
+        return getUserCredits(userId);
+      }
+    }
 
     // Lock and update user credits
     const result = await client.query(

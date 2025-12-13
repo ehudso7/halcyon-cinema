@@ -1,9 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { randomBytes } from 'crypto';
-import { getUserByEmail } from '@/utils/db';
-
-// In production, you would use a proper email service (SendGrid, AWS SES, etc.)
-// and store tokens in the database with expiration times
+import { randomBytes, createHash } from 'crypto';
+import { getUserByEmail, query, isPostgresAvailable } from '@/utils/db';
 
 interface ForgotPasswordResponse {
   success: boolean;
@@ -11,8 +8,32 @@ interface ForgotPasswordResponse {
   error?: string;
 }
 
-// Simple in-memory token store (replace with database in production)
-const resetTokens = new Map<string, { email: string; expires: number }>();
+// Initialize password reset tokens table
+async function initResetTokensTable() {
+  if (!isPostgresAvailable()) return;
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash VARCHAR(64) NOT NULL UNIQUE,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      used BOOLEAN DEFAULT false,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    )
+  `);
+
+  // Create index for faster token lookups
+  await query(`
+    CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash
+    ON password_reset_tokens(token_hash) WHERE used = false
+  `);
+}
+
+// Hash the token before storing (so plaintext token is never stored)
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 export default async function handler(
   req: NextApiRequest,
@@ -45,16 +66,29 @@ export default async function handler(
   }
 
   try {
+    await initResetTokensTable();
+
     // Check if user exists (but don't reveal this to the client for security)
     const user = await getUserByEmail(email.toLowerCase());
 
-    if (user) {
+    if (user && isPostgresAvailable()) {
+      // Invalidate any existing reset tokens for this user
+      await query(
+        'UPDATE password_reset_tokens SET used = true WHERE user_id = $1::uuid AND used = false',
+        [user.id]
+      );
+
       // Generate a secure reset token
       const token = randomBytes(32).toString('hex');
-      const expires = Date.now() + 3600000; // 1 hour expiration
+      const tokenHash = hashToken(token);
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hour expiration
 
-      // Store the token (in production, save to database)
-      resetTokens.set(token, { email: email.toLowerCase(), expires });
+      // Store the hashed token in database
+      await query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+         VALUES ($1::uuid, $2, $3)`,
+        [user.id, tokenHash, expiresAt]
+      );
 
       // In production, send an email with the reset link
       // For now, log it (development only)
@@ -88,17 +122,38 @@ export default async function handler(
   }
 }
 
-// Export for use in reset-password endpoint
-export function verifyResetToken(token: string): { email: string } | null {
-  const data = resetTokens.get(token);
-  if (!data) return null;
-  if (Date.now() > data.expires) {
-    resetTokens.delete(token);
-    return null;
-  }
-  return { email: data.email };
+// Verify a reset token - returns user ID if valid
+export async function verifyResetToken(token: string): Promise<{ userId: string; email: string } | null> {
+  if (!isPostgresAvailable()) return null;
+
+  await initResetTokensTable();
+
+  const tokenHash = hashToken(token);
+
+  const result = await query(
+    `SELECT prt.user_id, u.email
+     FROM password_reset_tokens prt
+     JOIN users u ON prt.user_id = u.id
+     WHERE prt.token_hash = $1
+       AND prt.used = false
+       AND prt.expires_at > NOW()`,
+    [tokenHash]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const row = result.rows[0] as { user_id: string; email: string };
+  return { userId: row.user_id, email: row.email };
 }
 
-export function invalidateResetToken(token: string): void {
-  resetTokens.delete(token);
+// Invalidate a reset token after use
+export async function invalidateResetToken(token: string): Promise<void> {
+  if (!isPostgresAvailable()) return;
+
+  const tokenHash = hashToken(token);
+
+  await query(
+    'UPDATE password_reset_tokens SET used = true WHERE token_hash = $1',
+    [tokenHash]
+  );
 }

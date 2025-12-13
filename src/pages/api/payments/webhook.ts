@@ -16,23 +16,36 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-// Credit amounts for different price IDs
+// Price IDs from environment variables with fallbacks for development
+// In production, set STRIPE_PRICE_* environment variables to actual Stripe price IDs
+const PRICE_IDS = {
+  CREDITS_50: process.env.STRIPE_PRICE_CREDITS_50 || 'price_50_credits',
+  CREDITS_100: process.env.STRIPE_PRICE_CREDITS_100 || 'price_100_credits',
+  CREDITS_250: process.env.STRIPE_PRICE_CREDITS_250 || 'price_250_credits',
+  CREDITS_500: process.env.STRIPE_PRICE_CREDITS_500 || 'price_500_credits',
+  CREDITS_1000: process.env.STRIPE_PRICE_CREDITS_1000 || 'price_1000_credits',
+  STARTER: process.env.STRIPE_PRICE_STARTER || 'price_starter',
+  CREATOR: process.env.STRIPE_PRICE_CREATOR || 'price_creator',
+  STUDIO: process.env.STRIPE_PRICE_STUDIO || 'price_studio',
+};
+
+// Credit amounts for different price IDs - dynamically built from env vars
 const CREDIT_AMOUNTS: Record<string, number> = {
-  price_50_credits: 50,
-  price_100_credits: 100,
-  price_250_credits: 250,
-  price_500_credits: 500,
-  price_1000_credits: 1000,
-  price_starter: 100,
-  price_creator: 500,
-  price_studio: 2000,
+  [PRICE_IDS.CREDITS_50]: 50,
+  [PRICE_IDS.CREDITS_100]: 100,
+  [PRICE_IDS.CREDITS_250]: 250,
+  [PRICE_IDS.CREDITS_500]: 500,
+  [PRICE_IDS.CREDITS_1000]: 1000,
+  [PRICE_IDS.STARTER]: 100,
+  [PRICE_IDS.CREATOR]: 500,
+  [PRICE_IDS.STUDIO]: 2000,
 };
 
 // Subscription tiers for price IDs
 const SUBSCRIPTION_TIERS: Record<string, 'free' | 'pro' | 'enterprise'> = {
-  price_starter: 'free',
-  price_creator: 'pro',
-  price_studio: 'enterprise',
+  [PRICE_IDS.STARTER]: 'free',
+  [PRICE_IDS.CREATOR]: 'pro',
+  [PRICE_IDS.STUDIO]: 'enterprise',
 };
 
 export default async function handler(
@@ -123,8 +136,7 @@ export default async function handler(
 
         if (priceId && SUBSCRIPTION_TIERS[priceId]) {
           const tier = SUBSCRIPTION_TIERS[priceId];
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const expiresAt = new Date((subscription as any).current_period_end * 1000);
+          const expiresAt = new Date(subscription.current_period_end * 1000);
 
           await updateUserSubscription(userId, tier, expiresAt, subscription.id);
           console.log(`[webhook] Updated subscription for user ${userId} to ${tier}`);
@@ -163,8 +175,7 @@ export default async function handler(
       }
 
       case 'invoice.payment_succeeded': {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const invoice = event.data.object as any;
+        const invoice = event.data.object as Stripe.Invoice;
 
         // Handle subscription renewal
         if (invoice.subscription && invoice.billing_reason === 'subscription_cycle') {

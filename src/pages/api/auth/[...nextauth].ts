@@ -2,7 +2,7 @@ import NextAuth, { NextAuthOptions, Account, Profile } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import GitHubProvider from 'next-auth/providers/github';
-import { validateUser, createUser, getUserByEmail } from '@/utils/users';
+import { validateUser, getUserByEmail, createOAuthUser } from '@/utils/users';
 
 // Build providers array dynamically based on available env vars
 const providers = [];
@@ -68,11 +68,11 @@ async function handleOAuthSignIn(
     const existingUser = await getUserByEmail(profile.email);
 
     if (!existingUser) {
-      // Create new user for OAuth sign-in (no password)
-      await createUser(
+      // Create new user for OAuth sign-in (no password required)
+      await createOAuthUser(
         profile.email,
-        '', // Empty password for OAuth users
-        profile.name || profile.email.split('@')[0]
+        profile.name || profile.email.split('@')[0],
+        account.provider
       );
     }
 

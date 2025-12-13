@@ -80,6 +80,15 @@ export default async function handler(
         return res.status(401).json({ success: false, error: 'Unauthorized' });
       }
 
+      // Verify user owns this project before returning share status
+      const project = await dbGetProjectById(projectId);
+      if (!project) {
+        return res.status(404).json({ success: false, error: 'Project not found' });
+      }
+      if (project.userId !== session.user.id) {
+        return res.status(403).json({ success: false, error: 'Not authorized to access this project' });
+      }
+
       const result = await query(
         'SELECT * FROM project_shares WHERE project_id = $1::uuid',
         [projectId]
