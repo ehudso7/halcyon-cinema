@@ -307,6 +307,38 @@ export async function updateUser(id: string, updates: Partial<Pick<User, 'name'>
   return safeUser as User;
 }
 
+export async function updateUserPassword(id: string, passwordHash: string): Promise<boolean> {
+  // Use Postgres if available
+  if (isPostgresAvailable()) {
+    const { query } = await import('./db');
+    try {
+      const result = await query(
+        'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2::uuid RETURNING id',
+        [passwordHash, id]
+      );
+      return result.rows.length > 0;
+    } catch (error) {
+      authLogger.error('Failed to update password', { userId: id }, error);
+      return false;
+    }
+  }
+
+  // Fallback to file storage
+  loadFromFile();
+
+  const index = users.findIndex(u => u.id === id);
+  if (index === -1) return false;
+
+  users[index] = {
+    ...users[index],
+    passwordHash,
+    updatedAt: new Date().toISOString(),
+  };
+
+  saveToFile();
+  return true;
+}
+
 export async function deleteUser(id: string): Promise<boolean> {
   // Use Postgres if available
   if (isPostgresAvailable()) {
