@@ -460,18 +460,28 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
             <div
               className={styles.imageContainer}
               ref={imageContainerRef}
-              onClick={() => setIsFullscreen(true)}
+              onClick={() => !scene.metadata?.mediaType || scene.metadata.mediaType === 'image' ? setIsFullscreen(true) : undefined}
             >
               <div className={`${styles.imageWrapper} ${!isImageLoaded ? styles.imageLoading : ''}`}>
-                <ImageWithFallback
-                  src={scene.imageUrl}
-                  alt={`Scene ${sceneIndex + 1}`}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 70vw"
-                  priority
-                  fallbackType="scene"
-                  onLoad={() => setIsImageLoaded(true)}
-                />
+                {scene.metadata?.mediaType === 'video' && scene.imageUrl ? (
+                  <video
+                    src={scene.imageUrl}
+                    className={styles.sceneVideo}
+                    controls
+                    playsInline
+                    onLoadedData={() => setIsImageLoaded(true)}
+                  />
+                ) : (
+                  <ImageWithFallback
+                    src={scene.imageUrl}
+                    alt={`Scene ${sceneIndex + 1}`}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 70vw"
+                    priority
+                    fallbackType="scene"
+                    onLoad={() => setIsImageLoaded(true)}
+                  />
+                )}
                 {!isImageLoaded && (
                   <div className={styles.loadingOverlay}>
                     <span className={styles.loadingSpinner} />
@@ -484,7 +494,7 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                     </svg>
-                    AI-Generated with DALL-E 3
+                    {scene.metadata?.mediaType === 'video' ? 'AI-Generated Video' : 'AI-Generated with DALL-E 3'}
                   </div>
                   <button
                     className={styles.expandButton}

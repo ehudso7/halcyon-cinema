@@ -48,6 +48,7 @@ export interface SceneMetadata {
   lighting?: string;
   mood?: string;
   aspectRatio?: string;
+  mediaType?: 'image' | 'video';
 }
 
 // Project types
