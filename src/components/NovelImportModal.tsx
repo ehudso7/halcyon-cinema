@@ -570,12 +570,10 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
                 existing.description = c.description;
               }
               // Merge traits (union of both arrays, deduplicated)
-              if (c.traits && c.traits.length > 0) {
-                existing.traits = Array.from(new Set([
-                  ...(existing.traits || []),
-                  ...c.traits,
-                ]));
-              }
+              existing.traits = Array.from(new Set([
+                ...(existing.traits || []),
+                ...(c.traits || []),
+              ]));
               // Prefer longer/non-empty role
               if (c.role && c.role.length > (existing.role?.length || 0)) {
                 existing.role = c.role;
