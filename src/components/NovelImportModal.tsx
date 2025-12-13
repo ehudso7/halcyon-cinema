@@ -100,6 +100,21 @@ interface SequentialChapter {
   analysis?: ChapterAnalysis;
 }
 
+// Helper function to deduplicate traits case-insensitively while preserving original casing
+function deduplicateTraits(existingTraits: string[], newTraits: string[]): string[] {
+  const traitMap = new Map<string, string>();
+  [...(existingTraits || []), ...(newTraits || [])]
+    .map(t => t.trim())
+    .filter(Boolean)
+    .forEach(t => {
+      const lower = t.toLowerCase();
+      if (!traitMap.has(lower)) {
+        traitMap.set(lower, t);
+      }
+    });
+  return Array.from(traitMap.values());
+}
+
 const GENRES = [
   { value: 'cinematic-realism', label: 'Cinematic Realism' },
   { value: 'film-noir', label: 'Film Noir' },
@@ -359,18 +374,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
           const existing = allCharacters.find(ec => ec.name.toLowerCase() === c.name.toLowerCase());
           if (existing) {
             // Update existing character with new appearances (deduplicated)
-            // Merge traits (union, deduplicated case-insensitively, normalized)
-            const traitMap = new Map<string, string>();
-            [...(existing.traits || []), ...(c.traits || [])]
-              .map(t => t.trim())
-              .filter(Boolean)
-              .forEach(t => {
-                const lower = t.toLowerCase();
-                if (!traitMap.has(lower)) {
-                  traitMap.set(lower, t);
-                }
-              });
-            const mergedTraits = Array.from(traitMap.values());
+            const mergedTraits = deduplicateTraits(existing.traits, c.traits);
             return {
               ...existing,
               appearances: Array.from(new Set([...existing.appearances, chapterIndex])),
@@ -576,18 +580,8 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
               if (c.description && c.description.length > existing.description.length) {
                 existing.description = c.description;
               }
-              // Merge traits (union, deduplicated case-insensitively, normalized)
-              const traitMap = new Map<string, string>();
-              [...(existing.traits || []), ...(c.traits || [])]
-                .map(t => t.trim())
-                .filter(Boolean)
-                .forEach(t => {
-                  const lower = t.toLowerCase();
-                  if (!traitMap.has(lower)) {
-                    traitMap.set(lower, t);
-                  }
-                });
-              existing.traits = Array.from(traitMap.values());
+              // Merge traits (deduplicated case-insensitively)
+              existing.traits = deduplicateTraits(existing.traits, c.traits);
               // Prefer longer/non-empty role
               if (c.role && c.role.length > (existing.role?.length || 0)) {
                 existing.role = c.role;
