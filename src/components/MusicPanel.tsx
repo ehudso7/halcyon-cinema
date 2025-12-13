@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { MusicIcon, CogIcon, FilmIcon, WavesIcon } from './Icons';
 import styles from './MusicPanel.module.css';
 
 interface MusicPanelProps {
@@ -188,30 +189,12 @@ export default function MusicPanel({
     setIsPlaying(false);
   };
 
-  const getGenreEmoji = (genre: Genre): string => {
-    const emojis: Record<Genre, string> = {
-      ambient: '🌊',
-      cinematic: '🎬',
-      classical: '🎻',
-      electronic: '🎹',
-      folk: '🪕',
-      'hip-hop': '🎤',
-      jazz: '🎷',
-      'lo-fi': '☕',
-      orchestral: '🎼',
-      pop: '🎵',
-      rock: '🎸',
-      synthwave: '🌆',
-      world: '🌍',
-    };
-    return emojis[genre] || '🎵';
-  };
 
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <span className={styles.icon}>🎵</span>
+          <span className={styles.icon}><MusicIcon size={20} /></span>
           <h3 className={styles.title}>AI Music</h3>
           {sceneTitle && <span className={styles.sceneTag}>{sceneTitle}</span>}
         </div>
@@ -220,7 +203,7 @@ export default function MusicPanel({
           onClick={() => setShowSettings(!showSettings)}
           title="Music settings"
         >
-          ⚙️
+          <CogIcon size={18} />
         </button>
       </div>
 
@@ -235,7 +218,7 @@ export default function MusicPanel({
             >
               {GENRES.map(g => (
                 <option key={g.id} value={g.id}>
-                  {getGenreEmoji(g.id)} {g.name} - {g.description}
+                  {g.name} - {g.description}
                 </option>
               ))}
             </select>
@@ -297,7 +280,7 @@ export default function MusicPanel({
         />
         <div className={styles.textMeta}>
           <span>
-            {getGenreEmoji(selectedGenre)} {selectedGenre} • {selectedMood} • {selectedTempo}
+            {selectedGenre} • {selectedMood} • {selectedTempo}
           </span>
           <span>{duration} seconds</span>
         </div>

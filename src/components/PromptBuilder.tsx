@@ -3,6 +3,7 @@ import VisualStyleSelector, { getStyleModifier } from './VisualStyleSelector';
 import CharacterSelector from './CharacterSelector';
 import { getCreditsRemaining, invalidateCreditsCache } from './UsageStats';
 import { Character } from '@/types';
+import { PaletteIcon } from './Icons';
 import styles from './PromptBuilder.module.css';
 
 interface PromptBuilderProps {
@@ -209,7 +210,7 @@ export default function PromptBuilder({
             onClick={() => setShowStyleSelector(!showStyleSelector)}
             className={`${styles.styleButton} ${visualStyleId ? styles.styleActive : ''}`}
           >
-            <span className={styles.styleIcon}>🎨</span>
+            <span className={styles.styleIcon}><PaletteIcon size={18} /></span>
             {visualStyleId ? (
               <span>Style: <strong>{selectedStyleName}</strong></span>
             ) : (

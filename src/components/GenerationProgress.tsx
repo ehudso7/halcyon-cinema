@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { SparklesIcon } from './Icons';
 import styles from './GenerationProgress.module.css';
 
 export type GenerationStage =
@@ -292,7 +293,7 @@ export default function GenerationProgress({
       {/* Creative message */}
       {isGenerating && currentStage === 'rendering' && (
         <div className={styles.creativeMessage}>
-          <span className={styles.sparkle}>✨</span>
+          <span className={styles.sparkle}><SparklesIcon size={16} /></span>
           {creativeMessage}
         </div>
       )}

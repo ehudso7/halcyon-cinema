@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import React from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
@@ -7,17 +8,18 @@ import Breadcrumb from '@/components/Breadcrumb';
 import ProjectNavigation from '@/components/ProjectNavigation';
 import LoreCard from '@/components/LoreCard';
 import AddLoreModal from '@/components/AddLoreModal';
+import { BookIcon, UserIcon, LocationIcon, CalendarIcon, CogIcon } from '@/components/Icons';
 import { LoreEntry, LoreType, Project } from '@/types';
 import { getProjectByIdAsync, getProjectLoreAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Lore.module.css';
 
-const LORE_FILTER_TABS: { type: LoreType | 'all'; label: string; icon: string }[] = [
-  { type: 'all', label: 'All', icon: '📚' },
-  { type: 'character', label: 'Characters', icon: '👤' },
-  { type: 'location', label: 'Locations', icon: '🏛️' },
-  { type: 'event', label: 'Events', icon: '📅' },
-  { type: 'system', label: 'Systems', icon: '⚙️' },
+const LORE_FILTER_TABS: { type: LoreType | 'all'; label: string; IconComponent: React.FC<{ size?: number; color?: string }> }[] = [
+  { type: 'all', label: 'All', IconComponent: BookIcon },
+  { type: 'character', label: 'Characters', IconComponent: UserIcon },
+  { type: 'location', label: 'Locations', IconComponent: LocationIcon },
+  { type: 'event', label: 'Events', IconComponent: CalendarIcon },
+  { type: 'system', label: 'Systems', IconComponent: CogIcon },
 ];
 
 type SortBy = 'name' | 'type' | 'recent' | 'scenes';
@@ -559,7 +561,7 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
                 className={`${styles.tab} ${activeTab === tab.type ? styles.active : ''}`}
                 onClick={() => setActiveTab(tab.type)}
               >
-                <span>{tab.icon}</span>
+                <span><tab.IconComponent size={18} /></span>
                 <span>{tab.label}</span>
                 <span className={styles.count}>{counts[tab.type]}</span>
               </button>
@@ -585,7 +587,10 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
           ) : (
             <div className={styles.emptyState}>
               <div className={styles.emptyIcon}>
-                {activeTab === 'all' ? '📚' : LORE_FILTER_TABS.find(t => t.type === activeTab)?.icon}
+                {React.createElement(
+                  activeTab === 'all' ? BookIcon : (LORE_FILTER_TABS.find(t => t.type === activeTab)?.IconComponent || BookIcon),
+                  { size: 48 }
+                )}
               </div>
               <h3>
                 {searchQuery
@@ -715,9 +720,12 @@ export default function LoreDashboard({ project, initialEntries }: LorePageProps
                       showDetailModal.type === 'event' ? '#fbbf24' : '#60a5fa',
                   }}
                 >
-                  {showDetailModal.type === 'character' ? '👤' :
-                    showDetailModal.type === 'location' ? '🏛️' :
-                    showDetailModal.type === 'event' ? '📅' : '⚙️'}
+                  {React.createElement(
+                    showDetailModal.type === 'character' ? UserIcon :
+                    showDetailModal.type === 'location' ? LocationIcon :
+                    showDetailModal.type === 'event' ? CalendarIcon : CogIcon,
+                    { size: 32 }
+                  )}
                 </div>
                 <div className={styles.detailInfo}>
                   <h2>{showDetailModal.name}</h2>

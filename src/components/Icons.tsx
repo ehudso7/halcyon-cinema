@@ -237,6 +237,142 @@ export function ImageIcon({ size = 24, color = 'currentColor', className = '' }:
   );
 }
 
+// Fire icon - for streaks
+export function FireIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z" />
+    </svg>
+  );
+}
+
+// Trophy icon - for achievements
+export function TrophyIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M6 9H4.5a2.5 2.5 0 010-5H6" />
+      <path d="M18 9h1.5a2.5 2.5 0 000-5H18" />
+      <path d="M4 22h16" />
+      <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+      <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+      <path d="M18 2H6v7a6 6 0 0012 0V2z" />
+    </svg>
+  );
+}
+
+// Crown icon - for achievements
+export function CrownIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" />
+      <path d="M3 20h18" />
+    </svg>
+  );
+}
+
+// Star icon - for ratings/achievements
+export function StarIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+// Check circle icon - for completions
+export function CheckCircleIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+      <polyline points="22,4 12,14.01 9,11.01" />
+    </svg>
+  );
+}
+
+// Theater masks icon - for mood
+export function MasksIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M3 3h8a2 2 0 012 2v6a4 4 0 01-4 4H5a4 4 0 01-4-4V5a2 2 0 012-2z" />
+      <path d="M5 8h.01" />
+      <path d="M9 8h.01" />
+      <path d="M5 12a2 2 0 002 2h0a2 2 0 002-2" />
+      <path d="M13 9h8a2 2 0 012 2v6a4 4 0 01-4 4h-4a4 4 0 01-4-4v-6a2 2 0 012-2z" />
+      <path d="M15 13h.01" />
+      <path d="M19 13h.01" />
+      <path d="M19 17a2 2 0 00-2-2h0a2 2 0 00-2 2" />
+    </svg>
+  );
+}
+
+// Layout/Composition icon
+export function LayoutIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="9" y1="21" x2="9" y2="9" />
+    </svg>
+  );
+}
+
+// Zap/Lightning icon - for tips
+export function ZapIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+}
+
+// Target/Crosshair icon - for composition
+export function TargetIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  );
+}
+
+// Waves icon - for ambient
+export function WavesIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+      <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+      <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1" />
+    </svg>
+  );
+}
+
+// Party/Celebration icon
+export function PartyIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M5.8 11.3L2 22l10.7-3.8" />
+      <path d="M4 3h.01" />
+      <path d="M22 8h.01" />
+      <path d="M15 2h.01" />
+      <path d="M22 20h.01" />
+      <path d="M22 2l-2.24.75a2.9 2.9 0 00-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10" />
+      <path d="M22 13l-2.24-.75a2.9 2.9 0 00-2.41.56v0c-.5.5-1.27.54-1.8.08l-.29-.27c-.64-.64-1.71-.44-2.1.4l-.5 1.1" />
+    </svg>
+  );
+}
+
+// Chart/Metrics icon
+export function ChartIcon({ size = 24, color = 'currentColor', className = '' }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  );
+}
+
 // Helper function to get icon by name
 export function getIcon(name: string, props: IconProps = defaultProps): React.ReactNode {
   const icons: Record<string, React.FC<IconProps>> = {
@@ -282,6 +418,29 @@ export function getIcon(name: string, props: IconProps = defaultProps): React.Re
     concept: LightbulbIcon,
     idea: LightbulbIcon,
     image: ImageIcon,
+    fire: FireIcon,
+    streak: FireIcon,
+    trophy: TrophyIcon,
+    crown: CrownIcon,
+    star: StarIcon,
+    check: CheckCircleIcon,
+    checkcircle: CheckCircleIcon,
+    masks: MasksIcon,
+    mood: MasksIcon,
+    theater: MasksIcon,
+    layout: LayoutIcon,
+    composition: LayoutIcon,
+    zap: ZapIcon,
+    lightning: ZapIcon,
+    tip: ZapIcon,
+    target: TargetIcon,
+    crosshair: TargetIcon,
+    waves: WavesIcon,
+    ambient: WavesIcon,
+    party: PartyIcon,
+    celebration: PartyIcon,
+    chart: ChartIcon,
+    metrics: ChartIcon,
   };
 
   const IconComponent = icons[name.toLowerCase()];
@@ -311,5 +470,17 @@ export default {
   BoxIcon,
   LightbulbIcon,
   ImageIcon,
+  FireIcon,
+  TrophyIcon,
+  CrownIcon,
+  StarIcon,
+  CheckCircleIcon,
+  MasksIcon,
+  LayoutIcon,
+  ZapIcon,
+  TargetIcon,
+  WavesIcon,
+  PartyIcon,
+  ChartIcon,
   getIcon,
 };
