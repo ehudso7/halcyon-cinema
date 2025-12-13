@@ -89,6 +89,19 @@
   letter-spacing: 0.5px;
 }
 
+.creditBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: linear-gradient(135deg, var(--color-primary), #6366f1);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.3px;
+}
+
 /* Visual Style Toggle */
 .styleToggle {
   margin-bottom: 12px;

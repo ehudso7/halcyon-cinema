@@ -373,30 +373,9 @@ async function doInitializeTables(): Promise<void> {
       )
     `);
 
-    // Add credits columns if they don't exist (for existing databases)
-    await query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'credits_remaining') THEN
-          ALTER TABLE users ADD COLUMN credits_remaining INTEGER DEFAULT 100;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'subscription_tier') THEN
-          ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) DEFAULT 'free';
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'subscription_expires_at') THEN
-          ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP WITH TIME ZONE;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'lifetime_credits_used') THEN
-          ALTER TABLE users ADD COLUMN lifetime_credits_used INTEGER DEFAULT 0;
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'stripe_customer_id') THEN
-          ALTER TABLE users ADD COLUMN stripe_customer_id VARCHAR(255);
-        END IF;
-        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'stripe_subscription_id') THEN
-          ALTER TABLE users ADD COLUMN stripe_subscription_id VARCHAR(255);
-        END IF;
-      END $$;
-    `);
+    // Note: Credits columns are managed via migrations (002_add_credits.sql)
+    // The CREATE TABLE above includes all columns for new installations
+    // Existing databases should run migrations to add credits columns
 
     // Create credit transactions table for audit trail
     await query(`
@@ -1595,6 +1574,19 @@ export interface CreditTransaction {
 }
 
 /**
+ * Custom error for credit operations.
+ */
+export class CreditError extends Error {
+  constructor(
+    message: string,
+    public code: 'USER_NOT_FOUND' | 'INSUFFICIENT_CREDITS' | 'INVALID_AMOUNT'
+  ) {
+    super(message);
+    this.name = 'CreditError';
+  }
+}
+
+/**
  * Get a user's credit information.
  */
 export async function getUserCredits(userId: string): Promise<UserCredits | null> {
@@ -1622,16 +1614,24 @@ export async function getUserCredits(userId: string): Promise<UserCredits | null
 
 /**
  * Deduct credits from a user atomically.
- * Returns the updated credits info if successful, null if insufficient credits or user not found.
+ * Returns the updated credits info if successful.
+ * @throws CreditError with code 'USER_NOT_FOUND' if user doesn't exist
+ * @throws CreditError with code 'INSUFFICIENT_CREDITS' if user doesn't have enough credits
+ * @throws CreditError with code 'INVALID_AMOUNT' if amount is not positive
  */
 export async function deductCredits(
   userId: string,
   amount: number,
   description: string,
-  referenceId?: string
-): Promise<UserCredits | null> {
-  if (!checkPostgresAvailable()) return null;
-  if (amount <= 0) throw new Error('Amount must be positive');
+  referenceId?: string,
+  transactionType: 'generation' | 'adjustment' = 'generation'
+): Promise<UserCredits> {
+  if (!checkPostgresAvailable()) {
+    throw new CreditError('Database not available', 'USER_NOT_FOUND');
+  }
+  if (amount <= 0) {
+    throw new CreditError('Amount must be positive', 'INVALID_AMOUNT');
+  }
 
   await initializeTables();
 
@@ -1650,13 +1650,16 @@ export async function deductCredits(
 
     if (checkResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      return null;
+      throw new CreditError('User not found', 'USER_NOT_FOUND');
     }
 
     const currentCredits = (checkResult.rows[0] as Record<string, unknown>).credits_remaining as number;
     if (currentCredits < amount) {
       await client.query('ROLLBACK');
-      return null; // Insufficient credits
+      throw new CreditError(
+        `Insufficient credits: ${currentCredits} available, ${amount} required`,
+        'INSUFFICIENT_CREDITS'
+      );
     }
 
     const newBalance = currentCredits - amount;
@@ -1674,8 +1677,8 @@ export async function deductCredits(
     // Log the transaction
     await client.query(
       `INSERT INTO credit_transactions (user_id, amount, transaction_type, description, reference_id, balance_after)
-       VALUES ($1::uuid, $2, 'generation', $3, $4, $5)`,
-      [userId, -amount, description, referenceId || null, newBalance]
+       VALUES ($1::uuid, $2, $3, $4, $5, $6)`,
+      [userId, -amount, transactionType, description, referenceId || null, newBalance]
     );
 
     await client.query('COMMIT');
@@ -1690,7 +1693,10 @@ export async function deductCredits(
       lifetimeCreditsUsed: ((row.lifetime_credits_used as number) ?? 0) + amount,
     };
   } catch (error) {
-    await client.query('ROLLBACK');
+    // Don't rollback if it's a CreditError (already rolled back)
+    if (!(error instanceof CreditError)) {
+      await client.query('ROLLBACK');
+    }
     throw error;
   } finally {
     client.release();

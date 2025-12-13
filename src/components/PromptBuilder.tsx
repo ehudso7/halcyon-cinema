@@ -121,15 +121,10 @@ export default function PromptBuilder({
       return;
     }
 
-    // Video generation is coming soon
-    if (contentType === 'video') {
-      setError('Video generation is coming soon! Please select Image for now.');
-      return;
-    }
-
-    // Check credits
-    if (creditsRemaining <= 0) {
-      setError('No credits remaining. Please upgrade your plan to continue generating.');
+    // Check credits (video requires 10 credits, image requires 1)
+    const requiredCredits = contentType === 'video' ? 10 : 1;
+    if (creditsRemaining < requiredCredits) {
+      setError(`Insufficient credits. ${contentType === 'video' ? 'Video generation requires 10 credits.' : 'Please upgrade your plan to continue generating.'}`);
       return;
     }
 
@@ -187,7 +182,7 @@ export default function PromptBuilder({
                 <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
               </svg>
               <span>Video</span>
-              <span className={styles.comingSoonBadge}>Coming Soon</span>
+              <span className={styles.creditBadge}>10 credits</span>
             </button>
           </div>
         </div>
