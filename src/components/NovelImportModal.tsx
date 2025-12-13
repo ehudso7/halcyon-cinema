@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type DragEvent, type ChangeEvent } from 'react';
 import {
   DocumentIcon,
   UsersIcon,
@@ -195,7 +195,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
   }, [isOpen]);
 
   // Handle file upload
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = useCallback(async (file: File) => {
     setIsUploading(true);
     setError('');
 
@@ -222,17 +222,17 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
     } finally {
       setIsUploading(false);
     }
-  };
+  }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file) {
       handleFileUpload(file);
     }
-  }, []);
+  }, [handleFileUpload]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       handleFileUpload(file);
@@ -309,8 +309,9 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
             chapterTitle: chapter.title,
             previousCharacters: Array.from(accumulatedCharacters.values()),
             previousLocations: Array.from(accumulatedLocations.values()),
+            // Limit context to last 3 chapters to avoid token limits
             novelContext: analyses.length > 0
-              ? `Previous chapters summary: ${analyses.map(a => a.summary).join(' ')}`
+              ? `Previous chapters summary: ${analyses.slice(-3).map(a => a.summary).join(' ')}`
               : '',
           }),
         });
@@ -457,6 +458,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
   // Handle final submission
   const handleComplete = async () => {
     setStep('generating');
+    setError('');
 
     const selectedChapterContents = chapters
       .filter(ch => ch.selected)
@@ -481,7 +483,13 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
       generateLocationArt,
     };
 
-    await onComplete(data);
+    try {
+      await onComplete(data);
+    } catch (err) {
+      console.error('Novel import completion error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create project');
+      setStep('configure'); // Return to configure step on error
+    }
   };
 
   const handleClose = () => {
