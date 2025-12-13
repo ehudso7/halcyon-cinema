@@ -166,6 +166,7 @@ export default function VoiceoverPanel({
           className={styles.settingsBtn}
           onClick={() => setShowSettings(!showSettings)}
           title="Voice settings"
+          aria-label="Voice settings"
         >
           <CogIcon size={18} />
         </button>

@@ -42,6 +42,7 @@ export async function exportProjectAsPDF(
   // Title
   pdf.setFontSize(32);
   pdf.setFont('helvetica', 'bold');
+  pdf.setTextColor(255, 255, 255); // Reset to white for title
   pdf.text(project.name, pageWidth / 2, pageHeight / 2, { align: 'center' });
 
   // Subtitle
