@@ -6,9 +6,9 @@ import type { ComponentType } from 'react';
 import { FilmIcon, BookIcon, UserIcon, FilmStripIcon } from '@/components/Icons';
 
 export interface ProjectTab {
-  id: string;
-  label: string;
-  IconComponent: ComponentType<{ size?: number; color?: string }>;
+  readonly id: string;
+  readonly label: string;
+  readonly IconComponent: ComponentType<{ size?: number; color?: string }>;
 }
 
 export const PROJECT_TABS = [
