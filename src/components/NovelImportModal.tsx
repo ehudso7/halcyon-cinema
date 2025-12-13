@@ -89,6 +89,16 @@ interface ChapterAnalysis {
 }
 
 type WizardStep = 'upload' | 'chapters' | 'analyzing' | 'review' | 'configure' | 'generating';
+type ImportMode = 'full' | 'sequential';
+
+// Sequential mode state for chapter-by-chapter import
+interface SequentialChapter {
+  index: number;
+  title: string;
+  content: string;
+  wordCount: number;
+  analysis?: ChapterAnalysis;
+}
 
 const GENRES = [
   { value: 'cinematic-realism', label: 'Cinematic Realism' },
@@ -140,18 +150,26 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
   const [step, setStep] = useState<WizardStep>('upload');
   const [error, setError] = useState('');
 
+  // Import mode: 'full' for complete manuscript, 'sequential' for chapter-by-chapter
+  const [importMode, setImportMode] = useState<ImportMode>('full');
+
   // Upload state
   const [content, setContent] = useState('');
   const [filename, setFilename] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Chapter detection state
+  // Chapter detection state (full mode)
   const [novelTitle, setNovelTitle] = useState('');
   const [chapters, setChapters] = useState<DetectedChapter[]>([]);
   const [acts, setActs] = useState<DetectedAct[]>([]);
   const [totalWordCount, setTotalWordCount] = useState(0);
   const [isDetecting, setIsDetecting] = useState(false);
+
+  // Sequential mode state
+  const [sequentialChapters, setSequentialChapters] = useState<SequentialChapter[]>([]);
+  const [currentChapterTitle, setCurrentChapterTitle] = useState('');
+  const [isAnalyzingSequential, setIsAnalyzingSequential] = useState(false);
 
   // Analysis state
   const [chapterAnalyses, setChapterAnalyses] = useState<ChapterAnalysis[]>([]);
@@ -191,6 +209,11 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
       setError('');
       setAnalyzingIndex(-1);
       setAnalysisProgress(0);
+      // Reset sequential mode state
+      setImportMode('full');
+      setSequentialChapters([]);
+      setCurrentChapterTitle('');
+      setIsAnalyzingSequential(false);
     }
   }, [isOpen]);
 
@@ -272,6 +295,201 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
     } finally {
       setIsDetecting(false);
     }
+  };
+
+  // Add and analyze a single chapter in sequential mode
+  const analyzeSequentialChapter = async () => {
+    if (!content.trim()) {
+      setError('Please paste or upload your chapter content');
+      return;
+    }
+
+    if (!currentChapterTitle.trim()) {
+      setError('Please enter a chapter title');
+      return;
+    }
+
+    setIsAnalyzingSequential(true);
+    setError('');
+
+    const chapterIndex = sequentialChapters.length;
+    const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+
+    try {
+      // Get existing characters and locations for context
+      const previousCharacters = allCharacters;
+      const previousLocations = allLocations;
+      const novelContext = chapterAnalyses.length > 0
+        ? `Previous chapters summary: ${chapterAnalyses.slice(-3).map(a => a.summary).join(' ')}`
+        : '';
+
+      const response = await fetch('/api/import/analyze-chapter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content,
+          chapterIndex,
+          chapterTitle: currentChapterTitle,
+          previousCharacters,
+          previousLocations,
+          novelContext,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to analyze chapter');
+      }
+
+      const data = await response.json();
+
+      // Create the chapter record
+      const newChapter: SequentialChapter = {
+        index: chapterIndex,
+        title: currentChapterTitle,
+        content,
+        wordCount,
+      };
+
+      // Process characters - merge with existing
+      const newCharacters: ExtractedCharacter[] = (data.characters || []).map(
+        (c: ExtractedCharacter, idx: number) => {
+          const id = `char-${chapterIndex}-${idx}`;
+          const existing = allCharacters.find(ec => ec.name.toLowerCase() === c.name.toLowerCase());
+          if (existing) {
+            // Update existing character with new appearances
+            return {
+              ...existing,
+              appearances: [...existing.appearances, chapterIndex],
+              description: c.description && c.description.length > existing.description.length
+                ? c.description
+                : existing.description,
+            };
+          }
+          return {
+            ...c,
+            id,
+            firstChapter: chapterIndex,
+            appearances: [chapterIndex],
+            selected: true,
+          };
+        }
+      );
+
+      // Process locations - merge with existing
+      const newLocations: ExtractedLocation[] = (data.locations || []).map(
+        (l: ExtractedLocation, idx: number) => {
+          const id = `loc-${chapterIndex}-${idx}`;
+          const existing = allLocations.find(el => el.name.toLowerCase() === l.name.toLowerCase());
+          if (existing) {
+            return {
+              ...existing,
+              appearances: [...existing.appearances, chapterIndex],
+            };
+          }
+          return {
+            ...l,
+            id,
+            firstChapter: chapterIndex,
+            appearances: [chapterIndex],
+            selected: true,
+          };
+        }
+      );
+
+      // Process scenes
+      const newScenes: ExtractedScene[] = (data.scenes || []).map(
+        (s: ExtractedScene, idx: number) => ({
+          ...s,
+          id: `scene-${chapterIndex}-${idx}`,
+          chapterIndex,
+          selected: true,
+        })
+      );
+
+      // Process lore
+      const newLore: ExtractedLore[] = (data.lore || []).map(
+        (l: ExtractedLore, idx: number) => ({
+          ...l,
+          id: `lore-${chapterIndex}-${idx}`,
+          chapterIndex,
+          selected: true,
+        })
+      );
+
+      // Add analysis record
+      const analysis: ChapterAnalysis = {
+        index: chapterIndex,
+        title: currentChapterTitle,
+        summary: data.summary || '',
+        characters: newCharacters,
+        locations: newLocations,
+        scenes: newScenes,
+        lore: newLore,
+        emotionalArc: data.emotionalArc || '',
+        pacing: data.pacing || 'moderate',
+        analyzed: true,
+      };
+
+      // Update state with merged data
+      setSequentialChapters(prev => [...prev, newChapter]);
+      setChapterAnalyses(prev => [...prev, analysis]);
+
+      // Merge characters (avoid duplicates)
+      setAllCharacters(prev => {
+        const merged = [...prev];
+        newCharacters.forEach(nc => {
+          const existingIndex = merged.findIndex(m => m.name.toLowerCase() === nc.name.toLowerCase());
+          if (existingIndex >= 0) {
+            merged[existingIndex] = nc; // Update with new info
+          } else {
+            merged.push(nc);
+          }
+        });
+        return merged;
+      });
+
+      // Merge locations (avoid duplicates)
+      setAllLocations(prev => {
+        const merged = [...prev];
+        newLocations.forEach(nl => {
+          const existingIndex = merged.findIndex(m => m.name.toLowerCase() === nl.name.toLowerCase());
+          if (existingIndex >= 0) {
+            merged[existingIndex] = nl;
+          } else {
+            merged.push(nl);
+          }
+        });
+        return merged;
+      });
+
+      setAllScenes(prev => [...prev, ...newScenes]);
+      setAllLore(prev => [...prev, ...newLore]);
+
+      // Update total word count
+      setTotalWordCount(prev => prev + wordCount);
+
+      // Clear inputs for next chapter
+      setContent('');
+      setCurrentChapterTitle('');
+      setFilename('');
+
+      // Move to review step to show results
+      setStep('review');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to analyze chapter');
+    } finally {
+      setIsAnalyzingSequential(false);
+    }
+  };
+
+  // Continue adding another chapter in sequential mode
+  const addAnotherChapter = () => {
+    setStep('upload');
+    setContent('');
+    setCurrentChapterTitle('');
+    setFilename('');
+    setError('');
   };
 
   // Analyze chapters
@@ -460,17 +678,35 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
     setStep('generating');
     setError('');
 
-    const selectedChapterContents = chapters
-      .filter(ch => ch.selected)
-      .map(ch => ({
+    // Build chapter contents based on mode
+    let selectedChapterContents: { title: string; content: string }[];
+    let fullContent: string;
+    let projectTitle: string;
+
+    if (importMode === 'sequential') {
+      // Sequential mode: use accumulated chapters
+      selectedChapterContents = sequentialChapters.map(ch => ({
         title: ch.title,
-        content: content.substring(ch.startIndex, ch.endIndex),
+        content: ch.content,
       }));
+      fullContent = sequentialChapters.map(ch => ch.content).join('\n\n---\n\n');
+      projectTitle = novelTitle || sequentialChapters[0]?.title || 'Untitled Novel';
+    } else {
+      // Full mode: use detected chapters
+      selectedChapterContents = chapters
+        .filter(ch => ch.selected)
+        .map(ch => ({
+          title: ch.title,
+          content: content.substring(ch.startIndex, ch.endIndex),
+        }));
+      fullContent = content;
+      projectTitle = novelTitle;
+    }
 
     const data: NovelImportData = {
-      title: novelTitle,
+      title: projectTitle,
       description: chapterAnalyses.map(a => a.summary).join(' ').substring(0, 500),
-      content,
+      content: fullContent,
       chapters: selectedChapterContents,
       characters: allCharacters.filter(c => c.selected),
       locations: allLocations.filter(l => l.selected),
@@ -542,8 +778,85 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
           <div className={styles.content}>
             <div className={styles.titleSection}>
               <h2>Import Your Novel</h2>
-              <p>Upload your manuscript or paste the text to get started</p>
+              <p>
+                {importMode === 'full'
+                  ? 'Upload your complete manuscript with all chapters'
+                  : sequentialChapters.length > 0
+                    ? `Adding chapter ${sequentialChapters.length + 1} to your project`
+                    : 'Add chapters one at a time for more control'}
+              </p>
             </div>
+
+            {/* Mode selector - only show if no chapters added yet */}
+            {sequentialChapters.length === 0 && (
+              <div className={styles.modeSelector}>
+                <button
+                  className={`${styles.modeBtn} ${importMode === 'full' ? styles.active : ''}`}
+                  onClick={() => setImportMode('full')}
+                >
+                  <BookIcon size={20} />
+                  <div>
+                    <strong>Full Manuscript</strong>
+                    <small>Upload complete novel, auto-detect chapters</small>
+                  </div>
+                </button>
+                <button
+                  className={`${styles.modeBtn} ${importMode === 'sequential' ? styles.active : ''}`}
+                  onClick={() => setImportMode('sequential')}
+                >
+                  <DocumentIcon size={20} />
+                  <div>
+                    <strong>Chapter by Chapter</strong>
+                    <small>Add one chapter at a time, review as you go</small>
+                  </div>
+                </button>
+              </div>
+            )}
+
+            {/* Progress indicator for sequential mode */}
+            {importMode === 'sequential' && sequentialChapters.length > 0 && (
+              <div className={styles.sequentialProgress}>
+                <div className={styles.progressHeader}>
+                  <span>{sequentialChapters.length} chapter{sequentialChapters.length !== 1 ? 's' : ''} added</span>
+                  <span>{totalWordCount.toLocaleString()} total words</span>
+                </div>
+                <div className={styles.chapterTags}>
+                  {sequentialChapters.map(ch => (
+                    <span key={ch.index} className={styles.chapterTag}>
+                      {ch.title}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Sequential mode: Chapter title input */}
+            {importMode === 'sequential' && (
+              <div className={styles.chapterTitleInput}>
+                <label>Chapter Title</label>
+                <input
+                  type="text"
+                  value={currentChapterTitle}
+                  onChange={e => setCurrentChapterTitle(e.target.value)}
+                  placeholder={`e.g., ${sequentialChapters.length === 0 ? 'Prologue' : `Chapter ${sequentialChapters.length}`}`}
+                  className={styles.titleInput}
+                />
+              </div>
+            )}
+
+            {/* Novel title for sequential mode (shown after first chapter) */}
+            {importMode === 'sequential' && sequentialChapters.length === 0 && (
+              <div className={styles.chapterTitleInput}>
+                <label>Novel Title (optional)</label>
+                <input
+                  type="text"
+                  value={novelTitle}
+                  onChange={e => setNovelTitle(e.target.value)}
+                  placeholder="My Novel"
+                  className={styles.titleInput}
+                />
+              </div>
+            )}
 
             <div
               className={`${styles.dropZone} ${isUploading ? styles.uploading : ''}`}
@@ -567,13 +880,19 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
                 <>
                   <DocumentIcon size={48} color="#10b981" />
                   <p className={styles.filename}>{filename}</p>
-                  <p className={styles.wordCount}>{totalWordCount.toLocaleString()} words</p>
+                  <p className={styles.wordCount}>
+                    {content.split(/\s+/).filter(w => w).length.toLocaleString()} words
+                  </p>
                   <button className={styles.changeFile}>Change file</button>
                 </>
               ) : (
                 <>
                   <UploadIcon size={48} color="#6366f1" />
-                  <p>Drop your manuscript here</p>
+                  <p>
+                    {importMode === 'sequential'
+                      ? 'Drop your chapter file here'
+                      : 'Drop your manuscript here'}
+                  </p>
                   <p className={styles.supportedFormats}>.docx, .pdf, .epub, .txt</p>
                   <span className={styles.orDivider}>or click to browse</span>
                 </>
@@ -589,14 +908,19 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
                 onChange={e => {
                   setContent(e.target.value);
                   setFilename('');
-                  setTotalWordCount(e.target.value.split(/\s+/).filter(w => w).length);
                 }}
-                placeholder="Paste your novel content here..."
+                placeholder={
+                  importMode === 'sequential'
+                    ? 'Paste your chapter content here...'
+                    : 'Paste your novel content here...'
+                }
                 className={styles.pasteArea}
                 rows={8}
               />
               {content && !filename && (
-                <p className={styles.wordCount}>{totalWordCount.toLocaleString()} words</p>
+                <p className={styles.wordCount}>
+                  {content.split(/\s+/).filter(w => w).length.toLocaleString()} words
+                </p>
               )}
             </div>
 
@@ -604,14 +928,25 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
 
             <div className={styles.actions}>
               <button className={styles.cancelBtn} onClick={handleClose}>Cancel</button>
-              <button
-                className={styles.primaryBtn}
-                onClick={detectChapters}
-                disabled={!content.trim() || isDetecting}
-              >
-                {isDetecting ? 'Detecting...' : 'Detect Chapters'}
-                <ChevronRightIcon size={18} />
-              </button>
+              {importMode === 'full' ? (
+                <button
+                  className={styles.primaryBtn}
+                  onClick={detectChapters}
+                  disabled={!content.trim() || isDetecting}
+                >
+                  {isDetecting ? 'Detecting...' : 'Detect Chapters'}
+                  <ChevronRightIcon size={18} />
+                </button>
+              ) : (
+                <button
+                  className={styles.primaryBtn}
+                  onClick={analyzeSequentialChapter}
+                  disabled={!content.trim() || !currentChapterTitle.trim() || isAnalyzingSequential}
+                >
+                  {isAnalyzingSequential ? 'Analyzing...' : 'Analyze Chapter'}
+                  <SparklesIcon size={18} />
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -879,18 +1214,37 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
             </div>
 
             <div className={styles.actions}>
-              <button className={styles.backBtn} onClick={() => setStep('chapters')}>
-                <ChevronLeftIcon size={18} />
-                Back
-              </button>
-              <button
-                className={styles.primaryBtn}
-                onClick={() => setStep('configure')}
-                disabled={allScenes.filter(s => s.selected).length === 0}
-              >
-                Configure Project
-                <ChevronRightIcon size={18} />
-              </button>
+              {importMode === 'sequential' ? (
+                <>
+                  <button className={styles.backBtn} onClick={addAnotherChapter}>
+                    <ChevronLeftIcon size={18} />
+                    Add Another Chapter
+                  </button>
+                  <button
+                    className={styles.primaryBtn}
+                    onClick={() => setStep('configure')}
+                    disabled={allScenes.filter(s => s.selected).length === 0}
+                  >
+                    Finish & Configure
+                    <ChevronRightIcon size={18} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className={styles.backBtn} onClick={() => setStep('chapters')}>
+                    <ChevronLeftIcon size={18} />
+                    Back
+                  </button>
+                  <button
+                    className={styles.primaryBtn}
+                    onClick={() => setStep('configure')}
+                    disabled={allScenes.filter(s => s.selected).length === 0}
+                  >
+                    Configure Project
+                    <ChevronRightIcon size={18} />
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -970,6 +1324,8 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
                 <strong>{creditsEstimate} credits</strong>
               </div>
             </div>
+
+            {error && <p className={styles.error}>{error}</p>}
 
             <div className={styles.actions}>
               <button className={styles.backBtn} onClick={() => setStep('review')}>
