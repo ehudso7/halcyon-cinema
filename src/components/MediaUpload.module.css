@@ -19,12 +19,12 @@
 
 .dropzone:hover {
   border-color: var(--color-primary);
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(var(--color-primary-rgb), 0.05);
 }
 
 .dropzone.dragging {
   border-color: var(--color-primary);
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   border-style: solid;
 }
 

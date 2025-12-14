@@ -182,7 +182,7 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport,
                     sizes="120px"
                   />
                 ) : (
-                  <div className={styles.noImage}><FilmIcon size={32} color="#6366f1" /></div>
+                  <div className={styles.noImage}><FilmIcon size={32} color="#D4AF37" /></div>
                 )}
               </div>
 
@@ -295,7 +295,7 @@ export default function SceneSequencer({ scenes, initialOrder, onSave, onExport,
                     sizes="80px"
                   />
                 ) : (
-                  <div className={styles.noImage}><FilmIcon size={32} color="#6366f1" /></div>
+                  <div className={styles.noImage}><FilmIcon size={32} color="#D4AF37" /></div>
                 )}
                 <span>+ Add</span>
               </div>

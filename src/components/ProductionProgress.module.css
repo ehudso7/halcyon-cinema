@@ -104,7 +104,7 @@
 
 .step:hover {
   border-color: var(--primary);
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(var(--color-primary-rgb), 0.05);
 }
 
 .stepComplete {

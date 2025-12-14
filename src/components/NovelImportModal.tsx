@@ -930,7 +930,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
                 </>
               ) : (
                 <>
-                  <UploadIcon size={48} color="#6366f1" />
+                  <UploadIcon size={48} color="#D4AF37" />
                   <p>
                     {importMode === 'sequential'
                       ? 'Drop your chapter file here'
@@ -1086,7 +1086,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
               <div className={styles.analyzingAnimation}>
                 <div className={styles.pulseRing} />
                 <div className={styles.pulseRing} style={{ animationDelay: '0.5s' }} />
-                <SparklesIcon size={48} color="#6366f1" />
+                <SparklesIcon size={48} color="#D4AF37" />
               </div>
 
               <h2>Analyzing Your Novel</h2>
@@ -1393,7 +1393,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
               <div className={styles.analyzingAnimation}>
                 <div className={styles.pulseRing} />
                 <div className={styles.pulseRing} style={{ animationDelay: '0.5s' }} />
-                <FilmIcon size={48} color="#6366f1" />
+                <FilmIcon size={48} color="#D4AF37" />
               </div>
 
               <h2>Creating Your Cinematic Project</h2>

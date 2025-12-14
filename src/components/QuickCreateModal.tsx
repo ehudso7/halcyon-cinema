@@ -149,7 +149,7 @@ export default function QuickCreateModal({
               <div className={styles.pulseRing} style={{ animationDelay: '0.5s' }} />
               <div className={styles.pulseRing} style={{ animationDelay: '1s' }} />
               <div className={styles.generatingIcon}>
-                <span className={styles.stepIcon}><currentStep.IconComponent size={32} color="#6366f1" /></span>
+                <span className={styles.stepIcon}><currentStep.IconComponent size={32} color="#D4AF37" /></span>
               </div>
             </div>
 
@@ -306,35 +306,35 @@ export default function QuickCreateModal({
             <h4 className={styles.deliverablesTitle}>Your Cinematic Package Includes:</h4>
             <div className={styles.deliverablesList}>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}><DocumentIcon size={20} color="#6366f1" /></span>
+                <span className={styles.deliverableIcon}><DocumentIcon size={20} color="#D4AF37" /></span>
                 <div>
                   <strong>Logline & Tagline</strong>
                   <span>Marketable pitch materials</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}><FilmIcon size={20} color="#6366f1" /></span>
+                <span className={styles.deliverableIcon}><FilmIcon size={20} color="#D4AF37" /></span>
                 <div>
                   <strong>{sceneCount} Screenplay Scenes</strong>
                   <span>With sluglines & action</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}><UsersIcon size={20} color="#6366f1" /></span>
+                <span className={styles.deliverableIcon}><UsersIcon size={20} color="#D4AF37" /></span>
                 <div>
                   <strong>Character Profiles</strong>
                   <span>Arcs, traits & visuals</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}><GlobeIcon size={20} color="#6366f1" /></span>
+                <span className={styles.deliverableIcon}><GlobeIcon size={20} color="#D4AF37" /></span>
                 <div>
                   <strong>World Lore</strong>
                   <span>Locations, events & systems</span>
                 </div>
               </div>
               <div className={styles.deliverable}>
-                <span className={styles.deliverableIcon}><PaletteIcon size={20} color="#6366f1" /></span>
+                <span className={styles.deliverableIcon}><PaletteIcon size={20} color="#D4AF37" /></span>
                 <div>
                   <strong>Visual Style Guide</strong>
                   <span>Colors, lighting & motifs</span>

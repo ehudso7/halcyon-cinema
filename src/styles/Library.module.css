@@ -197,7 +197,7 @@
 
 .generationCard.selected {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.3);
 }
 
 .checkbox {
@@ -241,7 +241,7 @@
 .overlay {
   position: absolute;
   inset: 0;
-  background: rgba(99, 102, 241, 0.8);
+  background: rgba(var(--color-primary-rgb), 0.8);
   display: flex;
   align-items: center;
   justify-content: center;

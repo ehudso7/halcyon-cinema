@@ -503,7 +503,7 @@
 .compareOverlay {
   position: absolute;
   inset: 0;
-  background: rgba(99, 102, 241, 0.8);
+  background: rgba(var(--color-primary-rgb), 0.8);
   display: flex;
   align-items: center;
   justify-content: center;

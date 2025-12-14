@@ -101,13 +101,13 @@ export default function SceneFlow({ scenes, projectName, onClose }: SceneFlowPro
         <div className={`${styles.content} ${styles[transitionPhase]}`}>
           {isTitle ? (
             <div className={styles.titleCard}>
-              <span className={styles.emoji}><FilmIcon size={48} color="#6366f1" /></span>
+              <span className={styles.emoji}><FilmIcon size={48} color="#D4AF37" /></span>
               <h1 className={styles.title}>{projectName}</h1>
               <p className={styles.subtitle}>{scenes.length} Scenes</p>
             </div>
           ) : isEnd ? (
             <div className={styles.endCard}>
-              <span className={styles.emoji}><FilmIcon size={48} color="#6366f1" /></span>
+              <span className={styles.emoji}><FilmIcon size={48} color="#D4AF37" /></span>
               <h2 className={styles.endTitle}>The End</h2>
               <p className={styles.endSubtitle}>Created with HALCYON-Cinema</p>
               <button onClick={() => goToScene(-1)} className={styles.replayButton}>
