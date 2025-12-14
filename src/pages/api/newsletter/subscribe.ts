@@ -80,7 +80,6 @@ async function initNewsletterTable(): Promise<void> {
  *
  * @param req - Next.js API request object
  * @param res - Next.js API response object
- * @returns JSON response with success status and message/error
  *
  * @example
  * ```typescript
@@ -97,34 +96,31 @@ async function initNewsletterTable(): Promise<void> {
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<SubscribeResponse>
-): Promise<void> {
+) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    res.status(405).json({
+    return res.status(405).json({
       success: false,
       error: `Method ${req.method} not allowed`
     });
-    return;
   }
 
   const { email, source } = req.body;
 
   if (!email || typeof email !== 'string') {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       error: 'Email is required'
     });
-    return;
   }
 
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       error: 'Invalid email format'
     });
-    return;
   }
 
   try {
@@ -132,11 +128,10 @@ export default async function handler(
 
     // Return 503 if database is unavailable (don't silently succeed)
     if (!isPostgresAvailable()) {
-      res.status(503).json({
+      return res.status(503).json({
         success: false,
         error: 'Newsletter service temporarily unavailable'
       });
-      return;
     }
 
     // Validate and sanitize source parameter
@@ -153,13 +148,13 @@ export default async function handler(
       [email, sanitizedSource]
     );
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'Successfully subscribed to the newsletter!'
     });
   } catch (error) {
     console.error('[newsletter] Subscription error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to subscribe. Please try again.'
     });
