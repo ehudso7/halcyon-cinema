@@ -195,12 +195,78 @@
 }
 
 .chapterTag {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem 0.375rem 0.75rem;
   background: rgba(var(--color-primary-rgb), 0.2);
   border-radius: 20px;
   color: #a5b4fc;
   font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.chapterTag:hover {
+  background: rgba(var(--color-primary-rgb), 0.3);
+}
+
+.chapterTagText {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapterTagActions {
+  display: flex;
+  gap: 0.125rem;
+}
+
+.chapterTagBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chapterTagBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.chapterTagBtn.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* Chapter editing inline */
+.chapterTagEdit {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.chapterTagInput {
+  width: 120px;
+  padding: 0.25rem 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.5);
+  border-radius: 4px;
+  color: white;
+  font-size: 0.8rem;
+}
+
+.chapterTagInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
 }
 
 /* Chapter Title Input */
@@ -960,6 +1026,250 @@
   border-radius: 6px;
 }
 
+/* Duplicate Warning Popup */
+.duplicateWarning {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1rem;
+}
+
+.duplicateWarningContent {
+  background: linear-gradient(180deg, #2a1a10 0%, #1a1510 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  border-radius: 16px;
+  padding: 1.5rem;
+  max-width: 450px;
+  width: 100%;
+  animation: warningSlideIn 0.3s ease;
+}
+
+@keyframes warningSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.duplicateWarningHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #fbbf24;
+  margin-bottom: 1rem;
+}
+
+.duplicateWarningHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.duplicateWarningBody {
+  margin-bottom: 1.5rem;
+}
+
+.duplicateWarningBody p {
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.duplicateInfo {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.duplicateInfo strong {
+  display: block;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.duplicateInfo span {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+}
+
+.duplicateWarningActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.duplicateWarningActions button {
+  padding: 0.625rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proceedAnywayBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.proceedAnywayBtn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.cancelDuplicateBtn {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border: none;
+  color: white;
+}
+
+.cancelDuplicateBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.4);
+}
+
+/* Collapsible Chapters Section */
+.collapsibleHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 0.5rem;
+}
+
+.collapsibleHeader:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.collapsibleHeaderContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.collapsibleChevron {
+  transition: transform 0.3s ease;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.collapsibleChevron.open {
+  transform: rotate(180deg);
+}
+
+.collapsibleContent {
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.collapsibleContent.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+}
+
+.collapsibleContent.expanded {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+/* AI Assist Wrapper */
+.inputWithAI {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.inputWithAI .titleInput {
+  flex: 1;
+}
+
+/* Enhanced Primary Button */
+.primaryBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  transform: translateY(0);
+}
+
+.primaryBtn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(var(--color-primary-rgb), 0.4);
+}
+
+.primaryBtn:hover:not(:disabled)::before {
+  left: 100%;
+}
+
+.primaryBtn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.3);
+}
+
+.primaryBtn:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* No chapter limit indicator */
+.noLimitBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 6px;
+  color: #6ee7b7;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .modal {
@@ -1007,5 +1317,17 @@
   .actions button {
     width: 100%;
     justify-content: center;
+  }
+
+  .inputWithAI {
+    flex-direction: column;
+  }
+
+  .duplicateWarningActions {
+    flex-direction: column;
+  }
+
+  .duplicateWarningActions button {
+    width: 100%;
   }
 }

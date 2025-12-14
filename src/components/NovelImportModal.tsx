@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, type DragEvent, type ChangeEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, type DragEvent, type ChangeEvent } from 'react';
 import {
   DocumentIcon,
   UsersIcon,
@@ -10,8 +10,14 @@ import {
   UploadIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  TrashIcon,
+  EditIcon,
+  AlertIcon,
+  ChevronDownIcon,
 } from './Icons';
 import styles from './NovelImportModal.module.css';
+import AIAssistButton from './AIAssistButton';
+import DuplicateDetector, { useDuplicateDetection } from './DuplicateDetector';
 
 // Types
 interface DetectedChapter {
@@ -97,6 +103,7 @@ interface SequentialChapter {
   title: string;
   content: string;
   wordCount: number;
+  contentHash: string;
   analysis?: ChapterAnalysis;
 }
 
@@ -113,6 +120,40 @@ function deduplicateTraits(existingTraits: string[], newTraits: string[]): strin
       }
     });
   return Array.from(traitMap.values());
+}
+
+/**
+ * Generate a simple hash for content to detect duplicate uploads.
+ * Uses a fast non-cryptographic hash suitable for comparison.
+ */
+function generateContentHash(content: string): string {
+  const normalized = content.toLowerCase().replace(/\s+/g, ' ').trim();
+  let hash = 0;
+  for (let i = 0; i < Math.min(normalized.length, 10000); i++) {
+    const char = normalized.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  // Include length for additional uniqueness
+  return `${hash.toString(16)}-${normalized.length}`;
+}
+
+/**
+ * Calculate similarity between two content strings for duplicate detection.
+ * Returns value between 0 and 1.
+ */
+function calculateContentSimilarity(content1: string, content2: string): number {
+  const words1 = new Set(content1.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+  const words2 = new Set(content2.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+
+  if (words1.size === 0 || words2.size === 0) return 0;
+
+  let overlap = 0;
+  words1.forEach(word => {
+    if (words2.has(word)) overlap++;
+  });
+
+  return overlap / Math.max(words1.size, words2.size);
 }
 
 const GENRES = [
@@ -206,6 +247,37 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
 
   // Review tab state
   const [reviewTab, setReviewTab] = useState<'characters' | 'locations' | 'scenes' | 'lore'>('characters');
+
+  // Chapter management state (edit/remove)
+  const [editingChapterIndex, setEditingChapterIndex] = useState<number | null>(null);
+  const [editingChapterTitle, setEditingChapterTitle] = useState('');
+  const [chaptersExpanded, setChaptersExpanded] = useState(true);
+
+  // Duplicate upload detection
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    isOpen: boolean;
+    existingChapter: SequentialChapter | null;
+    similarity: number;
+  }>({ isOpen: false, existingChapter: null, similarity: 0 });
+
+  // Track content hashes for duplicate detection
+  const contentHashes = useMemo(() => {
+    return new Set(sequentialChapters.map(ch => ch.contentHash));
+  }, [sequentialChapters]);
+
+  // Duplicate detection for extracted content
+  const characterDuplicates = useDuplicateDetection(
+    allCharacters.map(c => ({ ...c, type: 'character' as const })),
+    'character'
+  );
+  const locationDuplicates = useDuplicateDetection(
+    allLocations.map(l => ({ ...l, type: 'location' as const })),
+    'location'
+  );
+  const loreDuplicates = useDuplicateDetection(
+    allLore.map(l => ({ ...l, type: 'lore' as const })),
+    'lore'
+  );
 
   // Reset on close
   useEffect(() => {
@@ -325,11 +397,23 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
       return;
     }
 
+    // Check for duplicate upload
+    const duplicateCheck = checkForDuplicateUpload(content);
+    if (duplicateCheck.isDuplicate && duplicateCheck.existingChapter) {
+      setDuplicateWarning({
+        isOpen: true,
+        existingChapter: duplicateCheck.existingChapter,
+        similarity: duplicateCheck.similarity,
+      });
+      return;
+    }
+
     setIsAnalyzingSequential(true);
     setError('');
 
     const chapterIndex = sequentialChapters.length;
     const wordCount = content.split(/\s+/).filter(w => w.length > 0).length;
+    const contentHash = generateContentHash(content);
 
     try {
       // Get existing characters and locations for context
@@ -365,6 +449,7 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
         title: currentChapterTitle,
         content,
         wordCount,
+        contentHash,
       };
 
       // Process characters - merge with existing
@@ -519,6 +604,121 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
     setFilename('');
     setError('');
   };
+
+  // Check for duplicate upload before analyzing
+  const checkForDuplicateUpload = useCallback((newContent: string): { isDuplicate: boolean; existingChapter: SequentialChapter | null; similarity: number } => {
+    const newHash = generateContentHash(newContent);
+
+    // Check exact hash match first
+    if (contentHashes.has(newHash)) {
+      const existing = sequentialChapters.find(ch => ch.contentHash === newHash);
+      return { isDuplicate: true, existingChapter: existing || null, similarity: 1 };
+    }
+
+    // Check content similarity for fuzzy matching
+    for (const chapter of sequentialChapters) {
+      const similarity = calculateContentSimilarity(chapter.content, newContent);
+      if (similarity > 0.8) {
+        return { isDuplicate: true, existingChapter: chapter, similarity };
+      }
+    }
+
+    return { isDuplicate: false, existingChapter: null, similarity: 0 };
+  }, [contentHashes, sequentialChapters]);
+
+  // Remove a chapter from sequential mode
+  const removeChapter = useCallback((index: number) => {
+    setSequentialChapters(prev => {
+      const chapter = prev.find(ch => ch.index === index);
+      if (chapter) {
+        // Update total word count
+        setTotalWordCount(wc => wc - chapter.wordCount);
+      }
+      return prev.filter(ch => ch.index !== index).map((ch, i) => ({ ...ch, index: i }));
+    });
+
+    // Also remove associated analysis, characters, locations, scenes, lore
+    setChapterAnalyses(prev => prev.filter(a => a.index !== index));
+
+    // Note: Full cleanup of characters/locations/scenes/lore linked to this chapter
+    // would require more complex logic - for now we keep them as they may be referenced elsewhere
+  }, []);
+
+  // Edit a chapter title
+  const startEditingChapter = useCallback((index: number) => {
+    const chapter = sequentialChapters.find(ch => ch.index === index);
+    if (chapter) {
+      setEditingChapterIndex(index);
+      setEditingChapterTitle(chapter.title);
+    }
+  }, [sequentialChapters]);
+
+  const saveChapterEdit = useCallback(() => {
+    if (editingChapterIndex === null || !editingChapterTitle.trim()) return;
+
+    setSequentialChapters(prev =>
+      prev.map(ch =>
+        ch.index === editingChapterIndex
+          ? { ...ch, title: editingChapterTitle.trim() }
+          : ch
+      )
+    );
+
+    setChapterAnalyses(prev =>
+      prev.map(a =>
+        a.index === editingChapterIndex
+          ? { ...a, title: editingChapterTitle.trim() }
+          : a
+      )
+    );
+
+    setEditingChapterIndex(null);
+    setEditingChapterTitle('');
+  }, [editingChapterIndex, editingChapterTitle]);
+
+  const cancelChapterEdit = useCallback(() => {
+    setEditingChapterIndex(null);
+    setEditingChapterTitle('');
+  }, []);
+
+  // Handle duplicate merge for extracted content
+  const handleMergeCharacters = useCallback((keepId: string, removeIds: string[]) => {
+    setAllCharacters(prev => prev.filter(c => !removeIds.includes(c.id)));
+  }, []);
+
+  const handleMergeLocations = useCallback((keepId: string, removeIds: string[]) => {
+    setAllLocations(prev => prev.filter(l => !removeIds.includes(l.id)));
+  }, []);
+
+  const handleMergeLore = useCallback((keepId: string, removeIds: string[]) => {
+    setAllLore(prev => prev.filter(l => !removeIds.includes(l.id)));
+  }, []);
+
+  const handleRemoveCharacter = useCallback((id: string) => {
+    setAllCharacters(prev => prev.filter(c => c.id !== id));
+  }, []);
+
+  const handleRemoveLocation = useCallback((id: string) => {
+    setAllLocations(prev => prev.filter(l => l.id !== id));
+  }, []);
+
+  const handleRemoveLore = useCallback((id: string) => {
+    setAllLore(prev => prev.filter(l => l.id !== id));
+  }, []);
+
+  // Dismiss duplicate warning and proceed anyway
+  const dismissDuplicateWarning = useCallback(() => {
+    setDuplicateWarning({ isOpen: false, existingChapter: null, similarity: 0 });
+  }, []);
+
+  // Handle AI suggestion for title
+  const handleApplyTitleSuggestion = useCallback((suggestion: string) => {
+    setCurrentChapterTitle(suggestion);
+  }, []);
+
+  const handleApplyNovelTitleSuggestion = useCallback((suggestion: string) => {
+    setNovelTitle(suggestion);
+  }, []);
 
   // Analyze chapters
   const analyzeChapters = async () => {
@@ -859,16 +1059,80 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
             {/* Progress indicator for sequential mode */}
             {importMode === 'sequential' && sequentialChapters.length > 0 && (
               <div className={styles.sequentialProgress}>
-                <div className={styles.progressHeader}>
-                  <span>{sequentialChapters.length} chapter{sequentialChapters.length !== 1 ? 's' : ''} added</span>
-                  <span>{totalWordCount.toLocaleString()} total words</span>
-                </div>
-                <div className={styles.chapterTags}>
-                  {sequentialChapters.map(ch => (
-                    <span key={ch.index} className={styles.chapterTag}>
-                      {ch.title}
+                <button
+                  type="button"
+                  className={styles.collapsibleHeader}
+                  onClick={() => setChaptersExpanded(!chaptersExpanded)}
+                >
+                  <div className={styles.collapsibleHeaderContent}>
+                    <span>{sequentialChapters.length} chapter{sequentialChapters.length !== 1 ? 's' : ''} added</span>
+                    <span className={styles.noLimitBadge}>
+                      <CheckCircleIcon size={12} />
+                      No limit
                     </span>
-                  ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+                      {totalWordCount.toLocaleString()} words
+                    </span>
+                    <ChevronDownIcon
+                      size={18}
+                      className={`${styles.collapsibleChevron} ${chaptersExpanded ? styles.open : ''}`}
+                    />
+                  </div>
+                </button>
+                <div className={`${styles.collapsibleContent} ${chaptersExpanded ? styles.expanded : styles.collapsed}`}>
+                  <div className={styles.chapterTags}>
+                    {sequentialChapters.map(ch => (
+                      <span key={ch.index} className={styles.chapterTag}>
+                        {editingChapterIndex === ch.index ? (
+                          <div className={styles.chapterTagEdit}>
+                            <input
+                              type="text"
+                              value={editingChapterTitle}
+                              onChange={e => setEditingChapterTitle(e.target.value)}
+                              className={styles.chapterTagInput}
+                              autoFocus
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') saveChapterEdit();
+                                if (e.key === 'Escape') cancelChapterEdit();
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className={styles.chapterTagBtn}
+                              onClick={saveChapterEdit}
+                              title="Save"
+                            >
+                              <CheckCircleIcon size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <span className={styles.chapterTagText}>{ch.title}</span>
+                            <div className={styles.chapterTagActions}>
+                              <button
+                                type="button"
+                                className={styles.chapterTagBtn}
+                                onClick={() => startEditingChapter(ch.index)}
+                                title="Edit title"
+                              >
+                                <EditIcon size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                className={`${styles.chapterTagBtn} ${styles.danger}`}
+                                onClick={() => removeChapter(ch.index)}
+                                title="Remove chapter"
+                              >
+                                <TrashIcon size={12} />
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
@@ -877,13 +1141,23 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
             {importMode === 'sequential' && (
               <div className={styles.chapterTitleInput}>
                 <label>Chapter Title</label>
-                <input
-                  type="text"
-                  value={currentChapterTitle}
-                  onChange={e => setCurrentChapterTitle(e.target.value)}
-                  placeholder={`e.g., ${sequentialChapters.length === 0 ? 'Prologue' : `Chapter ${sequentialChapters.length + 1}`}`}
-                  className={styles.titleInput}
-                />
+                <div className={styles.inputWithAI}>
+                  <input
+                    type="text"
+                    value={currentChapterTitle}
+                    onChange={e => setCurrentChapterTitle(e.target.value)}
+                    placeholder={`e.g., ${sequentialChapters.length === 0 ? 'Prologue' : `Chapter ${sequentialChapters.length + 1}`}`}
+                    className={styles.titleInput}
+                  />
+                  <AIAssistButton
+                    fieldName="Chapter Title"
+                    currentValue={currentChapterTitle}
+                    context={content.substring(0, 500)}
+                    onApply={handleApplyTitleSuggestion}
+                    size="small"
+                    position="right"
+                  />
+                </div>
               </div>
             )}
 
@@ -891,13 +1165,23 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
             {importMode === 'sequential' && sequentialChapters.length === 0 && (
               <div className={styles.chapterTitleInput}>
                 <label>Novel Title (optional)</label>
-                <input
-                  type="text"
-                  value={novelTitle}
-                  onChange={e => setNovelTitle(e.target.value)}
-                  placeholder="My Novel"
-                  className={styles.titleInput}
-                />
+                <div className={styles.inputWithAI}>
+                  <input
+                    type="text"
+                    value={novelTitle}
+                    onChange={e => setNovelTitle(e.target.value)}
+                    placeholder="My Novel"
+                    className={styles.titleInput}
+                  />
+                  <AIAssistButton
+                    fieldName="Novel Title"
+                    currentValue={novelTitle}
+                    context={content.substring(0, 500)}
+                    onApply={handleApplyNovelTitleSuggestion}
+                    size="small"
+                    position="right"
+                  />
+                </div>
               </div>
             )}
 
@@ -1167,6 +1451,35 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
               <button onClick={() => selectAll(reviewTab, false)}>Deselect All</button>
             </div>
 
+            {/* Duplicate Detection Alerts */}
+            {reviewTab === 'characters' && characterDuplicates.hasDuplicates && (
+              <DuplicateDetector
+                items={allCharacters.map(c => ({ ...c, type: 'character' as const }))}
+                type="character"
+                onMerge={handleMergeCharacters}
+                onRemove={handleRemoveCharacter}
+                onDismiss={() => {}}
+              />
+            )}
+            {reviewTab === 'locations' && locationDuplicates.hasDuplicates && (
+              <DuplicateDetector
+                items={allLocations.map(l => ({ ...l, type: 'location' as const }))}
+                type="location"
+                onMerge={handleMergeLocations}
+                onRemove={handleRemoveLocation}
+                onDismiss={() => {}}
+              />
+            )}
+            {reviewTab === 'lore' && loreDuplicates.hasDuplicates && (
+              <DuplicateDetector
+                items={allLore.map(l => ({ ...l, type: 'lore' as const }))}
+                type="lore"
+                onMerge={handleMergeLore}
+                onRemove={handleRemoveLore}
+                onDismiss={() => {}}
+              />
+            )}
+
             <div className={styles.reviewContent}>
               {reviewTab === 'characters' && (
                 <div className={styles.itemGrid}>
@@ -1411,6 +1724,52 @@ export default function NovelImportModal({ isOpen, onClose, onComplete }: NovelI
           </div>
         )}
       </div>
+
+      {/* Duplicate Upload Warning Popup */}
+      {duplicateWarning.isOpen && duplicateWarning.existingChapter && (
+        <div className={styles.duplicateWarning} onClick={dismissDuplicateWarning}>
+          <div className={styles.duplicateWarningContent} onClick={e => e.stopPropagation()}>
+            <div className={styles.duplicateWarningHeader}>
+              <AlertIcon size={24} />
+              <h3>Duplicate Content Detected</h3>
+            </div>
+            <div className={styles.duplicateWarningBody}>
+              <p>
+                This content appears to be {Math.round(duplicateWarning.similarity * 100)}% similar
+                to an existing chapter:
+              </p>
+              <div className={styles.duplicateInfo}>
+                <strong>{duplicateWarning.existingChapter.title}</strong>
+                <span>{duplicateWarning.existingChapter.wordCount.toLocaleString()} words</span>
+              </div>
+            </div>
+            <div className={styles.duplicateWarningActions}>
+              <button
+                type="button"
+                className={styles.proceedAnywayBtn}
+                onClick={() => {
+                  dismissDuplicateWarning();
+                  // Force proceed by calling the analysis without duplicate check
+                  setIsAnalyzingSequential(true);
+                }}
+              >
+                Add Anyway
+              </button>
+              <button
+                type="button"
+                className={styles.cancelDuplicateBtn}
+                onClick={() => {
+                  dismissDuplicateWarning();
+                  setContent('');
+                  setFilename('');
+                }}
+              >
+                Cancel & Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
