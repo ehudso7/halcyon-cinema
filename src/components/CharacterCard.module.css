@@ -265,7 +265,7 @@
 
 .compactCard.selected {
   border-color: var(--color-primary);
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .compactImage {

@@ -89,7 +89,7 @@
   font-size: 0.75rem;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(var(--color-primary-rgb), 0.15);
   color: var(--color-primary);
   font-weight: 500;
 }
@@ -440,7 +440,7 @@
   font-size: 0.75rem;
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(var(--color-primary-rgb), 0.15);
   color: var(--color-primary);
 }
 
@@ -529,7 +529,7 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), #8b5cf6);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
   color: white;
   font-size: 1.25rem;
   font-weight: 700;
@@ -593,7 +593,7 @@
   background: var(--color-surface);
   padding: 12px;
   border-radius: 8px;
-  border-left: 3px solid #8b5cf6;
+  border-left: 3px solid var(--color-primary-light);
 }
 
 .voiceStyle {
@@ -625,8 +625,8 @@
   font-size: 0.8rem;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(139, 92, 246, 0.15);
-  color: #a78bfa;
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-primary-light);
   font-weight: 500;
 }
 
@@ -799,7 +799,7 @@
   font-size: 0.8rem;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(var(--color-primary-rgb), 0.15);
   color: var(--color-primary);
   font-weight: 500;
 }
@@ -808,8 +808,8 @@
   font-size: 0.8rem;
   padding: 6px 14px;
   border-radius: 999px;
-  background: rgba(139, 92, 246, 0.15);
-  color: #a78bfa;
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-primary-light);
 }
 
 /* Empty State */

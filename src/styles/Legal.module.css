@@ -88,7 +88,7 @@
 }
 
 .tocLink.active {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--color-primary);
   font-weight: 500;
 }
@@ -134,7 +134,7 @@
 .headerBadge {
   display: inline-block;
   padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--color-primary);
   border-radius: 20px;
   font-size: 0.75rem;
@@ -210,8 +210,8 @@
 .highlight {
   display: flex;
   gap: 16px;
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.1), rgba(var(--color-primary-rgb), 0.1));
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
   border-radius: 12px;
   padding: 20px;
   margin: 16px 0;
@@ -224,7 +224,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.2);
   border-radius: 10px;
   color: var(--color-primary);
 }
@@ -338,7 +338,7 @@
 
 .link:hover {
   color: var(--color-primary-hover);
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .separator {
@@ -357,7 +357,7 @@
   border: none;
   color: white;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 20px rgba(var(--color-primary-rgb), 0.4);
   z-index: 100;
   display: flex;
   align-items: center;
@@ -368,7 +368,7 @@
 
 .backToTop:hover {
   transform: translateY(-4px);
-  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5);
+  box-shadow: 0 6px 24px rgba(var(--color-primary-rgb), 0.5);
 }
 
 @keyframes fadeIn {

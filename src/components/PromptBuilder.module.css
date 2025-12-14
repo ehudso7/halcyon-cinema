@@ -66,7 +66,7 @@
 
 .contentTypeActive {
   border-color: var(--color-primary);
-  background-color: rgba(99, 102, 241, 0.1);
+  background-color: rgba(var(--color-primary-rgb), 0.1);
   color: var(--color-text);
 }
 
@@ -93,7 +93,7 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  background: linear-gradient(135deg, var(--color-primary), #6366f1);
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-light));
   color: white;
   font-size: 0.65rem;
   font-weight: 600;

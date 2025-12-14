@@ -1,6 +1,6 @@
 .container {
-  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.1), rgba(var(--color-primary-rgb), 0.15));
+  border: 1px solid rgba(var(--color-primary-rgb), 0.3);
   border-radius: 16px;
   padding: 24px;
   margin: 24px 0;
@@ -43,7 +43,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.2);
   border-radius: 12px;
 }
 
@@ -58,7 +58,7 @@
 .spinner {
   width: 24px;
   height: 24px;
-  border: 3px solid rgba(99, 102, 241, 0.3);
+  border: 3px solid rgba(var(--color-primary-rgb), 0.3);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -127,7 +127,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light), #F4D03F);
   border-radius: 4px;
   transition: width 0.3s ease;
   position: relative;
@@ -169,7 +169,7 @@
   transform: translate(-50%, -50%);
   width: 20px;
   height: 20px;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.6), transparent 70%);
+  background: radial-gradient(circle, rgba(var(--color-primary-rgb), 0.6), transparent 70%);
   border-radius: 50%;
   pointer-events: none;
   transition: left 0.3s ease;

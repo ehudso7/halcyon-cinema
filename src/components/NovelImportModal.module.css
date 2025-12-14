@@ -13,7 +13,7 @@
 
 .modal {
   background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
-  border: 1px solid rgba(99, 102, 241, 0.2);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
   border-radius: 16px;
   width: 100%;
   max-width: 900px;
@@ -54,9 +54,9 @@
 }
 
 .stepDot.active {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: #6366f1;
-  color: #6366f1;
+  background: rgba(var(--color-primary-rgb), 0.2);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .stepDot.completed {
@@ -86,7 +86,7 @@
 }
 
 .closeButton:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -147,12 +147,12 @@
 }
 
 .modeBtn.active {
-  background: rgba(99, 102, 241, 0.15);
-  border-color: #6366f1;
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border-color: var(--color-primary);
 }
 
 .modeBtn:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -173,8 +173,8 @@
 
 /* Sequential Progress */
 .sequentialProgress {
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.3);
   border-radius: 12px;
   padding: 1rem 1.25rem;
   margin-bottom: 1.5rem;
@@ -197,7 +197,7 @@
 .chapterTag {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.2);
   border-radius: 20px;
   color: #a5b4fc;
   font-size: 0.8rem;
@@ -227,7 +227,7 @@
 
 .titleInput:focus {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(var(--color-primary-rgb), 0.5);
 }
 
 .titleInput::placeholder {
@@ -236,18 +236,18 @@
 
 /* Upload Section */
 .dropZone {
-  border: 2px dashed rgba(99, 102, 241, 0.4);
+  border: 2px dashed rgba(var(--color-primary-rgb), 0.4);
   border-radius: 12px;
   padding: 3rem 2rem;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(var(--color-primary-rgb), 0.05);
 }
 
 .dropZone:hover {
-  border-color: #6366f1;
-  background: rgba(99, 102, 241, 0.1);
+  border-color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .dropZone.uploading {
@@ -301,15 +301,15 @@
 }
 
 .changeFile:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 3px solid rgba(99, 102, 241, 0.2);
-  border-top-color: #6366f1;
+  border: 3px solid rgba(var(--color-primary-rgb), 0.2);
+  border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -357,7 +357,7 @@
 
 .pasteArea:focus {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(var(--color-primary-rgb), 0.5);
 }
 
 .pasteArea::placeholder {
@@ -396,7 +396,7 @@
 
 .cancelBtn:focus-visible,
 .backBtn:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -405,7 +405,7 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
   border: none;
   border-radius: 8px;
   color: white;
@@ -417,7 +417,7 @@
 
 .primaryBtn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.4);
 }
 
 .primaryBtn:focus-visible {
@@ -474,7 +474,7 @@
 .actTitle {
   padding: 1rem 1.25rem;
   margin: 0;
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: #a5b4fc;
   font-size: 0.9rem;
   font-weight: 600;
@@ -504,7 +504,7 @@
   margin-top: 0.25rem;
   width: 18px;
   height: 18px;
-  accent-color: #6366f1;
+  accent-color: var(--color-primary);
 }
 
 .chapterInfo {
@@ -563,7 +563,7 @@
 .pulseRing {
   position: absolute;
   inset: 0;
-  border: 2px solid #6366f1;
+  border: 2px solid var(--color-primary);
   border-radius: 50%;
   animation: pulse 2s ease-out infinite;
 }
@@ -601,7 +601,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light));
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -650,13 +650,13 @@
 }
 
 .reviewTab.active {
-  background: rgba(99, 102, 241, 0.2);
-  border-color: #6366f1;
+  background: rgba(var(--color-primary-rgb), 0.2);
+  border-color: var(--color-primary);
   color: white;
 }
 
 .reviewTab:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -682,7 +682,7 @@
 }
 
 .selectionActions button:focus-visible {
-  outline: 2px solid #6366f1;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -717,13 +717,13 @@
 }
 
 .itemCard.selected {
-  border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(var(--color-primary-rgb), 0.5);
+  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .itemCard input[type="checkbox"] {
   margin-top: 0.25rem;
-  accent-color: #6366f1;
+  accent-color: var(--color-primary);
 }
 
 .itemCardContent {
@@ -740,7 +740,7 @@
 .itemRole {
   display: inline-block;
   padding: 0.125rem 0.5rem;
-  background: rgba(99, 102, 241, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.2);
   color: #a5b4fc;
   border-radius: 4px;
   font-size: 0.75rem;
@@ -784,13 +784,13 @@
 }
 
 .sceneItem.selected {
-  border-color: rgba(99, 102, 241, 0.5);
-  background: rgba(99, 102, 241, 0.1);
+  border-color: rgba(var(--color-primary-rgb), 0.5);
+  background: rgba(var(--color-primary-rgb), 0.1);
 }
 
 .sceneItem input[type="checkbox"] {
   margin-top: 0.25rem;
-  accent-color: #6366f1;
+  accent-color: var(--color-primary);
 }
 
 .sceneContent {
@@ -874,7 +874,7 @@
 
 .optionGroup select:focus {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.5);
+  border-color: rgba(var(--color-primary-rgb), 0.5);
 }
 
 .generationOptions {
@@ -901,7 +901,7 @@
 
 .generationOption input[type="checkbox"] {
   margin-top: 0.25rem;
-  accent-color: #6366f1;
+  accent-color: var(--color-primary);
   width: 18px;
   height: 18px;
 }
@@ -924,8 +924,8 @@
 
 .creditsSummary {
   padding: 1.5rem;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.3);
   border-radius: 12px;
 }
 

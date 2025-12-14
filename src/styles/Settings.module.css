@@ -216,11 +216,11 @@
 
 .themeOption:hover {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(99, 102, 241, 0.3);
+  border-color: rgba(var(--color-primary-rgb), 0.3);
 }
 
 .themeOption.active {
-  background: rgba(99, 102, 241, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   border-color: var(--color-primary);
   color: var(--color-text);
 }
@@ -332,8 +332,8 @@
 }
 
 .linkItem:hover {
-  background: rgba(99, 102, 241, 0.1);
-  border-color: rgba(99, 102, 241, 0.3);
+  background: rgba(var(--color-primary-rgb), 0.1);
+  border-color: rgba(var(--color-primary-rgb), 0.3);
 }
 
 .linkItem svg {
