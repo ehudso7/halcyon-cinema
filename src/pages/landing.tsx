@@ -274,7 +274,8 @@ export default function LandingPage() {
       } else {
         setSubscribeError(data.error || 'Failed to subscribe. Please try again.');
       }
-    } catch {
+    } catch (error) {
+      console.error('[newsletter] Subscription error:', error);
       setSubscribeError('Failed to subscribe. Please try again.');
     } finally {
       setIsSubscribing(false);
@@ -732,19 +733,25 @@ export default function LandingPage() {
                 <span>Thanks for subscribing!</span>
               </div>
             ) : (
-              <form onSubmit={handleNewsletterSubmit} className={styles.newsletterForm}>
-                <input
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={styles.newsletterInput}
-                  required
-                />
-                <button type="submit" className={styles.newsletterBtn}>
-                  Subscribe
-                </button>
-              </form>
+              <>
+                <form onSubmit={handleNewsletterSubmit} className={styles.newsletterForm}>
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={styles.newsletterInput}
+                    disabled={isSubscribing}
+                    required
+                  />
+                  <button type="submit" className={styles.newsletterBtn} disabled={isSubscribing}>
+                    {isSubscribing ? 'Subscribing...' : 'Subscribe'}
+                  </button>
+                </form>
+                {subscribeError && (
+                  <p className={styles.newsletterError}>{subscribeError}</p>
+                )}
+              </>
             )}
           </div>
         </section>
