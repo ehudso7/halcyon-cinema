@@ -217,10 +217,29 @@ export default function LandingPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Track if device is mobile for disabling parallax
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Parallax scroll effect with RAF throttling and reduced-motion support
   useEffect(() => {
     // Guard for SSR
     if (typeof window === 'undefined') return;
+
+    // Skip parallax on mobile devices to prevent overlay issues
+    if (isMobile) return;
 
     // Check for reduced motion preference
     const prefersReducedMotion =
@@ -250,7 +269,7 @@ export default function LandingPage() {
         cancelAnimationFrame(rafId);
       }
     };
-  }, []);
+  }, [isMobile]);
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -328,9 +347,9 @@ export default function LandingPage() {
         <header
           ref={heroRef}
           className={styles.hero}
-          style={{ transform: `translateY(${scrollY * 0.3}px)` }}
+          style={isMobile ? undefined : { transform: `translateY(${scrollY * 0.3}px)` }}
         >
-          <div className={styles.heroContent} style={{ transform: `translateY(${scrollY * -0.1}px)` }}>
+          <div className={styles.heroContent} style={isMobile ? undefined : { transform: `translateY(${scrollY * -0.1}px)` }}>
             <div className={styles.badge}>
               <span className={styles.badgeDot} />
               Pioneering AI-Native Filmmaking
@@ -357,7 +376,7 @@ export default function LandingPage() {
               )}
             </div>
           </div>
-          <div className={styles.heroVisual} style={{ transform: `translateY(${scrollY * 0.15}px)` }}>
+          <div className={styles.heroVisual} style={isMobile ? undefined : { transform: `translateY(${scrollY * 0.15}px)` }}>
             <div className={styles.previewCard}>
               <div className={styles.previewHeader}>
                 <span className={styles.dot} style={{ background: '#ef4444' }} />
