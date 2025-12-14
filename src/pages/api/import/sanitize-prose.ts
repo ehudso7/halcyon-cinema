@@ -7,35 +7,11 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Common AI prose patterns to detect
-const AI_PROSE_PATTERNS = [
-  // Overly flowery transitions
-  /\b(furthermore|moreover|additionally|consequently|subsequently|hence|thus|therefore|accordingly)\b/gi,
-  // Generic intensifiers
-  /\b(truly|deeply|profoundly|incredibly|remarkably|undeniably|unquestionably)\b/gi,
-  // Cliché openings
-  /^(in today's|in this day and age|it is worth noting|it goes without saying|needless to say)/gim,
-  // Weak qualifiers
-  /\b(somewhat|rather|quite|fairly|relatively|approximately)\b/gi,
-  // AI-specific phrases
-  /\b(delve into|embark on|navigate through|foster|leverage|synergy|cutting-edge|state-of-the-art)\b/gi,
-  // Overused metaphors
-  /\b(tapestry of|fabric of|journey of|landscape of|realm of|essence of)\b/gi,
-  // Passive voice patterns
-  /\b(it can be seen|it should be noted|it is important to|it is essential to)\b/gi,
-  // Generic conclusions
-  /\b(in conclusion|to sum up|all in all|at the end of the day|when all is said and done)\b/gi,
-  // Overused adjectives
-  /\b(myriad|plethora|vast|immense|profound|intricate|multifaceted)\b/gi,
-  // AI-typical sentence starters
-  /^(this|these|however|additionally|furthermore|moreover|consequently)/gim,
-];
-
 // Categories of AI prose issues
 const ISSUE_CATEGORIES = {
   transitions: 'Overused transition words',
   intensifiers: 'Generic intensifiers',
-  cliches: 'Clichéd phrases',
+  cliches: 'Cliched phrases',
   qualifiers: 'Weak qualifiers',
   jargon: 'AI-specific jargon',
   metaphors: 'Overused metaphors',
@@ -43,6 +19,30 @@ const ISSUE_CATEGORIES = {
   conclusions: 'Generic conclusions',
   adjectives: 'Overused adjectives',
 } as const;
+
+// AI prose patterns with their associated categories
+const AI_PROSE_PATTERNS: Array<{ pattern: RegExp; category: keyof typeof ISSUE_CATEGORIES }> = [
+  // Overly flowery transitions
+  { pattern: /\b(furthermore|moreover|additionally|consequently|subsequently|hence|thus|therefore|accordingly)\b/gi, category: 'transitions' },
+  // Generic intensifiers
+  { pattern: /\b(truly|deeply|profoundly|incredibly|remarkably|undeniably|unquestionably)\b/gi, category: 'intensifiers' },
+  // Cliche openings
+  { pattern: /^(in today's|in this day and age|it is worth noting|it goes without saying|needless to say)/gim, category: 'cliches' },
+  // Weak qualifiers
+  { pattern: /\b(somewhat|rather|quite|fairly|relatively|approximately)\b/gi, category: 'qualifiers' },
+  // AI-specific phrases
+  { pattern: /\b(delve into|embark on|navigate through|foster|leverage|synergy|cutting-edge|state-of-the-art)\b/gi, category: 'jargon' },
+  // Overused metaphors
+  { pattern: /\b(tapestry of|fabric of|journey of|landscape of|realm of|essence of)\b/gi, category: 'metaphors' },
+  // Passive voice patterns
+  { pattern: /\b(it can be seen|it should be noted|it is important to|it is essential to)\b/gi, category: 'passive' },
+  // Generic conclusions
+  { pattern: /\b(in conclusion|to sum up|all in all|at the end of the day|when all is said and done)\b/gi, category: 'conclusions' },
+  // Overused adjectives
+  { pattern: /\b(myriad|plethora|vast|immense|profound|intricate|multifaceted)\b/gi, category: 'adjectives' },
+  // AI-typical sentence starters (maps to transitions)
+  { pattern: /^(this|these|however|additionally|furthermore|moreover|consequently)/gim, category: 'transitions' },
+];
 
 interface AnalysisResult {
   originalText: string;
@@ -75,12 +75,12 @@ function analyzeForAIPatterns(text: string): AnalysisResult {
   let matchCount = 0;
 
   // Check each pattern
-  AI_PROSE_PATTERNS.forEach((pattern, index) => {
+  AI_PROSE_PATTERNS.forEach(({ pattern, category }) => {
+    // Create new regex to avoid lastIndex state issues with global flag
     const regex = new RegExp(pattern.source, pattern.flags);
     let match;
     while ((match = regex.exec(text)) !== null) {
       matchCount++;
-      const category = Object.keys(ISSUE_CATEGORIES)[Math.floor(index / 1)] as keyof typeof ISSUE_CATEGORIES;
       issues.push({
         match: match[0],
         index: match.index,
