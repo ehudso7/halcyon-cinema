@@ -7,6 +7,9 @@ interface SubscribeResponse {
   error?: string;
 }
 
+// Valid source values for newsletter subscriptions
+const VALID_SOURCES = ['landing_page', 'footer', 'popup', 'settings'] as const;
+
 // Initialize newsletter subscribers table
 async function initNewsletterTable() {
   if (!isPostgresAvailable()) return;
@@ -19,11 +22,6 @@ async function initNewsletterTable() {
       unsubscribed_at TIMESTAMP WITH TIME ZONE,
       source VARCHAR(50) DEFAULT 'landing_page'
     )
-  `);
-
-  await query(`
-    CREATE INDEX IF NOT EXISTS idx_newsletter_email
-    ON newsletter_subscribers(email)
   `);
 }
 
@@ -60,16 +58,27 @@ export default async function handler(
   try {
     await initNewsletterTable();
 
-    if (isPostgresAvailable()) {
-      // Insert or update (re-subscribe if previously unsubscribed)
-      await query(
-        `INSERT INTO newsletter_subscribers (email, source)
-         VALUES (LOWER($1), $2)
-         ON CONFLICT (email)
-         DO UPDATE SET unsubscribed_at = NULL, subscribed_at = NOW()`,
-        [email, source || 'landing_page']
-      );
+    // Return 503 if database is unavailable (don't silently succeed)
+    if (!isPostgresAvailable()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Newsletter service temporarily unavailable'
+      });
     }
+
+    // Validate and sanitize source parameter
+    const sanitizedSource = typeof source === 'string' && VALID_SOURCES.includes(source as typeof VALID_SOURCES[number])
+      ? source
+      : 'landing_page';
+
+    // Insert or update (re-subscribe if previously unsubscribed)
+    await query(
+      `INSERT INTO newsletter_subscribers (email, source)
+       VALUES (LOWER($1), $2)
+       ON CONFLICT (email)
+       DO UPDATE SET unsubscribed_at = NULL, subscribed_at = NOW()`,
+      [email, sanitizedSource]
+    );
 
     return res.status(200).json({
       success: true,

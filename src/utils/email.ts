@@ -1,9 +1,8 @@
 /**
  * Email utility for sending transactional emails.
  *
- * Supports multiple providers:
+ * Supports the following providers:
  * - Resend (recommended): Set RESEND_API_KEY
- * - SMTP: Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
  * - Console logging (development): Default when no provider configured
  */
 
@@ -21,11 +20,25 @@ interface EmailResult {
 }
 
 /**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char] || char);
+}
+
+/**
  * Send an email using the configured provider.
  * Falls back to console logging in development if no provider is configured.
  */
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
-  const { to, subject, html, text } = options;
+  const { to, subject, html } = options;
 
   // Try Resend first (modern email API)
   if (process.env.RESEND_API_KEY) {
@@ -75,7 +88,12 @@ async function sendWithResend(options: EmailOptions): Promise<EmailResult> {
     });
 
     if (!response.ok) {
-      const error = await response.json();
+      let error: { message?: string } = { message: 'Failed to send email' };
+      try {
+        error = await response.json();
+      } catch (parseError) {
+        console.error('[email] Failed to parse error response:', parseError);
+      }
       console.error('[email] Resend API error:', error);
       return {
         success: false,
@@ -101,6 +119,10 @@ async function sendWithResend(options: EmailOptions): Promise<EmailResult> {
  * Generate password reset email HTML
  */
 export function getPasswordResetEmailHtml(resetUrl: string, userName?: string): string {
+  // Escape user-provided values to prevent XSS
+  const safeUserName = userName ? escapeHtml(userName) : null;
+  const safeResetUrl = escapeHtml(resetUrl);
+
   return `
 <!DOCTYPE html>
 <html>
@@ -117,7 +139,7 @@ export function getPasswordResetEmailHtml(resetUrl: string, userName?: string): 
           <!-- Header -->
           <tr>
             <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid #333;">
-              <h1 style="margin: 0; font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+              <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #D4AF37; background: linear-gradient(135deg, #D4AF37 0%, #F4D03F 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
                 HALCYON-Cinema
               </h1>
             </td>
@@ -130,7 +152,7 @@ export function getPasswordResetEmailHtml(resetUrl: string, userName?: string): 
                 Reset Your Password
               </h2>
               <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.6; color: #a0a0a0;">
-                ${userName ? `Hi ${userName},` : 'Hi there,'}<br><br>
+                ${safeUserName ? `Hi ${safeUserName},` : 'Hi there,'}<br><br>
                 We received a request to reset your password. Click the button below to create a new password. This link will expire in 1 hour.
               </p>
 
@@ -138,7 +160,7 @@ export function getPasswordResetEmailHtml(resetUrl: string, userName?: string): 
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding: 8px 0 24px;">
-                    <a href="${resetUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%); color: #0a0a0a; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 8px;">
+                    <a href="${safeResetUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #D4AF37 0%, #B8960C 100%); color: #0a0a0a; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 8px;">
                       Reset Password
                     </a>
                   </td>
@@ -150,7 +172,7 @@ export function getPasswordResetEmailHtml(resetUrl: string, userName?: string): 
               </p>
 
               <p style="margin: 0; font-size: 12px; color: #555; word-break: break-all;">
-                Or copy this link: ${resetUrl}
+                Or copy this link: ${safeResetUrl}
               </p>
             </td>
           </tr>
