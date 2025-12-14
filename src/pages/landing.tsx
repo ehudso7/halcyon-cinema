@@ -179,6 +179,8 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [subscribeError, setSubscribeError] = useState('');
   const [scrollY, setScrollY] = useState(0);
   const heroRef = useRef<HTMLElement>(null);
 
@@ -250,11 +252,32 @@ export default function LandingPage() {
     };
   }, []);
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setIsSubscribed(true);
-      setEmail('');
+    if (!email || isSubscribing) return;
+
+    setIsSubscribing(true);
+    setSubscribeError('');
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, source: 'landing_page' }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsSubscribed(true);
+        setEmail('');
+      } else {
+        setSubscribeError(data.error || 'Failed to subscribe. Please try again.');
+      }
+    } catch {
+      setSubscribeError('Failed to subscribe. Please try again.');
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
@@ -757,9 +780,9 @@ export default function LandingPage() {
                 </div>
                 <div className={styles.footerColumn}>
                   <h4>Connect</h4>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter</a>
-                  <a href="https://discord.com" target="_blank" rel="noopener noreferrer">Discord</a>
-                  <a href="https://github.com" target="_blank" rel="noopener noreferrer">GitHub</a>
+                  <a href="https://twitter.com/halcyon_cinema" target="_blank" rel="noopener noreferrer">Twitter</a>
+                  <a href="https://discord.gg/halcyon-cinema" target="_blank" rel="noopener noreferrer">Discord</a>
+                  <a href="https://github.com/halcyon-cinema" target="_blank" rel="noopener noreferrer">GitHub</a>
                 </div>
               </div>
             </div>

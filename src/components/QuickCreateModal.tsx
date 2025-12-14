@@ -1,3 +1,25 @@
+/**
+ * QuickCreateModal - A streamlined project creation wizard.
+ *
+ * @description This component provides a guided workflow for quickly creating
+ * new cinematic projects with genre, mood, and scene count presets. It's designed
+ * to offer an alternative to the full ImportProjectModal for users who want a
+ * faster creation experience.
+ *
+ * @status Ready for integration - not yet wired up to main UI.
+ * To use: import and render in src/pages/index.tsx alongside ImportProjectModal.
+ *
+ * @example
+ * ```tsx
+ * import QuickCreateModal from '@/components/QuickCreateModal';
+ *
+ * <QuickCreateModal
+ *   isOpen={showQuickCreate}
+ *   onClose={() => setShowQuickCreate(false)}
+ *   onGenerate={handleQuickGenerate}
+ * />
+ * ```
+ */
 import { useState, useEffect, FormEvent } from 'react';
 import { DocumentIcon, UsersIcon, GlobeIcon, FilmIcon, PaletteIcon, SparklesIcon, CheckCircleIcon } from './Icons';
 import styles from './QuickCreateModal.module.css';

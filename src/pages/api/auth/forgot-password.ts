@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { randomBytes, createHash } from 'crypto';
 import { getUserByEmail, query, isPostgresAvailable } from '@/utils/db';
+import { sendEmail, getPasswordResetEmailHtml } from '@/utils/email';
 
 interface ForgotPasswordResponse {
   success: boolean;
@@ -90,22 +91,22 @@ export default async function handler(
         [user.id, tokenHash, expiresAt]
       );
 
-      // In production, send an email with the reset link
-      // For now, log it (development only)
+      // Generate the reset URL
       const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/auth/reset-password?token=${token}`;
 
-      console.log('[forgot-password] Reset link generated:', {
-        email: email.toLowerCase(),
-        resetUrl,
-        // Don't log token in production
+      // Send the password reset email
+      const emailResult = await sendEmail({
+        to: email.toLowerCase(),
+        subject: 'Reset your HALCYON-Cinema password',
+        html: getPasswordResetEmailHtml(resetUrl, user.name),
       });
 
-      // TODO: Implement actual email sending
-      // await sendEmail({
-      //   to: email,
-      //   subject: 'Reset your HALCYON-Cinema password',
-      //   html: `Click here to reset your password: ${resetUrl}`
-      // });
+      if (!emailResult.success) {
+        console.error('[forgot-password] Failed to send email:', emailResult.error);
+        // Don't reveal email sending failure to prevent enumeration
+      } else if (process.env.NODE_ENV === 'development') {
+        console.log('[forgot-password] Reset link generated:', { email: email.toLowerCase(), resetUrl });
+      }
     }
 
     // Always return success to prevent email enumeration

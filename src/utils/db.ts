@@ -521,7 +521,7 @@ export function isPostgresAvailable(): boolean {
 // ============================================================================
 
 /**
- * Retrieve a user by their email address.
+ * Retrieve a user by their email address, including Stripe and subscription fields.
  * Email comparison is case-insensitive.
  */
 export async function getUserByEmail(email: string): Promise<{
@@ -530,6 +530,10 @@ export async function getUserByEmail(email: string): Promise<{
   name: string;
   image: string | null;
   passwordHash: string | null;
+  stripeCustomerId: string | null;
+  creditsRemaining: number;
+  subscriptionTier: string;
+  subscriptionExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 } | null> {
@@ -538,7 +542,10 @@ export async function getUserByEmail(email: string): Promise<{
   await initializeTables();
 
   const result = await query(
-    'SELECT id, email, name, image, password_hash, created_at, updated_at FROM users WHERE LOWER(email) = LOWER($1)',
+    `SELECT id, email, name, image, password_hash, stripe_customer_id,
+            credits_remaining, subscription_tier, subscription_expires_at,
+            created_at, updated_at
+     FROM users WHERE LOWER(email) = LOWER($1)`,
     [email]
   );
 
@@ -551,13 +558,19 @@ export async function getUserByEmail(email: string): Promise<{
     name: row.name as string,
     image: row.image as string | null,
     passwordHash: row.password_hash as string | null,
+    stripeCustomerId: row.stripe_customer_id as string | null,
+    creditsRemaining: (row.credits_remaining as number) ?? 100,
+    subscriptionTier: (row.subscription_tier as string) ?? 'free',
+    subscriptionExpiresAt: row.subscription_expires_at
+      ? (row.subscription_expires_at as Date).toISOString()
+      : null,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
   };
 }
 
 /**
- * Retrieve a user by their unique ID.
+ * Retrieve a user by their unique ID, including Stripe and subscription fields.
  */
 export async function getUserById(id: string): Promise<{
   id: string;
@@ -565,6 +578,10 @@ export async function getUserById(id: string): Promise<{
   name: string;
   image: string | null;
   passwordHash: string | null;
+  stripeCustomerId: string | null;
+  creditsRemaining: number;
+  subscriptionTier: string;
+  subscriptionExpiresAt: string | null;
   createdAt: string;
   updatedAt: string;
 } | null> {
@@ -573,7 +590,10 @@ export async function getUserById(id: string): Promise<{
   await initializeTables();
 
   const result = await query(
-    'SELECT id, email, name, image, password_hash, created_at, updated_at FROM users WHERE id = $1::uuid',
+    `SELECT id, email, name, image, password_hash, stripe_customer_id,
+            credits_remaining, subscription_tier, subscription_expires_at,
+            created_at, updated_at
+     FROM users WHERE id = $1::uuid`,
     [id]
   );
 
@@ -586,6 +606,12 @@ export async function getUserById(id: string): Promise<{
     name: row.name as string,
     image: row.image as string | null,
     passwordHash: row.password_hash as string | null,
+    stripeCustomerId: row.stripe_customer_id as string | null,
+    creditsRemaining: (row.credits_remaining as number) ?? 100,
+    subscriptionTier: (row.subscription_tier as string) ?? 'free',
+    subscriptionExpiresAt: row.subscription_expires_at
+      ? (row.subscription_expires_at as Date).toISOString()
+      : null,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
   };

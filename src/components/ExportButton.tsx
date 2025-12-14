@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Project } from '@/types';
 import { downloadProjectPDF } from '@/utils/pdf-export';
+import { useToast } from './Toast';
 import styles from './ExportButton.module.css';
 
 interface ExportButtonProps {
@@ -11,9 +12,11 @@ interface ExportButtonProps {
 export default function ExportButton({ project, disabled }: ExportButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const { showError, showSuccess } = useToast();
 
   const handleExportZIP = () => {
     window.open(`/api/export/project/${project.id}`, '_blank');
+    showSuccess('ZIP export started');
     setIsOpen(false);
   };
 
@@ -24,9 +27,10 @@ export default function ExportButton({ project, disabled }: ExportButtonProps) {
         includePrompts: true,
         includeMetadata: true,
       });
+      showSuccess('PDF exported successfully');
     } catch (error) {
       console.error('PDF export failed:', error);
-      alert('Failed to export PDF. Please try again.');
+      showError('Failed to export PDF. Please try again.');
     } finally {
       setIsExporting(false);
       setIsOpen(false);
