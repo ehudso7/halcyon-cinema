@@ -1,26 +1,68 @@
 /**
- * Email utility for sending transactional emails.
+ * Email utility module for sending transactional emails.
  *
- * Supports the following providers:
- * - Resend (recommended): Set RESEND_API_KEY
- * - Console logging (development): Default when no provider configured
+ * This module provides email sending functionality with support for multiple providers:
+ * - **Resend** (recommended): Set `RESEND_API_KEY` environment variable
+ * - **Console logging** (development): Default fallback when no provider is configured
+ *
+ * @module utils/email
+ * @example
+ * ```typescript
+ * import { sendEmail, getPasswordResetEmailHtml } from '@/utils/email';
+ *
+ * const result = await sendEmail({
+ *   to: 'user@example.com',
+ *   subject: 'Welcome!',
+ *   html: '<h1>Hello</h1>',
+ * });
+ * ```
  */
 
+/**
+ * Options for sending an email.
+ * @interface EmailOptions
+ */
 interface EmailOptions {
+  /** Recipient email address */
   to: string;
+  /** Email subject line */
   subject: string;
+  /** HTML content of the email */
   html: string;
+  /** Optional plain text version (auto-generated from HTML if not provided) */
   text?: string;
 }
 
+/**
+ * Result of an email send operation.
+ * @interface EmailResult
+ */
 interface EmailResult {
+  /** Whether the email was sent successfully */
   success: boolean;
+  /** Message ID from the email provider (if successful) */
   messageId?: string;
+  /** Error message (if failed) */
   error?: string;
 }
 
 /**
- * Escape HTML special characters to prevent XSS
+ * Escapes HTML special characters to prevent XSS attacks.
+ *
+ * Converts the following characters to their HTML entity equivalents:
+ * - `&` → `&amp;`
+ * - `<` → `&lt;`
+ * - `>` → `&gt;`
+ * - `"` → `&quot;`
+ * - `'` → `&#x27;`
+ *
+ * @param text - The string to escape
+ * @returns The escaped string safe for HTML insertion
+ * @example
+ * ```typescript
+ * escapeHtml('<script>alert("xss")</script>')
+ * // Returns: '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;'
+ * ```
  */
 function escapeHtml(text: string): string {
   const map: Record<string, string> = {
@@ -34,8 +76,29 @@ function escapeHtml(text: string): string {
 }
 
 /**
- * Send an email using the configured provider.
- * Falls back to console logging in development if no provider is configured.
+ * Sends an email using the configured provider.
+ *
+ * The function checks for available email providers in the following order:
+ * 1. Resend API (if `RESEND_API_KEY` is set)
+ * 2. Console logging (in development mode)
+ * 3. Returns error (in production without provider)
+ *
+ * @param options - Email options including recipient, subject, and content
+ * @returns Promise resolving to the result of the send operation
+ * @example
+ * ```typescript
+ * const result = await sendEmail({
+ *   to: 'user@example.com',
+ *   subject: 'Hello',
+ *   html: '<p>Welcome!</p>',
+ * });
+ *
+ * if (result.success) {
+ *   console.log('Email sent:', result.messageId);
+ * } else {
+ *   console.error('Failed:', result.error);
+ * }
+ * ```
  */
 export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
   const { to, subject, html } = options;
@@ -65,8 +128,12 @@ export async function sendEmail(options: EmailOptions): Promise<EmailResult> {
 }
 
 /**
- * Send email using Resend API
+ * Sends an email using the Resend API.
+ *
+ * @param options - Email options including recipient, subject, and content
+ * @returns Promise resolving to the result of the send operation
  * @see https://resend.com/docs/api-reference/emails/send-email
+ * @internal
  */
 async function sendWithResend(options: EmailOptions): Promise<EmailResult> {
   const { to, subject, html, text } = options;
@@ -116,7 +183,27 @@ async function sendWithResend(options: EmailOptions): Promise<EmailResult> {
 }
 
 /**
- * Generate password reset email HTML
+ * Generates HTML content for a password reset email.
+ *
+ * Creates a branded, responsive HTML email with:
+ * - HALCYON-Cinema header with gold gradient branding
+ * - Personalized greeting (if userName provided)
+ * - Reset password button with the provided URL
+ * - Fallback plain text link
+ * - Footer with copyright
+ *
+ * All user-provided values are escaped to prevent XSS attacks.
+ *
+ * @param resetUrl - The password reset URL to include in the email
+ * @param userName - Optional user's name for personalized greeting
+ * @returns HTML string for the password reset email
+ * @example
+ * ```typescript
+ * const html = getPasswordResetEmailHtml(
+ *   'https://example.com/reset?token=abc123',
+ *   'John Doe'
+ * );
+ * ```
  */
 export function getPasswordResetEmailHtml(resetUrl: string, userName?: string): string {
   // Escape user-provided values to prevent XSS
