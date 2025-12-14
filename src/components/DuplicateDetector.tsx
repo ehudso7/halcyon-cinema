@@ -1,6 +1,12 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { AlertIcon, MergeIcon, TrashIcon, CheckCircleIcon } from './Icons';
 import styles from './DuplicateDetector.module.css';
+import {
+  getDismissedGroups,
+  recordMergeDecision,
+  recordDismissDecision,
+  recordDeleteDecision,
+} from '@/utils/duplicate-persistence';
 
 interface DuplicateItem {
   id: string;
@@ -24,6 +30,8 @@ interface DuplicateDetectorProps {
   onRemove: (id: string) => void;
   onDismiss: (groupKey: string) => void;
   similarityThreshold?: number;
+  /** Unique context ID for persisting decisions (e.g., project ID or import session ID) */
+  contextId?: string;
 }
 
 /**
@@ -114,9 +122,20 @@ export default function DuplicateDetector({
   onRemove,
   onDismiss,
   similarityThreshold = 0.7,
+  contextId,
 }: DuplicateDetectorProps) {
   const [dismissedGroups, setDismissedGroups] = useState<Set<string>>(new Set());
   const [selectedForMerge, setSelectedForMerge] = useState<Map<string, string>>(new Map());
+
+  // Load persisted dismissed groups on mount
+  useEffect(() => {
+    if (contextId) {
+      const persisted = getDismissedGroups(contextId);
+      if (persisted.size > 0) {
+        setDismissedGroups(persisted);
+      }
+    }
+  }, [contextId]);
 
   const duplicateGroups = useMemo(() => {
     const groups = findDuplicates(items, similarityThreshold);
@@ -126,9 +145,13 @@ export default function DuplicateDetector({
   const handleDismiss = useCallback(
     (groupKey: string) => {
       setDismissedGroups((prev) => new Set([...prev, groupKey]));
+      // Persist the dismiss decision
+      if (contextId) {
+        recordDismissDecision(contextId, groupKey);
+      }
       onDismiss(groupKey);
     },
-    [onDismiss]
+    [onDismiss, contextId]
   );
 
   const handleSelectPrimary = useCallback((groupKey: string, itemId: string) => {
@@ -141,15 +164,23 @@ export default function DuplicateDetector({
       const removeIds = group.items.filter((i) => i.id !== primaryId).map((i) => i.id);
       onMerge(primaryId, removeIds);
       setDismissedGroups((prev) => new Set([...prev, group.key]));
+      // Persist the merge decision
+      if (contextId) {
+        recordMergeDecision(contextId, group.key, primaryId, removeIds);
+      }
     },
-    [selectedForMerge, onMerge]
+    [selectedForMerge, onMerge, contextId]
   );
 
   const handleRemoveItem = useCallback(
     (itemId: string) => {
+      // Persist the delete decision
+      if (contextId) {
+        recordDeleteDecision(contextId, itemId);
+      }
       onRemove(itemId);
     },
-    [onRemove]
+    [onRemove, contextId]
   );
 
   if (duplicateGroups.length === 0) {

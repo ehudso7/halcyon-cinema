@@ -103,6 +103,8 @@
   max-width: 1200px;
   margin: 0 auto;
   position: relative;
+  z-index: 10;
+  isolation: isolate;
 }
 
 .heroContent {
@@ -215,6 +217,8 @@
   display: flex;
   justify-content: center;
   perspective: 1000px;
+  position: relative;
+  z-index: 5;
 }
 
 .previewCard {
@@ -227,6 +231,9 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(212, 175, 55, 0.1);
   transform: rotateY(-5deg) rotateX(2deg);
   transition: transform 0.5s ease;
+  position: relative;
+  z-index: 5;
+  isolation: isolate;
 }
 
 .previewCard:hover {
@@ -516,6 +523,9 @@
   background: linear-gradient(180deg, rgba(212, 175, 55, 0.03), transparent);
   border-top: 1px solid rgba(212, 175, 55, 0.1);
   border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
 }
 
 .socialProofContent {
@@ -531,6 +541,8 @@
 .stat {
   text-align: center;
   padding: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .statNumber {
@@ -1313,6 +1325,21 @@
 @media (max-width: 768px) {
   .navLinks {
     display: none;
+  }
+
+  .hero {
+    transform: none !important;
+    padding-bottom: 40px;
+  }
+
+  .heroContent,
+  .heroVisual {
+    transform: none !important;
+  }
+
+  .previewCard {
+    transform: none !important;
+    max-width: 100%;
   }
 
   .title {
