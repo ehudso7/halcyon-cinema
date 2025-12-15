@@ -1,6 +1,7 @@
 import React from 'react';
 import { LoreEntry } from '@/types';
 import { UserIcon, LocationIcon, CalendarIcon, CogIcon, FilmIcon } from './Icons';
+import ImageWithFallback from './ImageWithFallback';
 import styles from './LoreCard.module.css';
 
 type ViewMode = 'grid' | 'list';
@@ -70,7 +71,18 @@ export default function LoreCard({
             'aria-label': `View ${entry.name} details`,
           })}
         >
-          {React.createElement(TYPE_ICON_COMPONENTS[entry.type] || UserIcon, { size: 24, color: TYPE_COLORS[entry.type] })}
+          {entry.imageUrl ? (
+            <ImageWithFallback
+              src={entry.imageUrl}
+              alt={entry.name}
+              width={40}
+              height={40}
+              fallbackType="generic"
+              showExpiredMessage={false}
+            />
+          ) : (
+            React.createElement(TYPE_ICON_COMPONENTS[entry.type] || UserIcon, { size: 24, color: TYPE_COLORS[entry.type] })
+          )}
         </div>
 
         <div
@@ -174,7 +186,18 @@ export default function LoreCard({
             className={styles.typeIcon}
             style={{ backgroundColor: TYPE_COLORS[entry.type] + '20', color: TYPE_COLORS[entry.type] }}
           >
-            {React.createElement(TYPE_ICON_COMPONENTS[entry.type] || UserIcon, { size: 20, color: TYPE_COLORS[entry.type] })}
+            {entry.imageUrl ? (
+              <ImageWithFallback
+                src={entry.imageUrl}
+                alt={entry.name}
+                width={36}
+                height={36}
+                fallbackType="generic"
+                showExpiredMessage={false}
+              />
+            ) : (
+              React.createElement(TYPE_ICON_COMPONENTS[entry.type] || UserIcon, { size: 20, color: TYPE_COLORS[entry.type] })
+            )}
           </div>
           <div className={styles.headerContent}>
             <h3 className={styles.name}>{entry.name}</h3>
