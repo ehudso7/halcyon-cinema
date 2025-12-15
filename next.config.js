@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     remotePatterns: [
+      // OpenAI DALL-E image URLs
       {
         protocol: 'https',
         hostname: 'oaidalleapiprodscus.blob.core.windows.net',
@@ -11,6 +12,33 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'dalleprodsec.blob.core.windows.net',
       },
+      {
+        protocol: 'https',
+        hostname: 'dalleproduse.blob.core.windows.net',
+      },
+      // Replicate image/video URLs
+      {
+        protocol: 'https',
+        hostname: 'replicate.delivery',
+      },
+      {
+        protocol: 'https',
+        hostname: 'pbxt.replicate.delivery',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.replicate.delivery',
+      },
+      // Supabase Storage URLs (dynamic project URLs)
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.in',
+      },
+      // OAuth provider avatars
       {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',

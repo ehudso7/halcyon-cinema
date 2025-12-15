@@ -489,7 +489,7 @@ export async function getSceneByIdAsync(projectId: string, sceneId: string): Pro
 export function updateScene(
   projectId: string,
   sceneId: string,
-  updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata'>>
+  updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata' | 'notes'>>
 ): Scene | null {
   if (usePostgres) {
     return null; // Use updateSceneAsync
@@ -518,7 +518,7 @@ export function updateScene(
 export async function updateSceneAsync(
   projectId: string,
   sceneId: string,
-  updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata'>>
+  updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata' | 'notes'>>
 ): Promise<Scene | null> {
   if (usePostgres) {
     return dbUpdateScene(projectId, sceneId, updates);

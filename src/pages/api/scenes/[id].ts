@@ -37,9 +37,9 @@ export default async function handler(
     }
 
     if (req.method === 'PUT') {
-      const { prompt, imageUrl, metadata } = req.body;
+      const { prompt, imageUrl, metadata, notes } = req.body;
 
-      const scene = await updateSceneAsync(projectId, id, { prompt, imageUrl, metadata });
+      const scene = await updateSceneAsync(projectId, id, { prompt, imageUrl, metadata, notes });
       if (!scene) {
         return res.status(404).json({ error: 'Scene not found' });
       }
