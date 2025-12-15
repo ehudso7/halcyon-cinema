@@ -74,6 +74,14 @@ export default async function handler(
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
+  // Validate optional projectId and sceneId types
+  if (projectId !== undefined && typeof projectId !== 'string') {
+    return res.status(400).json({ error: 'projectId must be a string' });
+  }
+  if (sceneId !== undefined && typeof sceneId !== 'string') {
+    return res.status(400).json({ error: 'sceneId must be a string' });
+  }
+
   try {
     // Use Stable Video Diffusion model on Replicate
     // This model generates video from an image, so we need an image first
