@@ -348,7 +348,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
     setIsDeleting(true);
     try {
       const deletePromises = Array.from(selectedScenes).map(sceneId =>
-        fetch(`/api/scenes/${sceneId}`, { method: 'DELETE' })
+        fetch(`/api/scenes/${sceneId}?projectId=${project.id}`, { method: 'DELETE' })
       );
 
       await Promise.all(deletePromises);
