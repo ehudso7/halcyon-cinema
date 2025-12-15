@@ -68,23 +68,27 @@ export default async function handler(
     });
   }
 
-  const { prompt, imageUrl, duration, aspectRatio, projectId, sceneId } = req.body;
+  const { prompt, imageUrl, duration, aspectRatio, projectId: rawProjectId, sceneId: rawSceneId } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
   // Validate optional projectId and sceneId: must be non-empty strings if provided
-  if (projectId !== undefined) {
-    if (typeof projectId !== 'string' || !projectId.trim()) {
+  if (rawProjectId !== undefined) {
+    if (typeof rawProjectId !== 'string' || !rawProjectId.trim()) {
       return res.status(400).json({ error: 'projectId must be a non-empty string' });
     }
   }
-  if (sceneId !== undefined) {
-    if (typeof sceneId !== 'string' || !sceneId.trim()) {
+  if (rawSceneId !== undefined) {
+    if (typeof rawSceneId !== 'string' || !rawSceneId.trim()) {
       return res.status(400).json({ error: 'sceneId must be a non-empty string' });
     }
   }
+
+  // Use trimmed values for file path construction
+  const projectId = rawProjectId?.trim();
+  const sceneId = rawSceneId?.trim();
 
   try {
     // Use Stable Video Diffusion model on Replicate
