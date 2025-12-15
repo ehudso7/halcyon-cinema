@@ -361,13 +361,12 @@ export function hasFeatureAccess(
   const features = TIER_FEATURES[tier];
   const path = featurePath.split('.');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let current: any = features;
+  let current: unknown = features;
   for (const segment of path) {
     if (current === undefined || current === null) {
       return false;
     }
-    current = current[segment];
+    current = (current as Record<string, unknown>)[segment];
   }
 
   return current === true || (typeof current === 'number' && current !== 0);
@@ -384,13 +383,12 @@ export function getFeatureLimit(
   const features = TIER_FEATURES[tier];
   const path = featurePath.split('.');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let current: any = features;
+  let current: unknown = features;
   for (const segment of path) {
     if (current === undefined || current === null) {
       return 0;
     }
-    current = current[segment];
+    current = (current as Record<string, unknown>)[segment];
   }
 
   return typeof current === 'number' ? current : 0;
