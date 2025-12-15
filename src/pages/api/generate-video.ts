@@ -74,12 +74,16 @@ export default async function handler(
     return res.status(400).json({ error: 'Prompt is required' });
   }
 
-  // Validate optional projectId and sceneId types
-  if (projectId !== undefined && typeof projectId !== 'string') {
-    return res.status(400).json({ error: 'projectId must be a string' });
+  // Validate optional projectId and sceneId: must be non-empty strings if provided
+  if (projectId !== undefined) {
+    if (typeof projectId !== 'string' || !projectId.trim()) {
+      return res.status(400).json({ error: 'projectId must be a non-empty string' });
+    }
   }
-  if (sceneId !== undefined && typeof sceneId !== 'string') {
-    return res.status(400).json({ error: 'sceneId must be a string' });
+  if (sceneId !== undefined) {
+    if (typeof sceneId !== 'string' || !sceneId.trim()) {
+      return res.status(400).json({ error: 'sceneId must be a non-empty string' });
+    }
   }
 
   try {
