@@ -10,8 +10,10 @@ Complete API documentation for HALCYON-Cinema.
 - [Characters](#characters)
 - [Lore](#lore)
 - [Sequences](#sequences)
-- [AI Features](#ai-features)
+- [AI Generation](#ai-generation)
+- [Import](#import)
 - [Export](#export)
+- [Payments](#payments)
 - [Health & Status](#health--status)
 - [Error Handling](#error-handling)
 - [Rate Limiting](#rate-limiting)
@@ -74,12 +76,24 @@ Change the current user's password.
 | currentPassword | string | Yes | Current password |
 | newPassword | string | Yes | New password (8+ chars) |
 
-**Response (200 OK):**
-```json
-{
-  "message": "Password changed successfully"
-}
-```
+#### POST /api/auth/forgot-password
+
+Request a password reset email.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| email | string | Yes | Account email address |
+
+#### POST /api/auth/reset-password
+
+Reset password using a reset token.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| token | string | Yes | Reset token from email |
+| password | string | Yes | New password (8+ chars) |
 
 #### PUT /api/auth/update-profile
 
@@ -110,13 +124,6 @@ Export all user data (GDPR compliance).
 
 Permanently delete the user account and all associated data.
 
-**Response (200 OK):**
-```json
-{
-  "message": "Account deleted successfully"
-}
-```
-
 ---
 
 ## Projects
@@ -142,6 +149,7 @@ List all projects for the authenticated user.
     "name": "My Project",
     "description": "A cinematic story...",
     "userId": "uuid",
+    "mode": "standard",
     "createdAt": "2024-12-01T00:00:00Z",
     "updatedAt": "2024-12-01T00:00:00Z",
     "scenes": [],
@@ -160,56 +168,28 @@ Create a new project.
 |-------|------|----------|-------------|
 | name | string | Yes | Project name (1-100 chars) |
 | description | string | No | Project description |
-
-**Response (201 Created):**
-```json
-{
-  "id": "uuid",
-  "name": "My Project",
-  "description": "A cinematic story...",
-  "userId": "uuid",
-  "createdAt": "2024-12-01T00:00:00Z",
-  "updatedAt": "2024-12-01T00:00:00Z"
-}
-```
+| mode | string | No | Project mode (standard/literary) |
 
 ### GET /api/projects/[projectId]
 
 Get a specific project with all related data.
 
-**Response (200 OK):**
-```json
-{
-  "id": "uuid",
-  "name": "My Project",
-  "description": "A cinematic story...",
-  "scenes": [...],
-  "characters": [...],
-  "lore": [...],
-  "sequences": [...]
-}
-```
-
 ### PUT /api/projects/[projectId]
 
 Update a project.
-
-**Request Body:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| name | string | No | New name |
-| description | string | No | New description |
 
 ### DELETE /api/projects/[projectId]
 
 Delete a project and all associated data.
 
-**Response (200 OK):**
-```json
-{
-  "message": "Project deleted successfully"
-}
-```
+### PUT /api/projects/[projectId]/mode
+
+Update project mode (standard or literary adaptation).
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| mode | string | Yes | "standard" or "literary" |
 
 ---
 
@@ -235,7 +215,8 @@ Create a new scene.
 |-------|------|----------|-------------|
 | projectId | string | Yes | Parent project ID |
 | prompt | string | Yes | Scene description |
-| style | string | No | Visual style preset |
+| imageUrl | string | No | Generated image URL |
+| notes | string | No | User notes |
 | metadata | object | No | Additional metadata |
 
 **Metadata Object:**
@@ -244,39 +225,36 @@ Create a new scene.
 | shotType | string | Wide Shot, Close-up, etc. |
 | mood | string | Epic, Mysterious, etc. |
 | lighting | string | Natural, Golden Hour, etc. |
-| style | string | Visual style override |
-
-**Response (201 Created):**
-```json
-{
-  "id": "uuid",
-  "projectId": "uuid",
-  "prompt": "A warrior stands on a cliff...",
-  "imageUrl": null,
-  "style": "cinematic-realism",
-  "metadata": { ... },
-  "createdAt": "2024-12-01T00:00:00Z"
-}
-```
+| style | string | Visual style |
+| aspectRatio | string | Image aspect ratio |
+| mediaType | string | "image" or "video" |
 
 ### GET /api/scenes/[id]
 
 Get a specific scene.
 
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| projectId | string | Yes | Project ID for authorization |
+
 ### PUT /api/scenes/[id]
 
 Update a scene.
 
-**Request Body:**
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| prompt | string | No | Updated prompt |
-| style | string | No | Updated style |
-| metadata | object | No | Updated metadata |
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| projectId | string | Yes | Project ID for authorization |
 
 ### DELETE /api/scenes/[id]
 
 Delete a scene.
+
+**Query Parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| projectId | string | Yes | Project ID for authorization |
 
 ---
 
@@ -298,20 +276,7 @@ Create a new character.
 | name | string | Yes | Character name |
 | description | string | No | Personality/role description |
 | traits | string[] | No | Character traits |
-| visualDescription | string | No | Appearance for image gen |
-
-**Response (201 Created):**
-```json
-{
-  "id": "uuid",
-  "projectId": "uuid",
-  "name": "Elena",
-  "description": "A brave warrior...",
-  "traits": ["brave", "loyal", "mysterious"],
-  "visualDescription": "Tall woman with silver hair...",
-  "createdAt": "2024-12-01T00:00:00Z"
-}
-```
+| imageUrl | string | No | Character image URL |
 
 ### GET /api/projects/[projectId]/characters/[characterId]
 
@@ -352,20 +317,7 @@ Create a new lore entry.
 | summary | string | No | Brief summary |
 | description | string | No | Full description |
 | tags | string[] | No | Categorization tags |
-
-**Response (201 Created):**
-```json
-{
-  "id": "uuid",
-  "projectId": "uuid",
-  "type": "location",
-  "name": "Crystal Caverns",
-  "summary": "Ancient caves filled with magical crystals",
-  "description": "Deep beneath the mountains...",
-  "tags": ["underground", "magical"],
-  "createdAt": "2024-12-01T00:00:00Z"
-}
-```
+| imageUrl | string | No | Lore image URL |
 
 ### GET /api/projects/[projectId]/lore/[loreId]
 
@@ -398,11 +350,11 @@ Create a new sequence.
 |-------|------|----------|-------------|
 | name | string | Yes | Sequence name |
 | description | string | No | Sequence description |
-| sceneIds | string[] | No | Ordered scene IDs |
+| shots | object[] | No | Ordered shot blocks |
 
 ### PUT /api/projects/[projectId]/sequences/[sequenceId]
 
-Update a sequence (including scene order).
+Update a sequence (including shot order).
 
 ### DELETE /api/projects/[projectId]/sequences/[sequenceId]
 
@@ -410,7 +362,7 @@ Delete a sequence.
 
 ---
 
-## AI Features
+## AI Generation
 
 ### POST /api/generate-image
 
@@ -420,18 +372,93 @@ Generate an AI image for a scene.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | sceneId | string | Yes | Scene to generate for |
+| projectId | string | Yes | Project ID |
 | prompt | string | Yes | Image description |
 | style | string | No | Visual style preset |
 
 **Response (200 OK):**
 ```json
 {
+  "success": true,
   "imageUrl": "https://...",
-  "urlType": "permanent"
+  "urlType": "permanent",
+  "creditsRemaining": 95
 }
 ```
 
 **Rate Limit:** 20 requests per minute per user
+
+### POST /api/generate-video
+
+Generate an AI video from a scene image.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| sceneId | string | Yes | Scene to generate for |
+| projectId | string | Yes | Project ID |
+| imageUrl | string | Yes | Source image URL |
+| prompt | string | No | Motion prompt |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "predictionId": "prediction-id",
+  "status": "starting"
+}
+```
+
+**Note:** Video generation is asynchronous. Poll `/api/prediction-status/[predictionId]` for status.
+
+### POST /api/generate-music
+
+Generate AI background music.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| prompt | string | Yes | Music description |
+| duration | number | No | Duration in seconds |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "predictionId": "prediction-id",
+  "status": "starting"
+}
+```
+
+### POST /api/generate-voiceover
+
+Generate AI voiceover narration.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| text | string | Yes | Text to speak |
+| voice | string | No | Voice preset |
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "audioUrl": "https://..."
+}
+```
+
+### GET /api/prediction-status/[predictionId]
+
+Check the status of an async generation (video/music).
+
+**Response (200 OK):**
+```json
+{
+  "status": "succeeded",
+  "output": "https://..."
+}
+```
 
 ### POST /api/expand-story
 
@@ -452,32 +479,9 @@ Expand a story prompt into a complete project structure.
   "projectName": "The Crystal Guardian",
   "projectDescription": "A tale of ancient magic...",
   "visualStyle": "Fantasy Art",
-  "characters": [
-    {
-      "name": "Elena",
-      "description": "A brave guardian...",
-      "traits": ["brave", "loyal"],
-      "visualDescription": "Tall woman with silver hair..."
-    }
-  ],
-  "scenes": [
-    {
-      "title": "The Awakening",
-      "prompt": "A crystal cave illuminated by...",
-      "shotType": "Wide Shot",
-      "mood": "Mysterious",
-      "lighting": "Ethereal",
-      "characters": ["Elena"]
-    }
-  ],
-  "lore": [
-    {
-      "type": "location",
-      "name": "Crystal Caverns",
-      "summary": "Ancient caves of power",
-      "description": "Deep beneath the mountains..."
-    }
-  ]
+  "characters": [...],
+  "scenes": [...],
+  "lore": [...]
 }
 ```
 
@@ -507,7 +511,94 @@ Get AI suggestions to enhance a scene prompt.
 }
 ```
 
-**Rate Limit:** 30 requests per minute per user
+### POST /api/ai-assist
+
+Get AI assistance for content refinement.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| content | string | Yes | Content to refine |
+| instruction | string | Yes | Refinement instruction |
+
+### POST /api/refine-story
+
+Refine and improve story content.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| content | string | Yes | Story content |
+| style | string | No | Target style |
+
+---
+
+## Import
+
+### POST /api/import/upload
+
+Upload a document for import.
+
+**Request:** Multipart form data with file
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "text": "Document content...",
+  "filename": "novel.pdf"
+}
+```
+
+### POST /api/import/detect-chapters
+
+Detect chapters in uploaded content.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| text | string | Yes | Document text |
+
+**Response (200 OK):**
+```json
+{
+  "chapters": [
+    {
+      "title": "Chapter 1",
+      "content": "...",
+      "startIndex": 0
+    }
+  ]
+}
+```
+
+### POST /api/import/analyze
+
+Analyze content for scene extraction.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| text | string | Yes | Content to analyze |
+
+### POST /api/import/analyze-chapter
+
+Analyze a specific chapter for visualization.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| content | string | Yes | Chapter content |
+| title | string | No | Chapter title |
+
+### POST /api/import/sanitize-prose
+
+Sanitize prose for scene generation.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| prose | string | Yes | Prose text |
 
 ---
 
@@ -518,19 +609,61 @@ Get AI suggestions to enhance a scene prompt.
 Export a project as a ZIP archive.
 
 **Response:** ZIP file containing:
-- `project.json` - Project metadata
-- `scenes/` - Scene images and metadata
-- `characters.json` - Character data
-- `lore.json` - Lore entries
+- `project-info.json` - Project metadata
+- `README.txt` - Project overview
+- `all-prompts.txt` - All scene prompts
+- `scenes/` - Scene folders with images and metadata
 
 ### GET /api/export/scene/[id]
 
-Export a single scene as PDF.
+Export a single scene.
 
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| format | string | "pdf" (default) or "png" |
+| format | string | "pdf" (default) or "zip" |
+
+### GET /api/projects/[projectId]/export
+
+Alternative project export endpoint.
+
+---
+
+## Payments
+
+### POST /api/payments/create-checkout
+
+Create a Stripe checkout session.
+
+**Request Body:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| priceId | string | Yes | Stripe price ID |
+| mode | string | No | "payment" or "subscription" |
+
+**Response (200 OK):**
+```json
+{
+  "sessionId": "cs_...",
+  "url": "https://checkout.stripe.com/..."
+}
+```
+
+### POST /api/payments/webhook
+
+Stripe webhook handler for payment events.
+
+### GET /api/credits
+
+Get user's remaining credits.
+
+**Response (200 OK):**
+```json
+{
+  "credits": 100,
+  "subscription": null
+}
+```
 
 ---
 
@@ -556,18 +689,6 @@ Check Supabase storage configuration (production-gated).
 | Header | Type | Required | Description |
 |--------|------|----------|-------------|
 | x-storage-health-token | string | Yes (prod) | Access token |
-
-**Response (200 OK):**
-```json
-{
-  "status": "ok",
-  "config": {
-    "urlConfigured": true,
-    "anonKeySet": true,
-    "serviceKeySet": true
-  }
-}
-```
 
 ---
 
@@ -607,6 +728,7 @@ All errors follow a consistent format:
 | `NOT_FOUND` | Resource not found |
 | `RATE_LIMITED` | Rate limit exceeded |
 | `AI_ERROR` | AI service error |
+| `INSUFFICIENT_CREDITS` | Not enough credits |
 
 ---
 
@@ -617,6 +739,9 @@ Rate limits are applied per user per endpoint:
 | Endpoint | Limit | Window |
 |----------|-------|--------|
 | `/api/generate-image` | 20 requests | 1 minute |
+| `/api/generate-video` | 10 requests | 1 minute |
+| `/api/generate-music` | 10 requests | 1 minute |
+| `/api/generate-voiceover` | 20 requests | 1 minute |
 | `/api/expand-story` | 10 requests | 1 hour |
 | `/api/ai-suggestions` | 30 requests | 1 minute |
 | All other endpoints | 100 requests | 1 minute |
