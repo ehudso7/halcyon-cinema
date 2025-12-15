@@ -11,7 +11,7 @@ const openai = new OpenAI({
 const ISSUE_CATEGORIES = {
   transitions: 'Overused transition words',
   intensifiers: 'Generic intensifiers',
-  cliches: 'Cliched phrases',
+  cliches: 'Clichéd phrases',
   qualifiers: 'Weak qualifiers',
   jargon: 'AI-specific jargon',
   metaphors: 'Overused metaphors',

@@ -1,8 +1,26 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { timingSafeEqual } from 'crypto';
 import { getUserByEmail, updateUserSubscription, addCredits } from '@/utils/db';
 
 // Admin secret must be configured via environment variable - no default fallback
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+/**
+ * Constant-time string comparison to prevent timing attacks.
+ * Returns true if strings are equal, false otherwise.
+ */
+function constantTimeCompare(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') {
+    return false;
+  }
+  // Ensure both strings are the same length to prevent timing leaks
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
+}
 
 // Credit allocations for each tier
 const TIER_CREDITS = {
@@ -40,8 +58,8 @@ export default async function handler(
   try {
     const { email, tier, duration, adminSecret } = req.body as GrantSubscriptionRequest;
 
-    // Validate admin secret
-    if (adminSecret !== ADMIN_SECRET) {
+    // Validate admin secret using constant-time comparison to prevent timing attacks
+    if (!constantTimeCompare(adminSecret, ADMIN_SECRET)) {
       return res.status(403).json({ error: 'Invalid admin secret' });
     }
 

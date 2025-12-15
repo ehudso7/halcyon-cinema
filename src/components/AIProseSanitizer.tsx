@@ -259,7 +259,7 @@ export default function AIProseSanitizer({
               <div className={styles.issuesList}>
                 {analysis.issues.slice(0, 10).map((issue, idx) => (
                   <span key={idx} className={styles.issueTag}>
-                    "{issue.match}"
+                    &ldquo;{issue.match}&rdquo;
                   </span>
                 ))}
                 {analysis.issues.length > 10 && (
@@ -334,25 +334,5 @@ export default function AIProseSanitizer({
         </div>
       )}
     </div>
-  );
-}
-
-// Inline RefreshIcon if not in Icons
-function RefreshIcon({ size = 24, color = 'currentColor' }: { size?: number; color?: string }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M23 4v6h-6" />
-      <path d="M1 20v-6h6" />
-      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-    </svg>
   );
 }
