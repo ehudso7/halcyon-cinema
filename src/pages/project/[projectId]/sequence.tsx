@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import Header from '@/components/Header';
 import Breadcrumb from '@/components/Breadcrumb';
 import ProjectNavigation from '@/components/ProjectNavigation';
@@ -73,7 +74,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
     }
   }, [isPlaying, currentPreviewIndex, currentShots, previewMode]);
 
-  const handleSaveSequence = async (shots: ShotBlock[]) => {
+  const handleSaveSequence = useCallback(async (shots: ShotBlock[]) => {
     setIsSaving(true);
     setCurrentShots(shots);
 
@@ -129,7 +130,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [project.id, project.name, project.sequences, showSuccess, showError]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -281,7 +282,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentShots, previewMode]);
+  }, [currentShots, previewMode, handleSaveSequence]);
 
   // Generate default narration text from scenes
   useEffect(() => {
@@ -466,7 +467,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
                     <>
                       <div className={styles.previewImage}>
                         {scene.imageUrl ? (
-                          <img src={scene.imageUrl} alt={shot.title || 'Scene'} />
+                          <Image src={scene.imageUrl} alt={shot.title || 'Scene'} fill unoptimized style={{ objectFit: 'cover' }} />
                         ) : (
                           <div className={styles.previewPlaceholder}>
                             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -501,7 +502,7 @@ export default function SequencePage({ project: initialProject }: SequencePagePr
                       onClick={() => setCurrentPreviewIndex(index)}
                     >
                       {scene?.imageUrl ? (
-                        <img src={scene.imageUrl} alt="" />
+                        <Image src={scene.imageUrl} alt="" fill unoptimized style={{ objectFit: 'cover' }} />
                       ) : (
                         <span>{index + 1}</span>
                       )}

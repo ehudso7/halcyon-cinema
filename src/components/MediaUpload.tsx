@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from 'react';
+import Image from 'next/image';
 import styles from './MediaUpload.module.css';
 
 interface MediaUploadProps {
@@ -283,7 +284,7 @@ export default function MediaUpload({
           {/* Image preview */}
           {uploadedFile.type.startsWith('image/') && uploadedFile.url && (
             <div className={styles.imagePreview}>
-              <img src={uploadedFile.url} alt={uploadedFile.name} />
+              <Image src={uploadedFile.url} alt={uploadedFile.name} fill unoptimized style={{ objectFit: 'contain' }} />
             </div>
           )}
         </div>
