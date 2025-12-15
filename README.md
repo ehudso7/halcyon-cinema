@@ -202,7 +202,7 @@ npm start
 
 ## Project Structure
 
-```
+```plaintext
 halcyon-cinema/
 ├── .github/                 # GitHub Actions workflows
 ├── docs/                    # Documentation
@@ -324,7 +324,7 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## Security
 
-- Report security vulnerabilities to security@halcyon-cinema.dev
+- Report security vulnerabilities to `security@halcyon-cinema.dev`
 - See [SECURITY.md](SECURITY.md) for our security policy
 
 ---
