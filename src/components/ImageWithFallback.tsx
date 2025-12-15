@@ -132,7 +132,7 @@ export default function ImageWithFallback({
           {isExpired && showExpiredMessage ? (
             <>
               <span className={styles.expiredText}>Image Expired</span>
-              <span className={styles.expiredHint}>Use regenerate to restore</span>
+              <span className={styles.expiredHint}>Use the regenerate button to restore</span>
             </>
           ) : (
             <span className={styles.fallbackText}>{alt}</span>

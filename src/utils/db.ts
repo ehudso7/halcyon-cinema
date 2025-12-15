@@ -789,6 +789,7 @@ export async function dbGetAllProjects(userId?: string): Promise<Project[]> {
         aspectRatio: s.aspect_ratio as string | undefined,
       },
       characterIds: s.character_ids as string[] | undefined,
+      notes: (s.notes as string | null) ?? undefined,
       createdAt: (s.created_at as Date).toISOString(),
       updatedAt: (s.updated_at as Date).toISOString(),
     });
@@ -1147,6 +1148,10 @@ export async function dbUpdateScene(
 
   await initializeTables();
 
+  // Use a flag-based approach for notes to allow clearing (setting to null)
+  // COALESCE would skip null values, so we use CASE WHEN for notes
+  const updateNotes = updates.notes !== undefined;
+
   await query(
     `UPDATE scenes SET
       prompt = COALESCE($1, prompt),
@@ -1156,7 +1161,7 @@ export async function dbUpdateScene(
       lighting = COALESCE($5, lighting),
       mood = COALESCE($6, mood),
       aspect_ratio = COALESCE($7, aspect_ratio),
-      notes = COALESCE($8, notes),
+      notes = CASE WHEN $11::boolean THEN $8 ELSE notes END,
       updated_at = NOW()
     WHERE id = $9::uuid AND project_id = $10::uuid`,
     [
@@ -1167,9 +1172,10 @@ export async function dbUpdateScene(
       updates.metadata?.lighting || null,
       updates.metadata?.mood || null,
       updates.metadata?.aspectRatio || null,
-      updates.notes !== undefined ? updates.notes : null,
+      updateNotes ? (updates.notes ?? null) : null,
       sceneId,
       projectId,
+      updateNotes,
     ]
   );
 
