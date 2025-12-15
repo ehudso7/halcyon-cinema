@@ -1,3 +1,9 @@
+// Re-export literary types for convenient access
+export * from './literary';
+
+// Import ProjectMode for use in Project interface
+import type { ProjectMode } from '@/config/feature-flags';
+
 // User types
 export interface User {
   id: string;
@@ -6,6 +12,8 @@ export interface User {
   image?: string;
   passwordHash?: string;
   password?: string; // For password validation (hashed)
+  subscriptionTier?: 'free' | 'pro' | 'enterprise';
+  creditsRemaining?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +66,17 @@ export interface Project {
   name: string;
   description?: string;
   projectType?: ProjectType;
+  // Mode support for literary works compatibility
+  mode?: ProjectMode;
+  workType?: LiteraryWorkType;
+  genre?: string;
+  synopsis?: string;
+  logline?: string;
+  totalWordCount?: number;
+  targetWordCount?: number;
+  publishingReadiness?: 'draft' | 'editing' | 'ready';
+  canonEnabled?: boolean;
+  lastWrittenAt?: string;
   scenes: Scene[];
   characters?: Character[];
   lore?: LoreEntry[];
@@ -65,6 +84,17 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
 }
+
+// Literary work types (re-exported from literary.ts)
+export type LiteraryWorkType =
+  | 'novel'
+  | 'novella'
+  | 'short-story'
+  | 'manuscript'
+  | 'screenplay'
+  | 'teleplay'
+  | 'stage-play'
+  | 'series';
 
 // Visual style presets
 export interface VisualStyle {
