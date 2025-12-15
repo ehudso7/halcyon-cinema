@@ -1,5 +1,5 @@
-import Image from 'next/image';
 import { Character } from '@/types';
+import ImageWithFallback from './ImageWithFallback';
 import styles from './CharacterCard.module.css';
 
 type ViewMode = 'grid' | 'list';
@@ -36,19 +36,15 @@ export default function CharacterCard({
         onClick={onSelect}
         className={`${styles.compactCard} ${selected ? styles.selected : ''}`}
       >
-        {character.imageUrl ? (
-          <Image
-            src={character.imageUrl}
-            alt={character.name}
-            className={styles.compactImage}
-            width={32}
-            height={32}
-          />
-        ) : (
-          <div className={styles.compactPlaceholder}>
-            {character.name[0].toUpperCase()}
-          </div>
-        )}
+        <ImageWithFallback
+          src={character.imageUrl}
+          alt={character.name}
+          className={styles.compactImage}
+          width={32}
+          height={32}
+          fallbackType="character"
+          showExpiredMessage={false}
+        />
         <span className={styles.compactName}>{character.name}</span>
         {selected && (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -79,19 +75,14 @@ export default function CharacterCard({
         )}
 
         <div className={styles.listAvatar} onClick={onShowDetail}>
-          {character.imageUrl ? (
-            <Image
-              src={character.imageUrl}
-              alt={character.name}
-              width={48}
-              height={48}
-              className={styles.avatar}
-            />
-          ) : (
-            <div className={styles.avatarPlaceholder}>
-              {character.name[0].toUpperCase()}
-            </div>
-          )}
+          <ImageWithFallback
+            src={character.imageUrl}
+            alt={character.name}
+            width={48}
+            height={48}
+            className={styles.avatar}
+            fallbackType="character"
+          />
         </div>
 
         <div className={styles.listContent} onClick={onShowDetail}>
@@ -155,19 +146,14 @@ export default function CharacterCard({
 
       <div className={styles.card} onClick={onShowDetail}>
         <div className={styles.header}>
-          {character.imageUrl ? (
-            <Image
-              src={character.imageUrl}
-              alt={character.name}
-              className={styles.avatar}
-              width={56}
-              height={56}
-            />
-          ) : (
-            <div className={styles.avatarPlaceholder}>
-              {character.name[0].toUpperCase()}
-            </div>
-          )}
+          <ImageWithFallback
+            src={character.imageUrl}
+            alt={character.name}
+            className={styles.avatar}
+            width={56}
+            height={56}
+            fallbackType="character"
+          />
           <div className={styles.info}>
             <h3 className={styles.name}>{character.name}</h3>
             <span className={styles.appearances}>

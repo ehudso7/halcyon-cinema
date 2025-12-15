@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import Image from 'next/image';
 import { Scene } from '@/types';
 import { FilmIcon } from './Icons';
+import ImageWithFallback from './ImageWithFallback';
 import styles from './SceneFlow.module.css';
 
 interface SceneFlowProps {
@@ -120,18 +120,15 @@ export default function SceneFlow({ scenes, projectName, onClose }: SceneFlowPro
             </div>
           ) : currentScene ? (
             <div className={styles.sceneCard}>
-              {currentScene.imageUrl ? (
-                <Image
-                  src={currentScene.imageUrl}
-                  alt={`Scene ${currentIndex + 1}`}
-                  className={styles.sceneImage}
-                  fill
-                  sizes="100vw"
-                  priority
-                />
-              ) : (
-                <div className={styles.placeholder}>No Image</div>
-              )}
+              <ImageWithFallback
+                src={currentScene.imageUrl}
+                alt={`Scene ${currentIndex + 1}`}
+                className={styles.sceneImage}
+                fill
+                sizes="100vw"
+                priority
+                fallbackType="scene"
+              />
               <div className={styles.sceneInfo}>
                 <span className={styles.sceneNumber}>Scene {currentIndex + 1}</span>
                 <p className={styles.scenePrompt}>{currentScene.prompt}</p>
