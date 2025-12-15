@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { SparklesIcon, AlertIcon, CheckCircleIcon, RefreshIcon } from './Icons';
+import { SparklesIcon, AlertIcon, CheckCircleIcon } from './Icons';
 import styles from './AIProseSanitizer.module.css';
 
 type SanitizeMode = 'subtle' | 'moderate' | 'aggressive';

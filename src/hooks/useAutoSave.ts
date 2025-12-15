@@ -72,7 +72,7 @@ export function useAutoSave<T>(options: UseAutoSaveOptions<T>): UseAutoSaveRetur
   const [hasSavedData, setHasSavedData] = useState(false);
 
   // Refs for debouncing
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastDataRef = useRef<T>(initialData);
 
   // Check if there's saved data on mount

@@ -1,8 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserByEmail, updateUserSubscription, addCredits } from '@/utils/db';
 
-// Admin secret - in production this should be a proper secret from env
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'halcyon-admin-secret-2024';
+// Admin secret must be configured via environment variable - no default fallback
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 // Credit allocations for each tier
 const TIER_CREDITS = {
@@ -20,12 +20,21 @@ interface GrantSubscriptionRequest {
   adminSecret: string;
 }
 
+// Simple email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Check if admin secret is configured
+  if (!ADMIN_SECRET) {
+    console.error('[admin/grant-subscription] ADMIN_SECRET environment variable not configured');
+    return res.status(500).json({ error: 'Server misconfigured: admin functionality not available' });
   }
 
   try {
@@ -39,6 +48,11 @@ export default async function handler(
     // Validate required fields
     if (!email || !tier || !duration) {
       return res.status(400).json({ error: 'Missing required fields: email, tier, duration' });
+    }
+
+    // Validate email format
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
     }
 
     // Validate tier
