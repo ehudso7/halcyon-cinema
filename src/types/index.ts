@@ -130,6 +130,8 @@ export interface GenerateImageResponse {
   urlType?: 'permanent' | 'temporary';
   /** Warning message if image persistence failed or is not configured */
   warning?: string;
+  /** Remaining credits after generation */
+  creditsRemaining?: number;
 }
 
 export interface ApiError {

@@ -417,9 +417,20 @@ async function doInitializeTables(): Promise<void> {
         mood VARCHAR(100),
         aspect_ratio VARCHAR(50),
         character_ids UUID[],
+        notes TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
+    `);
+
+    // Add notes column if it doesn't exist (migration for existing databases)
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'scenes' AND column_name = 'notes') THEN
+          ALTER TABLE scenes ADD COLUMN notes TEXT;
+        END IF;
+      END $$;
     `);
 
     // Create characters table
@@ -1082,6 +1093,7 @@ export async function dbAddScene(
       aspectRatio: row.aspect_ratio as string | undefined,
     },
     characterIds: row.character_ids as string[] | undefined,
+    notes: (row.notes as string | null) ?? undefined,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
   };
@@ -1116,6 +1128,7 @@ export async function dbGetSceneById(projectId: string, sceneId: string): Promis
       aspectRatio: row.aspect_ratio as string | undefined,
     },
     characterIds: row.character_ids as string[] | undefined,
+    notes: (row.notes as string | null) ?? undefined,
     createdAt: (row.created_at as Date).toISOString(),
     updatedAt: (row.updated_at as Date).toISOString(),
   };
@@ -1127,7 +1140,7 @@ export async function dbGetSceneById(projectId: string, sceneId: string): Promis
 export async function dbUpdateScene(
   projectId: string,
   sceneId: string,
-  updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata'>>
+  updates: Partial<Pick<Scene, 'prompt' | 'imageUrl' | 'metadata' | 'notes'>>
 ): Promise<Scene | null> {
   if (!checkPostgresAvailable()) return null;
 
@@ -1142,8 +1155,9 @@ export async function dbUpdateScene(
       lighting = COALESCE($5, lighting),
       mood = COALESCE($6, mood),
       aspect_ratio = COALESCE($7, aspect_ratio),
+      notes = COALESCE($8, notes),
       updated_at = NOW()
-    WHERE id = $8::uuid AND project_id = $9::uuid`,
+    WHERE id = $9::uuid AND project_id = $10::uuid`,
     [
       updates.prompt || null,
       updates.imageUrl || null,
@@ -1152,6 +1166,7 @@ export async function dbUpdateScene(
       updates.metadata?.lighting || null,
       updates.metadata?.mood || null,
       updates.metadata?.aspectRatio || null,
+      updates.notes !== undefined ? updates.notes : null,
       sceneId,
       projectId,
     ]
