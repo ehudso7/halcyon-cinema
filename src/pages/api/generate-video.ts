@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
+import { persistVideo } from '@/utils/media-storage';
 import { ApiError } from '@/types';
 
 // Replicate API for video generation
@@ -67,7 +68,7 @@ export default async function handler(
     });
   }
 
-  const { prompt, imageUrl, duration, aspectRatio } = req.body;
+  const { prompt, imageUrl, duration, aspectRatio, projectId, sceneId } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
@@ -207,9 +208,19 @@ export default async function handler(
         });
       }
 
-      const videoUrl = Array.isArray(finalPrediction.output)
+      const temporaryVideoUrl = Array.isArray(finalPrediction.output)
         ? finalPrediction.output[0]
         : finalPrediction.output;
+
+      // Persist video to permanent storage if projectId is provided
+      let videoUrl = temporaryVideoUrl;
+      if (projectId && temporaryVideoUrl) {
+        try {
+          videoUrl = await persistVideo(temporaryVideoUrl, projectId, sceneId);
+        } catch (persistError) {
+          console.warn('[generate-video] Failed to persist video, using temporary URL:', persistError);
+        }
+      }
 
       return res.status(200).json({
         success: true,

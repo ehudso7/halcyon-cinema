@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
+import { persistAudio } from '@/utils/media-storage';
 import { ApiError } from '@/types';
 
 // Replicate API for music generation
@@ -81,7 +82,7 @@ export default async function handler(
     });
   }
 
-  const { prompt, duration = 10, genre, mood, tempo } = req.body;
+  const { prompt, duration = 10, genre, mood, tempo, projectId, sceneId } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
@@ -232,9 +233,19 @@ export default async function handler(
         });
       }
 
-      const audioUrl = Array.isArray(finalPrediction.output)
+      const temporaryAudioUrl = Array.isArray(finalPrediction.output)
         ? finalPrediction.output[0]
         : finalPrediction.output;
+
+      // Persist audio to permanent storage if projectId is provided
+      let audioUrl = temporaryAudioUrl;
+      if (projectId && temporaryAudioUrl) {
+        try {
+          audioUrl = await persistAudio(temporaryAudioUrl, projectId, sceneId);
+        } catch (persistError) {
+          console.warn('[generate-music] Failed to persist audio, using temporary URL:', persistError);
+        }
+      }
 
       return res.status(200).json({
         success: true,
