@@ -363,7 +363,7 @@ export function hasFeatureAccess(
 
   let current: unknown = features;
   for (const segment of path) {
-    if (current === undefined || current === null) {
+    if (typeof current !== 'object' || current === null) {
       return false;
     }
     current = (current as Record<string, unknown>)[segment];
@@ -385,7 +385,7 @@ export function getFeatureLimit(
 
   let current: unknown = features;
   for (const segment of path) {
-    if (current === undefined || current === null) {
+    if (typeof current !== 'object' || current === null) {
       return 0;
     }
     current = (current as Record<string, unknown>)[segment];
