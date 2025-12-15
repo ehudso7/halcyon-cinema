@@ -104,10 +104,17 @@ export default function ImageWithFallback({
     setIsLoading(true);
   }, [src]);
 
-  // Check if the URL looks like a temporary OpenAI URL
+  // Check if the URL looks like a temporary URL that may expire
+  // OpenAI DALL-E URLs expire after ~1 hour
+  // Replicate URLs also expire after some time
   const isLikelyExpiredUrl = src && (
+    // OpenAI DALL-E temporary URLs
     src.includes('oaidalleapiprodscus.blob.core.windows.net') ||
-    src.includes('dalleproduse.blob.core.windows.net')
+    src.includes('dalleproduse.blob.core.windows.net') ||
+    // Replicate temporary URLs
+    src.includes('replicate.delivery') ||
+    src.includes('pbxt.replicate.delivery') ||
+    src.includes('replicate.com/api/models')
   );
 
   // If no src or error, show fallback
