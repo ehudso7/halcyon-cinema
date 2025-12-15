@@ -1,4 +1,5 @@
 import { useState, FormEvent } from 'react';
+import Image from 'next/image';
 import { Character, Scene } from '@/types';
 import CharacterCard from './CharacterCard';
 import styles from './CharacterManager.module.css';
@@ -197,7 +198,7 @@ export default function CharacterManager({
                 <label htmlFor="charImage" className={styles.label}>Reference Image</label>
                 <div className={styles.imagePreview}>
                   {imageUrl ? (
-                    <img src={imageUrl} alt="Preview" />
+                    <Image src={imageUrl} alt="Preview" fill unoptimized style={{ objectFit: 'cover' }} />
                   ) : (
                     <div className={styles.imagePlaceholder}>
                       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -284,10 +285,14 @@ export default function CharacterManager({
             <div className={styles.detailContent}>
               <div className={styles.detailHeader}>
                 {showDetailModal.imageUrl ? (
-                  <img
+                  <Image
                     src={showDetailModal.imageUrl}
                     alt={showDetailModal.name}
                     className={styles.detailImage}
+                    width={120}
+                    height={120}
+                    unoptimized
+                    style={{ objectFit: 'cover' }}
                   />
                 ) : (
                   <div className={styles.detailPlaceholder}>
@@ -328,7 +333,7 @@ export default function CharacterManager({
                       <div key={scene.id} className={styles.sceneItem}>
                         <div className={styles.sceneThumbnail}>
                           {scene.imageUrl ? (
-                            <img src={scene.imageUrl} alt={scene.prompt.slice(0, 30)} />
+                            <Image src={scene.imageUrl} alt={scene.prompt.slice(0, 30)} fill unoptimized style={{ objectFit: 'cover' }} />
                           ) : (
                             <div className={styles.scenePlaceholder}>
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
