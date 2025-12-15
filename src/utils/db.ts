@@ -905,6 +905,7 @@ export async function dbGetProjectById(id: string): Promise<Project | null> {
         aspectRatio: s.aspect_ratio as string | undefined,
       },
       characterIds: s.character_ids as string[] | undefined,
+      notes: (s.notes as string | null) ?? undefined,
       createdAt: (s.created_at as Date).toISOString(),
       updatedAt: (s.updated_at as Date).toISOString(),
     };
