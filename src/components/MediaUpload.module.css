@@ -193,8 +193,10 @@
 
 /* Image Preview */
 .imagePreview {
+  position: relative;
   padding: 16px;
   background: var(--color-background);
+  min-height: 200px;
 }
 
 .imagePreview img {
