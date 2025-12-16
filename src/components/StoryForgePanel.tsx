@@ -3,6 +3,16 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Project, StoryForgeFeatureId } from '@/types';
 import { useToast } from '@/components/Toast';
+import {
+  AIAuthorSettings,
+  GenreType,
+  QualityTier,
+  DEFAULT_AI_SETTINGS,
+  GENRE_PRESETS,
+  QUALITY_TIERS,
+  getAvailableGenres,
+  getGenreSettings,
+} from '@/config/ai-settings';
 import styles from './StoryForgePanel.module.css';
 
 const MAX_CONTENT_LENGTH = 10000;
@@ -112,13 +122,6 @@ const featureConfigs: Record<StoryForgeFeatureId, FeatureConfig> = {
 
 type RewriteMode = 'rewrite' | 'condense' | 'continue';
 
-interface AuthorControlSettings {
-  tone: string;
-  style: string;
-  pacing: string;
-  creativity: number;
-}
-
 export default function StoryForgePanel({ project, featureId, onClose }: StoryForgePanelProps) {
   const router = useRouter();
   const { showToast } = useToast();
@@ -126,12 +129,20 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [rewriteMode, setRewriteMode] = useState<RewriteMode>('rewrite');
-  const [authorSettings, setAuthorSettings] = useState<AuthorControlSettings>({
-    tone: 'neutral',
-    style: 'descriptive',
-    pacing: 'medium',
-    creativity: 0.7,
-  });
+  const [selectedGenre, setSelectedGenre] = useState<GenreType | null>(null);
+  const [qualityTier, setQualityTier] = useState<QualityTier>('professional');
+  const [authorSettings, setAuthorSettings] = useState<AIAuthorSettings>(DEFAULT_AI_SETTINGS);
+
+  // Apply genre preset
+  const handleGenreSelect = (genre: GenreType | null) => {
+    setSelectedGenre(genre);
+    if (genre) {
+      setAuthorSettings(getGenreSettings(genre));
+      showToast(`Applied ${GENRE_PRESETS[genre].name} preset`, 'success');
+    } else {
+      setAuthorSettings(DEFAULT_AI_SETTINGS);
+    }
+  };
 
   if (!featureId) {
     return (
@@ -199,7 +210,9 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
           feature: featureId,
           content: inputContent,
           options: featureId === 'rewrite-condense' ? { mode: rewriteMode } : undefined,
-          authorSettings: featureId === 'ai-author-controls' ? authorSettings : undefined,
+          authorSettings,
+          genre: selectedGenre,
+          qualityTier,
         }),
       });
 
@@ -292,72 +305,201 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
       <div className={styles.content}>
         {featureId === 'ai-author-controls' ? (
           <div className={styles.authorControls}>
-            <div className={styles.controlGroup}>
-              <label htmlFor="tone">Tone</label>
-              <select
-                id="tone"
-                value={authorSettings.tone}
-                onChange={(e) => setAuthorSettings({ ...authorSettings, tone: e.target.value })}
-              >
-                <option value="neutral">Neutral</option>
-                <option value="formal">Formal</option>
-                <option value="casual">Casual</option>
-                <option value="dramatic">Dramatic</option>
-                <option value="humorous">Humorous</option>
-                <option value="dark">Dark</option>
-                <option value="whimsical">Whimsical</option>
-              </select>
-            </div>
-
-            <div className={styles.controlGroup}>
-              <label htmlFor="style">Writing Style</label>
-              <select
-                id="style"
-                value={authorSettings.style}
-                onChange={(e) => setAuthorSettings({ ...authorSettings, style: e.target.value })}
-              >
-                <option value="descriptive">Descriptive</option>
-                <option value="minimalist">Minimalist</option>
-                <option value="poetic">Poetic</option>
-                <option value="action-oriented">Action-Oriented</option>
-                <option value="dialogue-heavy">Dialogue-Heavy</option>
-                <option value="literary">Literary</option>
-              </select>
-            </div>
-
-            <div className={styles.controlGroup}>
-              <label htmlFor="pacing">Pacing</label>
-              <select
-                id="pacing"
-                value={authorSettings.pacing}
-                onChange={(e) => setAuthorSettings({ ...authorSettings, pacing: e.target.value })}
-              >
-                <option value="slow">Slow & Deliberate</option>
-                <option value="medium">Medium</option>
-                <option value="fast">Fast-Paced</option>
-                <option value="varied">Varied</option>
-              </select>
-            </div>
-
-            <div className={styles.controlGroup}>
-              <label htmlFor="creativity">
-                Creativity Level: {Math.round(authorSettings.creativity * 100)}%
-              </label>
-              <input
-                type="range"
-                id="creativity"
-                min="0"
-                max="1"
-                step="0.1"
-                value={authorSettings.creativity}
-                onChange={(e) => setAuthorSettings({ ...authorSettings, creativity: parseFloat(e.target.value) })}
-                className={styles.slider}
-              />
-              <div className={styles.sliderLabels}>
-                <span>Conservative</span>
-                <span>Creative</span>
+            {/* Genre Presets Section */}
+            <div className={styles.presetsSection}>
+              <h4 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M4 19.5A2.5 2.5 0 016.5 17H20" />
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
+                </svg>
+                Genre Presets
+              </h4>
+              <p className={styles.sectionDesc}>Select a genre for optimized AI settings based on best-selling works</p>
+              <div className={styles.genreGrid}>
+                <button
+                  className={`${styles.genreButton} ${selectedGenre === null ? styles.active : ''}`}
+                  onClick={() => handleGenreSelect(null)}
+                >
+                  <span className={styles.genreName}>Custom</span>
+                  <span className={styles.genreDesc}>Manual settings</span>
+                </button>
+                {getAvailableGenres().map((preset) => (
+                  <button
+                    key={preset.id}
+                    className={`${styles.genreButton} ${selectedGenre === preset.id ? styles.active : ''}`}
+                    onClick={() => handleGenreSelect(preset.id)}
+                    title={preset.description}
+                  >
+                    <span className={styles.genreName}>{preset.name}</span>
+                    <span className={styles.genreDesc}>{preset.description}</span>
+                  </button>
+                ))}
               </div>
             </div>
+
+            {/* Quality Tier Section */}
+            <div className={styles.qualitySection}>
+              <h4 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+                Quality Tier
+              </h4>
+              <div className={styles.qualityTiers}>
+                {(Object.keys(QUALITY_TIERS) as QualityTier[]).map((tier) => (
+                  <button
+                    key={tier}
+                    className={`${styles.tierButton} ${qualityTier === tier ? styles.active : ''}`}
+                    onClick={() => setQualityTier(tier)}
+                  >
+                    <span className={styles.tierName}>{tier.charAt(0).toUpperCase() + tier.slice(1)}</span>
+                    <span className={styles.tierTokens}>{QUALITY_TIERS[tier].maxTokens} tokens</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Detailed Settings */}
+            <div className={styles.settingsSection}>
+              <h4 className={styles.sectionTitle}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+                </svg>
+                Fine-Tune Settings
+              </h4>
+
+              <div className={styles.settingsGrid}>
+                <div className={styles.controlGroup}>
+                  <label htmlFor="tone">Tone</label>
+                  <select
+                    id="tone"
+                    value={authorSettings.tone}
+                    onChange={(e) => setAuthorSettings({ ...authorSettings, tone: e.target.value as AIAuthorSettings['tone'] })}
+                  >
+                    <option value="neutral">Neutral</option>
+                    <option value="formal">Formal</option>
+                    <option value="casual">Casual</option>
+                    <option value="dramatic">Dramatic</option>
+                    <option value="humorous">Humorous</option>
+                    <option value="dark">Dark</option>
+                    <option value="whimsical">Whimsical</option>
+                    <option value="suspenseful">Suspenseful</option>
+                    <option value="romantic">Romantic</option>
+                    <option value="epic">Epic</option>
+                  </select>
+                </div>
+
+                <div className={styles.controlGroup}>
+                  <label htmlFor="style">Writing Style</label>
+                  <select
+                    id="style"
+                    value={authorSettings.style}
+                    onChange={(e) => setAuthorSettings({ ...authorSettings, style: e.target.value as AIAuthorSettings['style'] })}
+                  >
+                    <option value="descriptive">Descriptive</option>
+                    <option value="minimalist">Minimalist</option>
+                    <option value="poetic">Poetic</option>
+                    <option value="action-oriented">Action-Oriented</option>
+                    <option value="dialogue-heavy">Dialogue-Heavy</option>
+                    <option value="literary">Literary</option>
+                    <option value="cinematic">Cinematic</option>
+                    <option value="journalistic">Journalistic</option>
+                    <option value="stream-of-consciousness">Stream of Consciousness</option>
+                  </select>
+                </div>
+
+                <div className={styles.controlGroup}>
+                  <label htmlFor="pacing">Pacing</label>
+                  <select
+                    id="pacing"
+                    value={authorSettings.pacing}
+                    onChange={(e) => setAuthorSettings({ ...authorSettings, pacing: e.target.value as AIAuthorSettings['pacing'] })}
+                  >
+                    <option value="slow">Slow & Deliberate</option>
+                    <option value="medium">Medium</option>
+                    <option value="fast">Fast-Paced</option>
+                    <option value="varied">Varied</option>
+                    <option value="building">Building (Crescendo)</option>
+                  </select>
+                </div>
+
+                <div className={styles.controlGroup}>
+                  <label htmlFor="verbosity">Detail Level</label>
+                  <select
+                    id="verbosity"
+                    value={authorSettings.verbosity}
+                    onChange={(e) => setAuthorSettings({ ...authorSettings, verbosity: e.target.value as AIAuthorSettings['verbosity'] })}
+                  >
+                    <option value="concise">Concise</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="detailed">Detailed</option>
+                    <option value="elaborate">Elaborate</option>
+                  </select>
+                </div>
+
+                <div className={styles.controlGroup}>
+                  <label htmlFor="perspective">Perspective</label>
+                  <select
+                    id="perspective"
+                    value={authorSettings.perspective}
+                    onChange={(e) => setAuthorSettings({ ...authorSettings, perspective: e.target.value as AIAuthorSettings['perspective'] })}
+                  >
+                    <option value="first-person">First Person</option>
+                    <option value="third-person-limited">Third Person Limited</option>
+                    <option value="third-person-omniscient">Third Person Omniscient</option>
+                    <option value="second-person">Second Person</option>
+                  </select>
+                </div>
+
+                <div className={styles.controlGroup}>
+                  <label htmlFor="dialogueStyle">Dialogue Style</label>
+                  <select
+                    id="dialogueStyle"
+                    value={authorSettings.dialogueStyle}
+                    onChange={(e) => setAuthorSettings({ ...authorSettings, dialogueStyle: e.target.value as AIAuthorSettings['dialogueStyle'] })}
+                  >
+                    <option value="natural">Natural</option>
+                    <option value="stylized">Stylized</option>
+                    <option value="minimal">Minimal</option>
+                    <option value="subtext-heavy">Subtext-Heavy</option>
+                    <option value="witty">Witty</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className={styles.controlGroup}>
+                <label htmlFor="creativity">
+                  Creativity Level: {Math.round(authorSettings.creativity * 100)}%
+                </label>
+                <input
+                  type="range"
+                  id="creativity"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={authorSettings.creativity}
+                  onChange={(e) => setAuthorSettings({ ...authorSettings, creativity: parseFloat(e.target.value) })}
+                  className={styles.slider}
+                />
+                <div className={styles.sliderLabels}>
+                  <span>Conservative</span>
+                  <span>Balanced</span>
+                  <span>Creative</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Settings Summary */}
+            {selectedGenre && (
+              <div className={styles.settingsSummary}>
+                <h4>Active Preset: {GENRE_PRESETS[selectedGenre].name}</h4>
+                <p>{GENRE_PRESETS[selectedGenre].description}</p>
+                <p className={styles.summaryNote}>
+                  These settings are optimized based on analysis of best-selling {GENRE_PRESETS[selectedGenre].name.toLowerCase()} works.
+                </p>
+              </div>
+            )}
           </div>
         ) : (
           <>

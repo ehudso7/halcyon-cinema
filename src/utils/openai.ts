@@ -179,6 +179,18 @@ export function buildCinematicPrompt(
 }
 
 /**
+ * Settings for advanced text generation with full control over AI parameters.
+ */
+export interface TextGenerationSettings {
+  systemPrompt?: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+}
+
+/**
  * Generate text content using GPT-4o-mini.
  * Used by StoryForge for narrative generation, expansion, and editing.
  *
@@ -193,12 +205,37 @@ export async function generateText(
     maxTokens?: number;
   }
 ): Promise<string> {
+  return generateTextWithSettings(prompt, {
+    temperature: options?.temperature,
+    maxTokens: options?.maxTokens,
+  });
+}
+
+/**
+ * Generate text content using GPT-4o-mini with full settings control.
+ * This is the primary function for AI-assisted content generation across
+ * both StoryForge and Halcyon Cinema.
+ *
+ * @param prompt - The user prompt to generate content from
+ * @param settings - Full generation settings including system prompt and model parameters
+ * @returns The generated text content
+ */
+export async function generateTextWithSettings(
+  prompt: string,
+  settings: TextGenerationSettings = {}
+): Promise<string> {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error('OpenAI API key is not configured');
   }
 
-  const temperature = options?.temperature ?? 0.7;
-  const maxTokens = options?.maxTokens ?? 2000;
+  const {
+    systemPrompt = 'You are a skilled creative writer and storyteller. Generate engaging, well-written content that matches the requested style and tone. Focus on vivid descriptions, natural dialogue, and emotional depth.',
+    temperature = 0.7,
+    maxTokens = 2000,
+    topP = 1.0,
+    frequencyPenalty = 0.0,
+    presencePenalty = 0.0,
+  } = settings;
 
   try {
     const response = await openai.chat.completions.create({
@@ -206,7 +243,7 @@ export async function generateText(
       messages: [
         {
           role: 'system',
-          content: 'You are a skilled creative writer and storyteller. Generate engaging, well-written content that matches the requested style and tone. Focus on vivid descriptions, natural dialogue, and emotional depth.',
+          content: systemPrompt,
         },
         {
           role: 'user',
@@ -215,6 +252,9 @@ export async function generateText(
       ],
       temperature,
       max_tokens: maxTokens,
+      top_p: topP,
+      frequency_penalty: frequencyPenalty,
+      presence_penalty: presencePenalty,
     });
 
     const content = response.choices[0]?.message?.content?.trim();
