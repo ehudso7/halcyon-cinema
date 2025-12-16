@@ -9,6 +9,7 @@ import {
   GenreType,
   QualityTier,
   QUALITY_TIERS,
+  TIER_CREDITS,
   GENRE_PRESETS,
   buildSystemPrompt,
   validateAISettings,
@@ -171,10 +172,9 @@ export default async function handler(
     // Get validated author settings
     const validatedSettings = validateAISettings(authorSettings || {});
 
-    // Get and validate quality tier
+    // Get and validate quality tier (derive valid tiers from QUALITY_TIERS keys)
     const { qualityTier: requestedTier, genre: requestedGenre } = req.body as StoryForgeRequest;
-    const validQualityTiers: QualityTier[] = ['standard', 'professional', 'premium'];
-    const tier: QualityTier = requestedTier && validQualityTiers.includes(requestedTier)
+    const tier: QualityTier = requestedTier && requestedTier in QUALITY_TIERS
       ? requestedTier
       : 'professional';
     const qualitySettings = QUALITY_TIERS[tier];
@@ -199,9 +199,6 @@ export default async function handler(
       frequencyPenalty: qualitySettings.frequencyPenalty,
       presencePenalty: qualitySettings.presencePenalty,
     });
-
-    // Credit costs by tier
-    const TIER_CREDITS: Record<QualityTier, number> = { standard: 1, professional: 2, premium: 3 };
 
     return res.status(200).json({
       success: true,
