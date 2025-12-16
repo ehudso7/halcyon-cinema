@@ -237,6 +237,12 @@ export async function generateTextWithSettings(
     presencePenalty = 0.0,
   } = settings;
 
+  // Clamp parameters to valid OpenAI API ranges
+  const clampedTemp = Math.max(0, Math.min(2, temperature));
+  const clampedTopP = Math.max(0, Math.min(1, topP));
+  const clampedFreqPenalty = Math.max(-2, Math.min(2, frequencyPenalty));
+  const clampedPresPenalty = Math.max(-2, Math.min(2, presencePenalty));
+
   try {
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -250,11 +256,11 @@ export async function generateTextWithSettings(
           content: prompt,
         },
       ],
-      temperature,
+      temperature: clampedTemp,
       max_tokens: maxTokens,
-      top_p: topP,
-      frequency_penalty: frequencyPenalty,
-      presence_penalty: presencePenalty,
+      top_p: clampedTopP,
+      frequency_penalty: clampedFreqPenalty,
+      presence_penalty: clampedPresPenalty,
     });
 
     const content = response.choices[0]?.message?.content?.trim();

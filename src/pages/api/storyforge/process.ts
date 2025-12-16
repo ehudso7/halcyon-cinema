@@ -8,8 +8,8 @@ import {
   AIAuthorSettings,
   GenreType,
   QualityTier,
-  DEFAULT_AI_SETTINGS,
   QUALITY_TIERS,
+  GENRE_PRESETS,
   buildSystemPrompt,
   validateAISettings,
   calculateTemperature,
@@ -171,16 +171,24 @@ export default async function handler(
     // Get validated author settings
     const validatedSettings = validateAISettings(authorSettings || {});
 
-    // Get quality tier settings
-    const { qualityTier: requestedTier, genre } = req.body as StoryForgeRequest;
-    const tier = requestedTier || 'professional';
+    // Get and validate quality tier
+    const { qualityTier: requestedTier, genre: requestedGenre } = req.body as StoryForgeRequest;
+    const validQualityTiers: QualityTier[] = ['standard', 'professional', 'premium'];
+    const tier: QualityTier = requestedTier && validQualityTiers.includes(requestedTier)
+      ? requestedTier
+      : 'professional';
     const qualitySettings = QUALITY_TIERS[tier];
+
+    // Validate genre if provided
+    const validatedGenre: GenreType | undefined = requestedGenre && requestedGenre in GENRE_PRESETS
+      ? requestedGenre
+      : undefined;
 
     // Calculate temperature from creativity and quality tier
     const temperature = calculateTemperature(validatedSettings.creativity, tier);
 
     // Build the system prompt with genre and quality settings
-    const systemPrompt = buildSystemPrompt(validatedSettings, genre, tier, 'storyforge');
+    const systemPrompt = buildSystemPrompt(validatedSettings, validatedGenre, tier, 'storyforge');
 
     // Generate the content using OpenAI with full settings
     const result = await generateTextWithSettings(fullPrompt, {
@@ -192,13 +200,16 @@ export default async function handler(
       presencePenalty: qualitySettings.presencePenalty,
     });
 
+    // Credit costs by tier
+    const TIER_CREDITS: Record<QualityTier, number> = { standard: 1, professional: 2, premium: 3 };
+
     return res.status(200).json({
       success: true,
       result,
       feature,
-      genre,
+      genre: validatedGenre ?? null,
       qualityTier: tier,
-      creditsUsed: tier === 'premium' ? 3 : tier === 'professional' ? 2 : 1,
+      creditsUsed: TIER_CREDITS[tier],
     });
   } catch (error) {
     console.error('StoryForge processing error:', error);

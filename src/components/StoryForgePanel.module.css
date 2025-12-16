@@ -309,6 +309,13 @@
   color: var(--color-text-secondary);
 }
 
+.tierCredits {
+  font-size: 0.7rem;
+  color: var(--color-primary);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
 /* Settings Grid */
 .settingsGrid {
   display: grid;
