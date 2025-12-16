@@ -4,6 +4,28 @@ export * from './literary';
 // Import ProjectMode for use in Project interface
 import type { ProjectMode } from '@/config/feature-flags';
 
+// StoryForge feature types
+export type StoryForgeFeatureId =
+  | 'narrative-generation'
+  | 'chapter-expansion'
+  | 'scene-expansion'
+  | 'rewrite-condense'
+  | 'canon-validation'
+  | 'ai-author-controls';
+
+export const STORYFORGE_FEATURE_IDS: readonly StoryForgeFeatureId[] = [
+  'narrative-generation',
+  'chapter-expansion',
+  'scene-expansion',
+  'rewrite-condense',
+  'canon-validation',
+  'ai-author-controls',
+] as const;
+
+export function isValidStoryForgeFeatureId(id: string): id is StoryForgeFeatureId {
+  return STORYFORGE_FEATURE_IDS.includes(id as StoryForgeFeatureId);
+}
+
 // User types
 export interface User {
   id: string;

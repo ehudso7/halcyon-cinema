@@ -3,18 +3,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { generateText } from '@/utils/openai';
+import { StoryForgeFeatureId, isValidStoryForgeFeatureId } from '@/types';
 
-type StoryForgeFeatureId =
-  | 'narrative-generation'
-  | 'chapter-expansion'
-  | 'scene-expansion'
-  | 'rewrite-condense'
-  | 'canon-validation'
-  | 'ai-author-controls';
+const MAX_CONTENT_LENGTH = 10000;
 
 interface StoryForgeRequest {
   projectId: string;
-  feature: StoryForgeFeatureId;
+  feature: string;
   content: string;
   options?: {
     mode?: 'rewrite' | 'condense' | 'continue';
@@ -102,6 +97,11 @@ export default async function handler(
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  // Validate feature ID at runtime
+  if (!isValidStoryForgeFeatureId(feature)) {
+    return res.status(400).json({ error: 'Invalid feature type' });
+  }
+
   // Handle AI author controls (just save settings, no AI processing)
   if (feature === 'ai-author-controls') {
     // In a full implementation, you'd save these settings to the database
@@ -114,6 +114,11 @@ export default async function handler(
 
   if (!content?.trim()) {
     return res.status(400).json({ error: 'Content is required for this feature' });
+  }
+
+  // Validate content length
+  if (content.length > MAX_CONTENT_LENGTH) {
+    return res.status(400).json({ error: `Content exceeds maximum length of ${MAX_CONTENT_LENGTH} characters` });
   }
 
   try {
@@ -156,8 +161,9 @@ export default async function handler(
 
     const fullPrompt = contextInfo ? `${prompt}\n\nProject Context:${contextInfo}` : prompt;
 
-    // Get author settings for temperature adjustment
-    const temperature = authorSettings?.creativity ?? 0.7;
+    // Get author settings for temperature adjustment (clamped to valid range 0.0-2.0)
+    const rawTemperature = authorSettings?.creativity ?? 0.7;
+    const temperature = Math.max(0.0, Math.min(2.0, Number(rawTemperature) || 0.7));
 
     // Generate the content using OpenAI
     const result = await generateText(fullPrompt, {
