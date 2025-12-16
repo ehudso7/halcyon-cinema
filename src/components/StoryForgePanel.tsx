@@ -10,6 +10,7 @@ import {
   DEFAULT_AI_SETTINGS,
   GENRE_PRESETS,
   QUALITY_TIERS,
+  TIER_CREDITS,
   getAvailableGenres,
   getGenreSettings,
 } from '@/config/ai-settings';
@@ -347,7 +348,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
               </h4>
               <div className={styles.qualityTiers}>
                 {(Object.keys(QUALITY_TIERS) as QualityTier[]).map((tier) => {
-                  const credits = tier === 'premium' ? 3 : tier === 'professional' ? 2 : 1;
+                  const credits = TIER_CREDITS[tier];
                   return (
                     <button
                       key={tier}

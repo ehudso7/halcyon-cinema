@@ -399,6 +399,16 @@ export const QUALITY_TIERS: Record<QualityTier, QualitySettings> = {
   },
 };
 
+/**
+ * Credit costs per quality tier.
+ * Shared between frontend (display) and backend (billing).
+ */
+export const TIER_CREDITS: Record<QualityTier, number> = {
+  standard: 1,
+  professional: 2,
+  premium: 3,
+};
+
 // ============================================================================
 // System Prompts
 // ============================================================================
