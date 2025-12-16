@@ -15,18 +15,10 @@ import GenerationProgress from '@/components/GenerationProgress';
 import Warning from '@/components/Warning';
 import StoryForgePanel from '@/components/StoryForgePanel';
 import { trackGeneration } from '@/components/UsageStats';
-import { Project, Scene } from '@/types';
+import { Project, Scene, StoryForgeFeatureId, isValidStoryForgeFeatureId } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Project.module.css';
-
-type StoryForgeFeatureId =
-  | 'narrative-generation'
-  | 'chapter-expansion'
-  | 'scene-expansion'
-  | 'rewrite-condense'
-  | 'canon-validation'
-  | 'ai-author-controls';
 
 const SCENES_PER_PAGE = 12;
 
@@ -64,7 +56,10 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
   // StoryForge mode detection from query parameters
   const isStoryForgeMode = router.query.mode === 'storyforge';
-  const storyForgeFeature = (router.query.feature as StoryForgeFeatureId) || null;
+  const queryFeature = router.query.feature as string | undefined;
+  const storyForgeFeature = queryFeature && isValidStoryForgeFeatureId(queryFeature)
+    ? queryFeature
+    : null;
 
   // Handle exiting StoryForge mode
   const handleExitStoryForge = useCallback(() => {

@@ -1,17 +1,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Project } from '@/types';
+import { Project, StoryForgeFeatureId } from '@/types';
 import { useToast } from '@/components/Toast';
 import styles from './StoryForgePanel.module.css';
 
-type StoryForgeFeatureId =
-  | 'narrative-generation'
-  | 'chapter-expansion'
-  | 'scene-expansion'
-  | 'rewrite-condense'
-  | 'canon-validation'
-  | 'ai-author-controls';
+const MAX_CONTENT_LENGTH = 10000;
 
 interface StoryForgePanelProps {
   project: Project;
@@ -228,10 +222,32 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
     }
   };
 
-  const handleCopyResult = () => {
-    if (result) {
-      navigator.clipboard.writeText(result);
-      showToast('Copied to clipboard', 'success');
+  const handleCopyResult = async () => {
+    if (!result) return;
+
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(result);
+        showToast('Copied to clipboard', 'success');
+      } else {
+        // Fallback for older browsers
+        const textarea = document.createElement('textarea');
+        textarea.value = result;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (successful) {
+          showToast('Copied to clipboard', 'success');
+        } else {
+          showToast('Failed to copy to clipboard', 'error');
+        }
+      }
+    } catch {
+      showToast('Failed to copy to clipboard', 'error');
     }
   };
 
@@ -369,12 +385,24 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
             )}
 
             <textarea
+              id="storyforge-input"
+              aria-label={`Input content for ${config.title}`}
               className={styles.textarea}
               placeholder={config.placeholder}
               value={inputContent}
-              onChange={(e) => setInputContent(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value.length <= MAX_CONTENT_LENGTH) {
+                  setInputContent(e.target.value);
+                }
+              }}
+              maxLength={MAX_CONTENT_LENGTH}
               rows={8}
             />
+            {inputContent.length > MAX_CONTENT_LENGTH * 0.8 && (
+              <div className={styles.charCount}>
+                {inputContent.length.toLocaleString()} / {MAX_CONTENT_LENGTH.toLocaleString()} characters
+              </div>
+            )}
           </>
         )}
 
