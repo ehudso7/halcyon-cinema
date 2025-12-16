@@ -177,3 +177,60 @@ export function buildCinematicPrompt(
 
   return parts.join(', ');
 }
+
+/**
+ * Generate text content using GPT-4o-mini.
+ * Used by StoryForge for narrative generation, expansion, and editing.
+ *
+ * @param prompt - The prompt to generate content from
+ * @param options - Generation options including temperature and max tokens
+ * @returns The generated text content
+ */
+export async function generateText(
+  prompt: string,
+  options?: {
+    temperature?: number;
+    maxTokens?: number;
+  }
+): Promise<string> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OpenAI API key is not configured');
+  }
+
+  const temperature = options?.temperature ?? 0.7;
+  const maxTokens = options?.maxTokens ?? 2000;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a skilled creative writer and storyteller. Generate engaging, well-written content that matches the requested style and tone. Focus on vivid descriptions, natural dialogue, and emotional depth.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature,
+      max_tokens: maxTokens,
+    });
+
+    const content = response.choices[0]?.message?.content?.trim();
+
+    if (!content) {
+      throw new Error('No content generated');
+    }
+
+    return content;
+  } catch (error) {
+    console.error('[openai] Text generation error:', error);
+
+    if (error instanceof OpenAI.APIError) {
+      throw new Error(`OpenAI API error: ${error.message}`);
+    }
+
+    throw error;
+  }
+}
