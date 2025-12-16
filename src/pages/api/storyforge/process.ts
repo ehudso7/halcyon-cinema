@@ -163,7 +163,8 @@ export default async function handler(
 
     // Get author settings for temperature adjustment (clamped to valid range 0.0-2.0)
     const rawTemperature = authorSettings?.creativity ?? 0.7;
-    const temperature = Math.max(0.0, Math.min(2.0, Number(rawTemperature) || 0.7));
+    const numTemp = Number(rawTemperature);
+    const temperature = Math.max(0.0, Math.min(2.0, isNaN(numTemp) ? 0.7 : numTemp));
 
     // Generate the content using OpenAI
     const result = await generateText(fullPrompt, {

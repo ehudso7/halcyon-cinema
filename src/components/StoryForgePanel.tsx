@@ -390,15 +390,11 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
               className={styles.textarea}
               placeholder={config.placeholder}
               value={inputContent}
-              onChange={(e) => {
-                if (e.target.value.length <= MAX_CONTENT_LENGTH) {
-                  setInputContent(e.target.value);
-                }
-              }}
+              onChange={(e) => setInputContent(e.target.value)}
               maxLength={MAX_CONTENT_LENGTH}
               rows={8}
             />
-            {inputContent.length > MAX_CONTENT_LENGTH * 0.8 && (
+            {inputContent.length >= MAX_CONTENT_LENGTH * 0.8 && (
               <div className={styles.charCount}>
                 {inputContent.length.toLocaleString()} / {MAX_CONTENT_LENGTH.toLocaleString()} characters
               </div>
