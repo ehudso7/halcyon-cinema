@@ -2,8 +2,18 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { getProjectByIdAsync } from '@/utils/storage';
-import { generateText } from '@/utils/openai';
+import { generateTextWithSettings } from '@/utils/openai';
 import { StoryForgeFeatureId, isValidStoryForgeFeatureId } from '@/types';
+import {
+  AIAuthorSettings,
+  GenreType,
+  QualityTier,
+  DEFAULT_AI_SETTINGS,
+  QUALITY_TIERS,
+  buildSystemPrompt,
+  validateAISettings,
+  calculateTemperature,
+} from '@/config/ai-settings';
 
 const MAX_CONTENT_LENGTH = 10000;
 
@@ -14,12 +24,9 @@ interface StoryForgeRequest {
   options?: {
     mode?: 'rewrite' | 'condense' | 'continue';
   };
-  authorSettings?: {
-    tone: string;
-    style: string;
-    pacing: string;
-    creativity: number;
-  };
+  authorSettings?: Partial<AIAuthorSettings>;
+  genre?: GenreType;
+  qualityTier?: QualityTier;
 }
 
 const featurePrompts: Record<StoryForgeFeatureId, (content: string, options?: StoryForgeRequest['options']) => string> = {
@@ -161,22 +168,37 @@ export default async function handler(
 
     const fullPrompt = contextInfo ? `${prompt}\n\nProject Context:${contextInfo}` : prompt;
 
-    // Get author settings for temperature adjustment (clamped to valid range 0.0-2.0)
-    const rawTemperature = authorSettings?.creativity ?? 0.7;
-    const numTemp = Number(rawTemperature);
-    const temperature = Math.max(0.0, Math.min(2.0, isNaN(numTemp) ? 0.7 : numTemp));
+    // Get validated author settings
+    const validatedSettings = validateAISettings(authorSettings || {});
 
-    // Generate the content using OpenAI
-    const result = await generateText(fullPrompt, {
+    // Get quality tier settings
+    const { qualityTier: requestedTier, genre } = req.body as StoryForgeRequest;
+    const tier = requestedTier || 'professional';
+    const qualitySettings = QUALITY_TIERS[tier];
+
+    // Calculate temperature from creativity and quality tier
+    const temperature = calculateTemperature(validatedSettings.creativity, tier);
+
+    // Build the system prompt with genre and quality settings
+    const systemPrompt = buildSystemPrompt(validatedSettings, genre, tier, 'storyforge');
+
+    // Generate the content using OpenAI with full settings
+    const result = await generateTextWithSettings(fullPrompt, {
+      systemPrompt,
       temperature,
-      maxTokens: 2000,
+      maxTokens: qualitySettings.maxTokens,
+      topP: qualitySettings.topP,
+      frequencyPenalty: qualitySettings.frequencyPenalty,
+      presencePenalty: qualitySettings.presencePenalty,
     });
 
     return res.status(200).json({
       success: true,
       result,
       feature,
-      creditsUsed: 1,
+      genre,
+      qualityTier: tier,
+      creditsUsed: tier === 'premium' ? 3 : tier === 'professional' ? 2 : 1,
     });
   } catch (error) {
     console.error('StoryForge processing error:', error);
