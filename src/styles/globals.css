@@ -127,7 +127,12 @@
   margin: 0;
 }
 
-html,
+html {
+  scroll-behavior: smooth;
+  /* Prevent iOS bounce/rubber-band scrolling that causes glitches */
+  overscroll-behavior: none;
+}
+
 body {
   max-width: 100vw;
   overflow-x: hidden;
@@ -135,6 +140,23 @@ body {
   background-color: var(--color-background);
   color: var(--color-text);
   line-height: 1.6;
+  /* Prevent scroll chaining and improve scroll performance */
+  overscroll-behavior-y: contain;
+  /* Enable hardware acceleration for smoother scrolling */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent content from shifting during scroll */
+  overflow-anchor: auto;
+}
+
+/* Fix for scroll jank on elements with transforms */
+.page,
+.container,
+main {
+  /* Force GPU acceleration to prevent scroll lag */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 a {
@@ -299,6 +321,11 @@ select {
   justify-content: center;
   z-index: 1000;
   padding: 24px;
+  /* Prevent body scroll when modal is open */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Improve touch scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal {
