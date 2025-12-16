@@ -13,11 +13,20 @@ import Pagination from '@/components/Pagination';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import GenerationProgress from '@/components/GenerationProgress';
 import Warning from '@/components/Warning';
+import StoryForgePanel from '@/components/StoryForgePanel';
 import { trackGeneration } from '@/components/UsageStats';
 import { Project, Scene } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Project.module.css';
+
+type StoryForgeFeatureId =
+  | 'narrative-generation'
+  | 'chapter-expansion'
+  | 'scene-expansion'
+  | 'rewrite-condense'
+  | 'canon-validation'
+  | 'ai-author-controls';
 
 const SCENES_PER_PAGE = 12;
 
@@ -52,6 +61,15 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
   const [imageWarning, setImageWarning] = useState<string | null>(null);
 
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // StoryForge mode detection from query parameters
+  const isStoryForgeMode = router.query.mode === 'storyforge';
+  const storyForgeFeature = (router.query.feature as StoryForgeFeatureId) || null;
+
+  // Handle exiting StoryForge mode
+  const handleExitStoryForge = useCallback(() => {
+    router.push(`/project/${project.id}`, undefined, { shallow: true });
+  }, [router, project.id]);
 
   // Load view mode preference from localStorage
   useEffect(() => {
@@ -528,7 +546,17 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
           <ProjectNavigation projectId={project.id} activeTab="scenes" />
 
-          {showPromptBuilder && (
+          {/* StoryForge Mode Panel */}
+          {isStoryForgeMode && (
+            <StoryForgePanel
+              project={project}
+              featureId={storyForgeFeature}
+              onClose={handleExitStoryForge}
+            />
+          )}
+
+          {/* Cinema Mode Content */}
+          {!isStoryForgeMode && showPromptBuilder && (
             <div className={styles.promptBuilderWrapper}>
               <PromptBuilder
                 onSubmit={handleGenerateScene}
@@ -545,7 +573,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             </div>
           )}
 
-          {project.scenes.length > 0 && (
+          {!isStoryForgeMode && project.scenes.length > 0 && (
             <>
               <SceneFilters
                 scenes={project.scenes}
@@ -640,6 +668,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             </>
           )}
 
+          {!isStoryForgeMode && (
           <section className={styles.gallery}>
             {project.scenes.length > 0 ? (
               <>
@@ -701,6 +730,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
               </div>
             )}
           </section>
+          )}
         </div>
       </main>
 
