@@ -346,16 +346,20 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
                 Quality Tier
               </h4>
               <div className={styles.qualityTiers}>
-                {(Object.keys(QUALITY_TIERS) as QualityTier[]).map((tier) => (
-                  <button
-                    key={tier}
-                    className={`${styles.tierButton} ${qualityTier === tier ? styles.active : ''}`}
-                    onClick={() => setQualityTier(tier)}
-                  >
-                    <span className={styles.tierName}>{tier.charAt(0).toUpperCase() + tier.slice(1)}</span>
-                    <span className={styles.tierTokens}>{QUALITY_TIERS[tier].maxTokens} tokens</span>
-                  </button>
-                ))}
+                {(Object.keys(QUALITY_TIERS) as QualityTier[]).map((tier) => {
+                  const credits = tier === 'premium' ? 3 : tier === 'professional' ? 2 : 1;
+                  return (
+                    <button
+                      key={tier}
+                      className={`${styles.tierButton} ${qualityTier === tier ? styles.active : ''}`}
+                      onClick={() => setQualityTier(tier)}
+                    >
+                      <span className={styles.tierName}>{tier.charAt(0).toUpperCase() + tier.slice(1)}</span>
+                      <span className={styles.tierTokens}>{QUALITY_TIERS[tier].maxTokens} tokens</span>
+                      <span className={styles.tierCredits}>{credits} credit{credits > 1 ? 's' : ''}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

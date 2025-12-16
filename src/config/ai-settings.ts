@@ -365,7 +365,7 @@ export const GENRE_PRESETS: Record<GenreType, GenrePreset> = {
 
 export interface QualitySettings {
   maxTokens: number;
-  temperature: number;
+  baseTemperature: number;
   topP: number;
   frequencyPenalty: number;
   presencePenalty: number;
@@ -375,7 +375,7 @@ export interface QualitySettings {
 export const QUALITY_TIERS: Record<QualityTier, QualitySettings> = {
   standard: {
     maxTokens: 2000,
-    temperature: 0.7,
+    baseTemperature: 0.7,
     topP: 1.0,
     frequencyPenalty: 0.0,
     presencePenalty: 0.0,
@@ -383,7 +383,7 @@ export const QUALITY_TIERS: Record<QualityTier, QualitySettings> = {
   },
   professional: {
     maxTokens: 3000,
-    temperature: 0.75,
+    baseTemperature: 0.75,
     topP: 0.95,
     frequencyPenalty: 0.3,
     presencePenalty: 0.3,
@@ -391,7 +391,7 @@ export const QUALITY_TIERS: Record<QualityTier, QualitySettings> = {
   },
   premium: {
     maxTokens: 4000,
-    temperature: 0.8,
+    baseTemperature: 0.8,
     topP: 0.9,
     frequencyPenalty: 0.5,
     presencePenalty: 0.5,
@@ -549,8 +549,8 @@ export function calculateTemperature(
   creativity: number,
   qualityTier: QualityTier = 'professional'
 ): number {
-  const baseTemp = QUALITY_TIERS[qualityTier].temperature;
-  // Scale creativity (0-1) to temperature adjustment (-0.2 to +0.3)
+  const baseTemp = QUALITY_TIERS[qualityTier].baseTemperature;
+  // Scale creativity (0-1) to temperature adjustment (-0.25 to +0.25)
   const adjustment = (creativity - 0.5) * 0.5;
   return Math.max(0.0, Math.min(2.0, baseTemp + adjustment));
 }
