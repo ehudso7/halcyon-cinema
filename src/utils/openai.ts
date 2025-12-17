@@ -94,7 +94,14 @@ OUTPUT: Return ONLY the safe, rewritten prompt. Keep it under 150 words. Make it
 }
 
 export async function generateImage(request: GenerateImageRequest): Promise<GenerateImageResponse> {
-  const { prompt, size = '1024x1024', quality = 'standard', style = 'vivid' } = request;
+  const {
+    prompt,
+    model = 'gpt-image-1.5', // Default to the faster, cheaper GPT Image 1.5
+    size = '1024x1024',
+    quality = 'standard',
+    style = 'vivid',
+    outputFormat,
+  } = request;
 
   if (!process.env.OPENAI_API_KEY) {
     return {
@@ -104,14 +111,24 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
   }
 
   try {
-    const response = await openai.images.generate({
-      model: 'dall-e-3',
+    // Build request parameters based on model
+    // GPT Image 1.5 supports output_format, DALL-E 3 does not
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const requestParams: any = {
+      model,
       prompt,
       n: 1,
       size,
       quality,
       style,
-    });
+    };
+
+    // Add output_format for GPT Image 1.5 only
+    if (model === 'gpt-image-1.5' && outputFormat) {
+      requestParams.output_format = outputFormat;
+    }
+
+    const response = await openai.images.generate(requestParams);
 
     const imageUrl = response.data?.[0]?.url;
 
