@@ -4,7 +4,7 @@
 #
 # Arguments:
 #   email        - Required. The user's email address
-#   tier         - Required. Subscription tier: free, pro, or enterprise
+#   tier         - Required. Subscription tier: starter, pro, or enterprise
 #   duration     - Required. Subscription duration: monthly or yearly
 #   admin_secret - Required. The admin API secret (or set ADMIN_SECRET env var)
 #   base_url     - Optional. API base URL (default: http://localhost:3000)
@@ -29,7 +29,7 @@ if [ -z "$EMAIL" ]; then
 fi
 
 if [ -z "$TIER" ]; then
-  echo "Error: TIER is required (free, pro, or enterprise)"
+  echo "Error: TIER is required (starter, pro, or enterprise)"
   echo "Usage: $0 <email> <tier> <duration> <admin_secret> [base_url]"
   exit 1
 fi
@@ -47,8 +47,8 @@ if [ -z "$ADMIN_SECRET" ]; then
 fi
 
 # Validate tier
-if [[ "$TIER" != "free" && "$TIER" != "pro" && "$TIER" != "enterprise" ]]; then
-  echo "Error: Invalid tier '$TIER'. Must be: free, pro, or enterprise"
+if [[ "$TIER" != "starter" && "$TIER" != "pro" && "$TIER" != "enterprise" ]]; then
+  echo "Error: Invalid tier '$TIER'. Must be: starter, pro, or enterprise"
   exit 1
 fi
 
