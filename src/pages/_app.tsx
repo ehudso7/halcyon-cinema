@@ -12,7 +12,7 @@ import '@/styles/globals.css';
 const noFooterPages = ['/auth/signin', '/auth/signup', '/auth/error', '/landing'];
 
 // Pages that should not show onboarding
-const noOnboardingPages = ['/auth/signin', '/auth/signup', '/auth/error', '/landing', '/pricing'];
+const noOnboardingPages = ['/auth/signin', '/auth/signup', '/auth/error', '/landing', '/pricing', '/onboarding'];
 
 // Apply saved preferences on app load
 function usePreferencesInitialization() {

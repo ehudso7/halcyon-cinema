@@ -123,15 +123,18 @@ function CreateProjectStep({ onNext, onBack }: StepProps) {
   const { markProjectCreated } = useOnboarding();
   const [projectName, setProjectName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleCreateProject = async () => {
     if (!projectName.trim()) return;
 
     setIsCreating(true);
+    setError(null);
     try {
       const response = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           name: projectName,
           description: 'My first project created during onboarding',
@@ -144,9 +147,13 @@ function CreateProjectStep({ onNext, onBack }: StepProps) {
         // Navigate to the project with onboarding mode
         router.push(`/project/${project.id}?onboarding=true`);
         onNext();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setError(data.error || 'Failed to create project. Please try again.');
       }
-    } catch (error) {
-      console.error('Failed to create project:', error);
+    } catch (err) {
+      console.error('Failed to create project:', err);
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setIsCreating(false);
     }
@@ -200,6 +207,12 @@ function CreateProjectStep({ onNext, onBack }: StepProps) {
           Noir Thriller
         </button>
       </div>
+
+      {error && (
+        <div className={styles.errorMessage}>
+          {error}
+        </div>
+      )}
 
       <div className={styles.stepActions}>
         <button className={styles.secondaryButton} onClick={onBack}>
