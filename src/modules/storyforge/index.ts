@@ -1,23 +1,23 @@
 /**
- * StoryForge Module
+ * Writer's Room Module
  *
- * This is the SINGLE PUBLIC ADAPTER for the StoryForge narrative engine.
- * All external access to StoryForge functionality MUST go through this module.
+ * This is the SINGLE PUBLIC ADAPTER for the Writer's Room narrative engine.
+ * All external access to Writer's Room functionality MUST go through this module.
  *
  * ARCHITECTURE CONSTRAINTS:
- * - StoryForge lives at: /src/modules/storyforge
+ * - Writer's Room lives at: /src/modules/storyforge (internal path)
  * - Cinema lives at: /src/services/cinema
- * - Cinema NEVER imports StoryForge internals
+ * - Cinema NEVER imports Writer's Room internals
  * - Canon is the single source of truth
  * - Projects own everything
  * - Users own projects
  *
- * IMPORTANT: StoryForge is OPTIONAL. Users can write novels, manuscripts,
- * and other literary works indefinitely WITHOUT ever touching StoryForge.
- * StoryForge is an optional escalation, never a requirement.
+ * IMPORTANT: Writer's Room is OPTIONAL. Users can write novels, manuscripts,
+ * and other literary works indefinitely WITHOUT ever touching Writer's Room.
+ * Writer's Room is an optional escalation, never a requirement.
  */
 
-import { ProjectMode, SubscriptionTier, hasFeatureAccess, canUseStoryForge } from '@/config/feature-flags';
+import { ProjectMode, SubscriptionTier, hasFeatureAccess, canUseWritersRoom } from '@/config/feature-flags';
 import type {
   Chapter,
   ChapterScene,
@@ -53,14 +53,14 @@ export interface StoryForgeError {
 // ============================================================================
 
 /**
- * Check if StoryForge features are available for the user.
+ * Check if Writer's Room features are available for the user.
  */
-export function isStoryForgeAvailable(tier: SubscriptionTier): boolean {
-  return canUseStoryForge(tier);
+export function isWritersRoomAvailable(tier: SubscriptionTier): boolean {
+  return canUseWritersRoom(tier);
 }
 
 /**
- * Check if a specific StoryForge feature is available.
+ * Check if a specific Writer's Room feature is available.
  */
 export function isFeatureAvailable(tier: SubscriptionTier, feature: keyof typeof featurePathMap): boolean {
   const path = featurePathMap[feature];
@@ -68,14 +68,14 @@ export function isFeatureAvailable(tier: SubscriptionTier, feature: keyof typeof
 }
 
 const featurePathMap = {
-  narrativeGeneration: 'storyforge.narrativeGeneration',
-  chapterExpansion: 'storyforge.chapterExpansion',
-  sceneExpansion: 'storyforge.sceneExpansion',
-  rewriteCondenseContinue: 'storyforge.rewriteCondenseContinue',
-  longFormMemory: 'storyforge.longFormMemory',
-  canonValidation: 'storyforge.canonValidation',
-  canonConflictResolution: 'storyforge.canonConflictResolution',
-  aiAuthorControls: 'storyforge.aiAuthorControls',
+  narrativeGeneration: 'writersRoom.narrativeGeneration',
+  chapterExpansion: 'writersRoom.chapterExpansion',
+  sceneExpansion: 'writersRoom.sceneExpansion',
+  rewriteCondenseContinue: 'writersRoom.rewriteCondenseContinue',
+  longFormMemory: 'writersRoom.longFormMemory',
+  canonValidation: 'writersRoom.canonValidation',
+  canonConflictResolution: 'writersRoom.canonConflictResolution',
+  aiAuthorControls: 'writersRoom.aiAuthorControls',
 } as const;
 
 // ============================================================================
@@ -97,20 +97,20 @@ export class StoryForgeAdapter {
   }
 
   /**
-   * Check if StoryForge is available for the current context.
+   * Check if Writer's Room is available for the current context.
    */
   isAvailable(): boolean {
-    return isStoryForgeAvailable(this.context.tier);
+    return isWritersRoomAvailable(this.context.tier);
   }
 
   /**
-   * Validate that the user can use StoryForge features.
+   * Validate that the user can use Writer's Room features.
    */
   private validateAccess(feature: keyof typeof featurePathMap): StoryForgeError | null {
     if (!this.isAvailable()) {
       return {
         code: 'INSUFFICIENT_TIER',
-        message: 'StoryForge features require a Pro or Enterprise subscription',
+        message: "Writer's Room features require a Pro or Enterprise subscription",
       };
     }
 

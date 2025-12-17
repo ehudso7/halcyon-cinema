@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { Project, StoryForgeFeatureId } from '@/types';
+import { Project, WritersRoomFeatureId } from '@/types';
 import { useToast } from '@/components/Toast';
 import {
   AIAuthorSettings,
@@ -20,12 +20,12 @@ const MAX_CONTENT_LENGTH = 10000;
 
 interface StoryForgePanelProps {
   project: Project;
-  featureId: StoryForgeFeatureId | null;
+  featureId: WritersRoomFeatureId | null;
   onClose: () => void;
 }
 
 interface FeatureConfig {
-  id: StoryForgeFeatureId;
+  id: WritersRoomFeatureId;
   title: string;
   description: string;
   placeholder: string;
@@ -33,7 +33,7 @@ interface FeatureConfig {
   icon: React.ReactNode;
 }
 
-const featureConfigs: Record<StoryForgeFeatureId, FeatureConfig> = {
+const featureConfigs: Record<WritersRoomFeatureId, FeatureConfig> = {
   'narrative-generation': {
     id: 'narrative-generation',
     title: 'AI Narrative Generation',
@@ -307,7 +307,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
     }
   };
 
-  const handleSwitchFeature = (newFeatureId: StoryForgeFeatureId) => {
+  const handleSwitchFeature = (newFeatureId: WritersRoomFeatureId) => {
     setInputContent('');
     setResult(null);
     router.push(`/project/${project.id}?mode=storyforge&feature=${newFeatureId}`);

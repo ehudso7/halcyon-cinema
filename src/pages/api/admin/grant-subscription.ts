@@ -24,7 +24,7 @@ function constantTimeCompare(a: string, b: string): boolean {
 
 // Credit allocations for each tier
 const TIER_CREDITS = {
-  free: 100,
+  starter: 100, // Starter tier
   pro: 500, // Creator tier
   enterprise: 2000, // Studio tier
 } as const;
@@ -74,8 +74,8 @@ export default async function handler(
     }
 
     // Validate tier
-    if (!['free', 'pro', 'enterprise'].includes(tier)) {
-      return res.status(400).json({ error: 'Invalid tier. Must be: free, pro, or enterprise' });
+    if (!['starter', 'pro', 'enterprise'].includes(tier)) {
+      return res.status(400).json({ error: 'Invalid tier. Must be: starter, pro, or enterprise' });
     }
 
     // Validate duration

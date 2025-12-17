@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { generateTextWithSettings } from '@/utils/openai';
-import { StoryForgeFeatureId, isValidStoryForgeFeatureId } from '@/types';
+import { WritersRoomFeatureId, isValidWritersRoomFeatureId } from '@/types';
 import {
   AIAuthorSettings,
   GenreType,
@@ -30,7 +30,7 @@ interface StoryForgeRequest {
   qualityTier?: QualityTier;
 }
 
-const featurePrompts: Record<StoryForgeFeatureId, (content: string, options?: StoryForgeRequest['options']) => string> = {
+const featurePrompts: Record<WritersRoomFeatureId, (content: string, options?: StoryForgeRequest['options']) => string> = {
   'narrative-generation': (content) =>
     `You are a skilled storyteller. Generate a compelling narrative based on the following prompt or outline. Write in a engaging, immersive style with vivid descriptions and natural dialogue.
 
@@ -106,7 +106,7 @@ export default async function handler(
   }
 
   // Validate feature ID at runtime
-  if (!isValidStoryForgeFeatureId(feature)) {
+  if (!isValidWritersRoomFeatureId(feature)) {
     return res.status(400).json({ error: 'Invalid feature type' });
   }
 

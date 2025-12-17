@@ -6,7 +6,7 @@
  * they are entitled to based on their plan.
  *
  * IMPORTANT: Literary works features are available to ALL tiers.
- * Users can write novels and manuscripts without ever touching StoryForge.
+ * Users can write novels and manuscripts without ever touching Writer's Room.
  */
 
 import { NextApiRequest, NextApiResponse } from 'next';
@@ -20,7 +20,7 @@ import {
   hasFeatureAccess,
   getFeatureLimit,
   canUseCinema,
-  canUseStoryForge,
+  canUseWritersRoom,
   canUseLiteraryWorks,
   ProjectMode,
   canTransitionMode,
@@ -117,7 +117,7 @@ export function checkFeatureAccess(
  * Find the minimum tier required for a feature.
  */
 function findRequiredTier(featurePath: string): SubscriptionTier {
-  const tiers: SubscriptionTier[] = ['free', 'pro', 'enterprise'];
+  const tiers: SubscriptionTier[] = ['starter', 'pro', 'enterprise'];
 
   for (const tier of tiers) {
     if (hasFeatureAccess(tier, featurePath)) {
@@ -155,7 +155,7 @@ export function checkFeatureLimit(
  * Find a tier with a higher limit for a feature.
  */
 function findTierWithHigherLimit(featurePath: string, currentLimit: number): SubscriptionTier {
-  const tiers: SubscriptionTier[] = ['free', 'pro', 'enterprise'];
+  const tiers: SubscriptionTier[] = ['starter', 'pro', 'enterprise'];
 
   for (const tier of tiers) {
     const limit = getFeatureLimit(tier, featurePath);
@@ -182,9 +182,9 @@ export function checkModeAccess(tier: SubscriptionTier): ModeAccessResult {
     availableModes.push('literary');
   }
 
-  // StoryForge requires pro or enterprise
-  if (canUseStoryForge(tier)) {
-    availableModes.push('storyforge');
+  // Writer's Room requires pro or enterprise
+  if (canUseWritersRoom(tier)) {
+    availableModes.push('writersRoom');
   }
 
   // Cinema is available to all paid tiers
@@ -236,13 +236,13 @@ export function checkModeTransition(
 function findTierForMode(mode: ProjectMode): SubscriptionTier {
   switch (mode) {
     case 'literary':
-      return 'free';
-    case 'storyforge':
+      return 'starter';
+    case 'writersRoom':
       return 'pro';
     case 'cinema':
-      return 'free'; // Basic cinema is free, advanced features need higher tier
+      return 'starter'; // Basic cinema available to starter, advanced features need higher tier
     default:
-      return 'free';
+      return 'starter';
   }
 }
 
@@ -266,7 +266,7 @@ export async function requireTier(
     return null;
   }
 
-  const tierOrder: SubscriptionTier[] = ['free', 'pro', 'enterprise'];
+  const tierOrder: SubscriptionTier[] = ['starter', 'pro', 'enterprise'];
   const requiredIndex = tierOrder.indexOf(requiredTier);
   const currentIndex = tierOrder.indexOf(tierInfo.tier);
 
@@ -356,7 +356,7 @@ export async function requireMode(
  * Literary works are ALWAYS available to all tiers.
  *
  * This ensures users with existing literary works can continue using
- * Halcyon Cinema without ever touching StoryForge.
+ * Halcyon Cinema without ever touching Writer's Room.
  */
 export function canAccessLiteraryWorks(tier: SubscriptionTier): boolean {
   return canUseLiteraryWorks(tier);
@@ -413,21 +413,21 @@ export function getCinemaFeatures(tier: SubscriptionTier): TierFeatures['cinema'
 }
 
 // ============================================================================
-// StoryForge Access
+// Writer's Room Access
 // ============================================================================
 
 /**
- * Check if a user can use StoryForge features.
+ * Check if a user can use Writer's Room features.
  */
-export function canAccessStoryForge(tier: SubscriptionTier): boolean {
-  return canUseStoryForge(tier);
+export function canAccessWritersRoom(tier: SubscriptionTier): boolean {
+  return canUseWritersRoom(tier);
 }
 
 /**
- * Get StoryForge features available for a tier.
+ * Get Writer's Room features available for a tier.
  */
-export function getStoryForgeFeatures(tier: SubscriptionTier): TierFeatures['storyforge'] {
-  return TIER_FEATURES[tier].storyforge;
+export function getWritersRoomFeatures(tier: SubscriptionTier): TierFeatures['writersRoom'] {
+  return TIER_FEATURES[tier].writersRoom;
 }
 
 // ============================================================================

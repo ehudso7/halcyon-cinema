@@ -15,7 +15,7 @@ import GenerationProgress from '@/components/GenerationProgress';
 import Warning from '@/components/Warning';
 import StoryForgePanel from '@/components/StoryForgePanel';
 import { trackGeneration } from '@/components/UsageStats';
-import { Project, Scene, StoryForgeFeatureId, isValidStoryForgeFeatureId } from '@/types';
+import { Project, Scene, WritersRoomFeatureId, isValidWritersRoomFeatureId } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import styles from '@/styles/Project.module.css';
@@ -54,15 +54,15 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
   const titleInputRef = useRef<HTMLInputElement>(null);
 
-  // StoryForge mode detection from query parameters
-  const isStoryForgeMode = router.query.mode === 'storyforge';
+  // Writer's Room mode detection from query parameters
+  const isWritersRoomMode = router.query.mode === 'storyforge';
   const queryFeature = router.query.feature as string | undefined;
-  const storyForgeFeature = queryFeature && isValidStoryForgeFeatureId(queryFeature)
+  const writersRoomFeature = queryFeature && isValidWritersRoomFeatureId(queryFeature)
     ? queryFeature
     : null;
 
-  // Handle exiting StoryForge mode
-  const handleExitStoryForge = useCallback(() => {
+  // Handle exiting Writer's Room mode
+  const handleExitWritersRoom = useCallback(() => {
     router.push(`/project/${project.id}`, undefined, { shallow: true });
   }, [router, project.id]);
 
@@ -541,17 +541,17 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
           <ProjectNavigation projectId={project.id} activeTab="scenes" />
 
-          {/* StoryForge Mode Panel */}
-          {isStoryForgeMode && (
+          {/* Writer's Room Mode Panel */}
+          {isWritersRoomMode && (
             <StoryForgePanel
               project={project}
-              featureId={storyForgeFeature}
-              onClose={handleExitStoryForge}
+              featureId={writersRoomFeature}
+              onClose={handleExitWritersRoom}
             />
           )}
 
           {/* Cinema Mode Content */}
-          {!isStoryForgeMode && showPromptBuilder && (
+          {!isWritersRoomMode && showPromptBuilder && (
             <div className={styles.promptBuilderWrapper}>
               <PromptBuilder
                 onSubmit={handleGenerateScene}
@@ -568,7 +568,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             </div>
           )}
 
-          {!isStoryForgeMode && project.scenes.length > 0 && (
+          {!isWritersRoomMode && project.scenes.length > 0 && (
             <>
               <SceneFilters
                 scenes={project.scenes}
@@ -663,7 +663,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
             </>
           )}
 
-          {!isStoryForgeMode && (
+          {!isWritersRoomMode && (
           <section className={styles.gallery}>
             {project.scenes.length > 0 ? (
               <>

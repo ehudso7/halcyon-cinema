@@ -363,7 +363,7 @@ async function doInitializeTables(): Promise<void> {
         image TEXT,
         password_hash TEXT,
         credits_remaining INTEGER DEFAULT 100,
-        subscription_tier VARCHAR(20) DEFAULT 'free',
+        subscription_tier VARCHAR(20) DEFAULT 'starter',
         subscription_expires_at TIMESTAMP WITH TIME ZONE,
         lifetime_credits_used INTEGER DEFAULT 0,
         stripe_customer_id VARCHAR(255),
@@ -571,7 +571,7 @@ export async function getUserByEmail(email: string): Promise<{
     passwordHash: row.password_hash as string | null,
     stripeCustomerId: row.stripe_customer_id as string | null,
     creditsRemaining: (row.credits_remaining as number) ?? 100,
-    subscriptionTier: (row.subscription_tier as string) ?? 'free',
+    subscriptionTier: (row.subscription_tier as string) ?? 'starter',
     subscriptionExpiresAt: row.subscription_expires_at
       ? (row.subscription_expires_at as Date).toISOString()
       : null,
@@ -619,7 +619,7 @@ export async function getUserById(id: string): Promise<{
     passwordHash: row.password_hash as string | null,
     stripeCustomerId: row.stripe_customer_id as string | null,
     creditsRemaining: (row.credits_remaining as number) ?? 100,
-    subscriptionTier: (row.subscription_tier as string) ?? 'free',
+    subscriptionTier: (row.subscription_tier as string) ?? 'starter',
     subscriptionExpiresAt: row.subscription_expires_at
       ? (row.subscription_expires_at as Date).toISOString()
       : null,
@@ -1623,7 +1623,7 @@ export async function dbDeleteSequence(projectId: string, sequenceId: string): P
 export interface UserCredits {
   id: string;
   creditsRemaining: number;
-  subscriptionTier: 'free' | 'pro' | 'enterprise';
+  subscriptionTier: 'starter' | 'pro' | 'enterprise';
   subscriptionExpiresAt: string | null;
   lifetimeCreditsUsed: number;
 }
@@ -1672,7 +1672,7 @@ export async function getUserCredits(userId: string): Promise<UserCredits | null
   return {
     id: row.id as string,
     creditsRemaining: (row.credits_remaining as number) ?? 100,
-    subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+    subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
     subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
     lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
   };
@@ -1755,7 +1755,7 @@ export async function deductCredits(
     return {
       id: row.id as string,
       creditsRemaining: newBalance,
-      subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+      subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
       subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
       lifetimeCreditsUsed: ((row.lifetime_credits_used as number) ?? 0) + amount,
     };
@@ -1835,7 +1835,7 @@ export async function addCredits(
     return {
       id: row.id as string,
       creditsRemaining: newBalance,
-      subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+      subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
       subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
       lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
     };
@@ -1888,7 +1888,7 @@ export async function getCreditTransactions(
  */
 export async function updateUserSubscription(
   userId: string,
-  tier: 'free' | 'pro' | 'enterprise',
+  tier: 'starter' | 'pro' | 'enterprise',
   expiresAt: Date | null,
   stripeSubscriptionId?: string
 ): Promise<UserCredits | null> {
@@ -1913,7 +1913,7 @@ export async function updateUserSubscription(
   return {
     id: row.id as string,
     creditsRemaining: (row.credits_remaining as number) ?? 100,
-    subscriptionTier: (row.subscription_tier as 'free' | 'pro' | 'enterprise') ?? 'free',
+    subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
     subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
     lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
   };

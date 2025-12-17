@@ -55,13 +55,13 @@ const CREDIT_AMOUNTS: Record<string, number> = {
 };
 
 // Subscription tiers for price IDs (both monthly and yearly)
-const SUBSCRIPTION_TIERS: Record<string, 'free' | 'pro' | 'enterprise'> = {
+const SUBSCRIPTION_TIERS: Record<string, 'starter' | 'pro' | 'enterprise'> = {
   // Monthly
-  [PRICE_IDS.STARTER_MONTHLY]: 'free',
+  [PRICE_IDS.STARTER_MONTHLY]: 'starter',
   [PRICE_IDS.CREATOR_MONTHLY]: 'pro',
   [PRICE_IDS.STUDIO_MONTHLY]: 'enterprise',
   // Yearly (same tiers)
-  [PRICE_IDS.STARTER_YEARLY]: 'free',
+  [PRICE_IDS.STARTER_YEARLY]: 'starter',
   [PRICE_IDS.CREATOR_YEARLY]: 'pro',
   [PRICE_IDS.STUDIO_YEARLY]: 'enterprise',
 };
@@ -190,7 +190,8 @@ export default async function handler(
 
         if (result.rows.length > 0) {
           const userId = result.rows[0].id as string;
-          await updateUserSubscription(userId, 'free', null);
+          // When subscription is cancelled, reset to starter tier (no active subscription)
+          await updateUserSubscription(userId, 'starter', null);
           console.log(`[webhook] Subscription cancelled for user ${userId}`);
         }
         break;
