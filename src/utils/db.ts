@@ -1672,7 +1672,7 @@ export async function getUserCredits(userId: string): Promise<UserCredits | null
   return {
     id: row.id as string,
     creditsRemaining: (row.credits_remaining as number) ?? 100,
-    subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
+    subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'starter',
     subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
     lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
   };
@@ -1755,7 +1755,7 @@ export async function deductCredits(
     return {
       id: row.id as string,
       creditsRemaining: newBalance,
-      subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
+      subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'starter',
       subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
       lifetimeCreditsUsed: ((row.lifetime_credits_used as number) ?? 0) + amount,
     };
@@ -1835,7 +1835,7 @@ export async function addCredits(
     return {
       id: row.id as string,
       creditsRemaining: newBalance,
-      subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
+      subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'starter',
       subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
       lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
     };
@@ -1913,7 +1913,7 @@ export async function updateUserSubscription(
   return {
     id: row.id as string,
     creditsRemaining: (row.credits_remaining as number) ?? 100,
-    subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'free',
+    subscriptionTier: (row.subscription_tier as 'starter' | 'pro' | 'enterprise') ?? 'starter',
     subscriptionExpiresAt: row.subscription_expires_at ? (row.subscription_expires_at as Date).toISOString() : null,
     lifetimeCreditsUsed: (row.lifetime_credits_used as number) ?? 0,
   };

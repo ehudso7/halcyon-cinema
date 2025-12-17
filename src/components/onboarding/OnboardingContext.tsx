@@ -109,13 +109,13 @@ export function useOnboarding(): OnboardingContextValue {
 interface OnboardingProviderProps {
   children: ReactNode;
   isNewUser?: boolean;
-  subscriptionTier?: 'free' | 'pro' | 'enterprise';
+  subscriptionTier?: 'starter' | 'pro' | 'enterprise';
 }
 
 export function OnboardingProvider({
   children,
   isNewUser = false,
-  subscriptionTier = 'free',
+  subscriptionTier = 'starter',
 }: OnboardingProviderProps) {
   const [progress, setProgress] = useState<OnboardingProgress>(defaultProgress);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -127,8 +127,8 @@ export function OnboardingProvider({
       if (saved) {
         const parsed = JSON.parse(saved) as OnboardingProgress;
         setProgress(parsed);
-      } else if (isNewUser && subscriptionTier === 'free') {
-        // Start fresh onboarding for new free users
+      } else if (isNewUser && subscriptionTier === 'starter') {
+        // Start fresh onboarding for new starter users
         setProgress({ ...defaultProgress });
       }
     } catch {
@@ -151,7 +151,7 @@ export function OnboardingProvider({
   // Determine if we should show onboarding
   const shouldShowOnboarding =
     isInitialized &&
-    subscriptionTier === 'free' &&
+    subscriptionTier === 'starter' &&
     !progress.completedAt &&
     !progress.dismissedAt;
 
