@@ -206,7 +206,7 @@ export default function WritersRoomPanel({ project, featureId, onClose }: Writer
               <button
                 key={config.id}
                 className={styles.featureButton}
-                onClick={() => router.push(`/project/${project.id}?mode=storyforge&feature=${config.id}`)}
+                onClick={() => router.push(`/project/${project.id}?mode=writers-room&feature=${config.id}`)}
               >
                 <span className={styles.featureButtonIcon}>{config.icon}</span>
                 <span>{config.title}</span>
@@ -612,7 +612,7 @@ export default function WritersRoomPanel({ project, featureId, onClose }: Writer
             )}
 
             <textarea
-              id="storyforge-input"
+              id="writers-room-input"
               aria-label={`Input content for ${config.title}`}
               className={styles.textarea}
               placeholder={config.placeholder}
