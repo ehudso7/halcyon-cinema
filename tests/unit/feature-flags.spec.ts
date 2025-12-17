@@ -25,18 +25,18 @@ import {
 describe('hasFeatureAccess', () => {
   describe('valid nested object traversal', () => {
     it('should return true for enabled boolean features', () => {
-      expect(hasFeatureAccess('free', 'literaryWorks.enabled')).toBe(true);
+      expect(hasFeatureAccess('starter', 'literaryWorks.enabled')).toBe(true);
       expect(hasFeatureAccess('pro', 'writersRoom.enabled')).toBe(true);
       expect(hasFeatureAccess('enterprise', 'cinema.enabled')).toBe(true);
     });
 
     it('should return false for disabled boolean features', () => {
-      expect(hasFeatureAccess('free', 'writersRoom.enabled')).toBe(false);
-      expect(hasFeatureAccess('free', 'literaryWorks.canonLocking')).toBe(false);
+      expect(hasFeatureAccess('starter', 'writersRoom.enabled')).toBe(false);
+      expect(hasFeatureAccess('starter', 'literaryWorks.canonLocking')).toBe(false);
     });
 
     it('should return true for non-zero numeric features', () => {
-      expect(hasFeatureAccess('free', 'maxProjects')).toBe(true);
+      expect(hasFeatureAccess('starter', 'maxProjects')).toBe(true);
       expect(hasFeatureAccess('pro', 'monthlyCredits')).toBe(true);
     });
 
@@ -49,43 +49,43 @@ describe('hasFeatureAccess', () => {
   describe('early return for primitive values mid-traversal', () => {
     it('should return false when traversing through a boolean to nested property', () => {
       // Trying to access a property on a boolean value (e.g., enabled.nestedProp)
-      expect(hasFeatureAccess('free', 'literaryWorks.enabled.nestedProp')).toBe(false);
+      expect(hasFeatureAccess('starter', 'literaryWorks.enabled.nestedProp')).toBe(false);
       expect(hasFeatureAccess('pro', 'cinema.enabled.invalid')).toBe(false);
     });
 
     it('should return false when traversing through a number to nested property', () => {
       // Trying to access a property on a number value
-      expect(hasFeatureAccess('free', 'maxProjects.nestedProp')).toBe(false);
+      expect(hasFeatureAccess('starter', 'maxProjects.nestedProp')).toBe(false);
       expect(hasFeatureAccess('pro', 'monthlyCredits.invalid')).toBe(false);
     });
   });
 
   describe('handling non-existent paths', () => {
     it('should return false for non-existent top-level properties', () => {
-      expect(hasFeatureAccess('free', 'nonExistent')).toBe(false);
+      expect(hasFeatureAccess('starter', 'nonExistent')).toBe(false);
       expect(hasFeatureAccess('pro', 'invalidFeature')).toBe(false);
     });
 
     it('should return false for non-existent nested properties', () => {
-      expect(hasFeatureAccess('free', 'literaryWorks.nonExistent')).toBe(false);
+      expect(hasFeatureAccess('starter', 'literaryWorks.nonExistent')).toBe(false);
       expect(hasFeatureAccess('pro', 'cinema.invalidProperty')).toBe(false);
     });
 
     it('should return false for deeply non-existent paths', () => {
-      expect(hasFeatureAccess('free', 'a.b.c.d.e')).toBe(false);
+      expect(hasFeatureAccess('starter', 'a.b.c.d.e')).toBe(false);
     });
   });
 
   describe('tier-specific access', () => {
     it('should correctly differentiate access between tiers', () => {
-      // StoryForge only available for pro and enterprise
-      expect(hasFeatureAccess('free', 'writersRoom.narrativeGeneration')).toBe(false);
+      // Writer's Room only available for pro and enterprise
+      expect(hasFeatureAccess('starter', 'writersRoom.narrativeGeneration')).toBe(false);
       expect(hasFeatureAccess('pro', 'writersRoom.narrativeGeneration')).toBe(true);
       expect(hasFeatureAccess('enterprise', 'writersRoom.narrativeGeneration')).toBe(true);
     });
 
     it('should grant literary works access to all tiers', () => {
-      expect(hasFeatureAccess('free', 'literaryWorks.enabled')).toBe(true);
+      expect(hasFeatureAccess('starter', 'literaryWorks.enabled')).toBe(true);
       expect(hasFeatureAccess('pro', 'literaryWorks.enabled')).toBe(true);
       expect(hasFeatureAccess('enterprise', 'literaryWorks.enabled')).toBe(true);
     });
@@ -95,13 +95,13 @@ describe('hasFeatureAccess', () => {
 describe('getFeatureLimit', () => {
   describe('valid nested object traversal', () => {
     it('should return correct numeric limits', () => {
-      expect(getFeatureLimit('free', 'maxProjects')).toBe(3);
+      expect(getFeatureLimit('starter', 'maxProjects')).toBe(3);
       expect(getFeatureLimit('pro', 'maxProjects')).toBe(20);
       expect(getFeatureLimit('enterprise', 'maxProjects')).toBe(-1); // Unlimited
     });
 
     it('should return correct nested numeric limits', () => {
-      expect(getFeatureLimit('free', 'literaryWorks.maxChaptersPerProject')).toBe(10);
+      expect(getFeatureLimit('starter', 'literaryWorks.maxChaptersPerProject')).toBe(10);
       expect(getFeatureLimit('pro', 'literaryWorks.maxChaptersPerProject')).toBe(50);
       expect(getFeatureLimit('enterprise', 'literaryWorks.maxChaptersPerProject')).toBe(-1);
     });
@@ -109,19 +109,19 @@ describe('getFeatureLimit', () => {
 
   describe('early return for primitive values mid-traversal', () => {
     it('should return 0 when traversing through a boolean', () => {
-      expect(getFeatureLimit('free', 'literaryWorks.enabled.nestedProp')).toBe(0);
+      expect(getFeatureLimit('starter', 'literaryWorks.enabled.nestedProp')).toBe(0);
       expect(getFeatureLimit('pro', 'cinema.enabled.invalid')).toBe(0);
     });
 
     it('should return 0 when traversing through a number', () => {
-      expect(getFeatureLimit('free', 'maxProjects.nestedProp')).toBe(0);
+      expect(getFeatureLimit('starter', 'maxProjects.nestedProp')).toBe(0);
       expect(getFeatureLimit('pro', 'monthlyCredits.invalid')).toBe(0);
     });
   });
 
   describe('handling non-existent paths', () => {
     it('should return 0 for non-existent properties', () => {
-      expect(getFeatureLimit('free', 'nonExistent')).toBe(0);
+      expect(getFeatureLimit('starter', 'nonExistent')).toBe(0);
       expect(getFeatureLimit('pro', 'literaryWorks.nonExistent')).toBe(0);
     });
   });
@@ -129,7 +129,7 @@ describe('getFeatureLimit', () => {
   describe('handling boolean values', () => {
     it('should return 0 for boolean feature values', () => {
       // Boolean values are not numeric limits
-      expect(getFeatureLimit('free', 'literaryWorks.enabled')).toBe(0);
+      expect(getFeatureLimit('starter', 'literaryWorks.enabled')).toBe(0);
       expect(getFeatureLimit('pro', 'writersRoom.narrativeGeneration')).toBe(0);
     });
   });
@@ -160,15 +160,15 @@ describe('canTransitionMode', () => {
 describe('tier feature checks', () => {
   describe('canUseCinema', () => {
     it('should return true for all tiers with cinema enabled', () => {
-      expect(canUseCinema('free')).toBe(true);
+      expect(canUseCinema('starter')).toBe(true);
       expect(canUseCinema('pro')).toBe(true);
       expect(canUseCinema('enterprise')).toBe(true);
     });
   });
 
   describe('canUseWritersRoom', () => {
-    it('should return false for free tier', () => {
-      expect(canUseWritersRoom('free')).toBe(false);
+    it('should return false for starter tier', () => {
+      expect(canUseWritersRoom('starter')).toBe(false);
     });
 
     it('should return true for pro and enterprise tiers', () => {
@@ -179,7 +179,7 @@ describe('tier feature checks', () => {
 
   describe('canUseLiteraryWorks', () => {
     it('should return true for all tiers', () => {
-      expect(canUseLiteraryWorks('free')).toBe(true);
+      expect(canUseLiteraryWorks('starter')).toBe(true);
       expect(canUseLiteraryWorks('pro')).toBe(true);
       expect(canUseLiteraryWorks('enterprise')).toBe(true);
     });
@@ -188,13 +188,13 @@ describe('tier feature checks', () => {
 
 describe('TIER_FEATURES structure', () => {
   it('should have all required tiers defined', () => {
-    expect(TIER_FEATURES).toHaveProperty('free');
+    expect(TIER_FEATURES).toHaveProperty('starter');
     expect(TIER_FEATURES).toHaveProperty('pro');
     expect(TIER_FEATURES).toHaveProperty('enterprise');
   });
 
   it('should have consistent structure across tiers', () => {
-    const tiers = ['free', 'pro', 'enterprise'] as const;
+    const tiers = ['starter', 'pro', 'enterprise'] as const;
 
     for (const tier of tiers) {
       expect(TIER_FEATURES[tier]).toHaveProperty('maxProjects');
@@ -207,40 +207,40 @@ describe('TIER_FEATURES structure', () => {
   });
 
   it('should have progressively more features in higher tiers', () => {
-    expect(TIER_FEATURES.free.maxProjects).toBeLessThan(TIER_FEATURES.pro.maxProjects);
+    expect(TIER_FEATURES.starter.maxProjects).toBeLessThan(TIER_FEATURES.pro.maxProjects);
     expect(TIER_FEATURES.pro.monthlyCredits).toBeLessThan(TIER_FEATURES.enterprise.monthlyCredits);
   });
 });
 
 describe('getAvailableFeatures', () => {
   it('should return array of features for each tier', () => {
-    const freeFeatures = getAvailableFeatures('free');
+    const starterFeatures = getAvailableFeatures('starter');
     const proFeatures = getAvailableFeatures('pro');
     const enterpriseFeatures = getAvailableFeatures('enterprise');
 
-    expect(Array.isArray(freeFeatures)).toBe(true);
+    expect(Array.isArray(starterFeatures)).toBe(true);
     expect(Array.isArray(proFeatures)).toBe(true);
     expect(Array.isArray(enterpriseFeatures)).toBe(true);
   });
 
   it('should include Literary Works Mode for all tiers', () => {
-    expect(getAvailableFeatures('free')).toContain('Literary Works Mode');
+    expect(getAvailableFeatures('starter')).toContain('Literary Works Mode');
     expect(getAvailableFeatures('pro')).toContain('Literary Works Mode');
     expect(getAvailableFeatures('enterprise')).toContain('Literary Works Mode');
   });
 
   it('should include Writer\'s Room Mode only for pro and enterprise', () => {
-    expect(getAvailableFeatures('free')).not.toContain('Writer\'s Room Mode');
+    expect(getAvailableFeatures('starter')).not.toContain('Writer\'s Room Mode');
     expect(getAvailableFeatures('pro')).toContain('Writer\'s Room Mode');
     expect(getAvailableFeatures('enterprise')).toContain('Writer\'s Room Mode');
   });
 
   it('should have more features for higher tiers', () => {
-    const freeFeatures = getAvailableFeatures('free');
+    const starterFeatures = getAvailableFeatures('starter');
     const proFeatures = getAvailableFeatures('pro');
     const enterpriseFeatures = getAvailableFeatures('enterprise');
 
-    expect(proFeatures.length).toBeGreaterThan(freeFeatures.length);
+    expect(proFeatures.length).toBeGreaterThan(starterFeatures.length);
     expect(enterpriseFeatures.length).toBeGreaterThanOrEqual(proFeatures.length);
   });
 });

@@ -1,7 +1,7 @@
 /**
  * Onboarding Context
  *
- * Manages immersive onboarding state for new and free-tier users.
+ * Manages immersive onboarding state for new and starter-tier users.
  * Tracks progress through the guided experience and triggers strategic
  * upgrade prompts at key moments.
  */
@@ -52,7 +52,7 @@ export interface OnboardingContextValue {
   markWritersRoomTried: () => void;
   markContentGenerated: () => void;
   markCinemaPreviewed: () => void;
-  useTrialCredit: () => boolean;
+  consumeTrialCredit: () => boolean;
   showUpgrade: () => void;
   dismissOnboarding: () => void;
   completeOnboarding: () => void;
@@ -243,7 +243,7 @@ export function OnboardingProvider({
     }));
   }, []);
 
-  const useTrialCredit = useCallback((): boolean => {
+  const consumeTrialCredit = useCallback((): boolean => {
     let success = false;
     setProgress((prev) => {
       if (prev.trialCreditsRemaining > 0) {
@@ -310,7 +310,7 @@ export function OnboardingProvider({
     markWritersRoomTried,
     markContentGenerated,
     markCinemaPreviewed,
-    useTrialCredit,
+    consumeTrialCredit,
     showUpgrade,
     dismissOnboarding,
     completeOnboarding,
