@@ -14,7 +14,7 @@ interface UsageData {
   longestStreak: number;
   creditsUsed: number;
   creditsRemaining: number;
-  subscriptionTier: 'free' | 'pro' | 'enterprise';
+  subscriptionTier: 'starter' | 'pro' | 'enterprise';
   memberSince: string;
   totalProjects: number;
   totalScenes: number;
@@ -32,7 +32,7 @@ const STORAGE_KEY = 'halcyon-usage-stats';
 /**
  * Get the maximum credits for a subscription tier.
  */
-function getMaxCredits(tier: 'free' | 'pro' | 'enterprise'): number {
+function getMaxCredits(tier: 'starter' | 'pro' | 'enterprise'): number {
   switch (tier) {
     case 'enterprise': return 10000;
     case 'pro': return 500;
@@ -101,7 +101,7 @@ async function fetchCreditsFromServer(): Promise<{ creditsRemaining: number; sub
       const data = await response.json();
       return {
         creditsRemaining: data.credits?.creditsRemaining ?? 100,
-        subscriptionTier: data.credits?.subscriptionTier ?? 'free',
+        subscriptionTier: data.credits?.subscriptionTier ?? 'starter',
       };
     }
     // If not authenticated or error, return null
@@ -204,7 +204,7 @@ export default function UsageStats({ compact = false }: UsageStatsProps) {
         setUsage({
           ...localStats,
           creditsRemaining: serverCredits.creditsRemaining,
-          subscriptionTier: serverCredits.subscriptionTier as 'free' | 'pro' | 'enterprise',
+          subscriptionTier: serverCredits.subscriptionTier as 'starter' | 'pro' | 'enterprise',
         });
         setIsLoading(false);
         return;
@@ -215,7 +215,7 @@ export default function UsageStats({ compact = false }: UsageStatsProps) {
     setUsage({
       ...localStats,
       creditsRemaining: 100,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
     });
     setIsLoading(false);
   }, [session]);
@@ -321,7 +321,7 @@ function UsageStatsContent({ usage }: { usage: UsageData }) {
             style={{ width: `${creditsPercent}%` }}
           />
         </div>
-        {isLow && usage.subscriptionTier === 'free' && (
+        {isLow && usage.subscriptionTier === 'starter' && (
           <p className={styles.creditsWarning}>
             Running low on credits! Upgrade to Pro for 500 credits/month.
           </p>

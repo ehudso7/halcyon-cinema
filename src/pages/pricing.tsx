@@ -208,7 +208,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
             {isLoggedIn && creditsRemaining !== undefined && (
               <div className={styles.currentCredits}>
                 You have <strong>{creditsRemaining}</strong> credits remaining
-                {currentTier && currentTier !== 'free' && (
+                {currentTier && currentTier !== 'starter' && (
                   <span className={styles.tierBadge}>{currentTier}</span>
                 )}
               </div>
@@ -448,7 +448,7 @@ export const getServerSideProps: GetServerSideProps<PricingPageProps> = async (c
     return {
       props: {
         isLoggedIn: true,
-        currentTier: credits?.subscriptionTier || 'free',
+        currentTier: credits?.subscriptionTier || 'starter',
         creditsRemaining: credits?.creditsRemaining || 0,
         stripeConfigured,
         priceIds,
