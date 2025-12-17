@@ -2,21 +2,21 @@ import { useState, useEffect, useCallback } from 'react';
 
 const CSRF_HEADER_NAME = 'x-csrf-token';
 
-// Type alias for fetch options to avoid ESLint no-undef error with global RequestInit
-type FetchOptions = {
+// Simplified fetch options using string literals to avoid ESLint no-undef errors with global DOM types
+interface FetchOptions {
   method?: string;
-  headers?: HeadersInit;
-  body?: BodyInit | null;
-  credentials?: RequestCredentials;
-  mode?: RequestMode;
-  cache?: RequestCache;
-  redirect?: RequestRedirect;
+  headers?: Record<string, string> | [string, string][];
+  body?: string | null;
+  credentials?: 'include' | 'omit' | 'same-origin';
+  mode?: 'cors' | 'no-cors' | 'same-origin';
+  cache?: 'default' | 'no-store' | 'reload' | 'no-cache' | 'force-cache';
+  redirect?: 'follow' | 'error' | 'manual';
   referrer?: string;
-  referrerPolicy?: ReferrerPolicy;
+  referrerPolicy?: 'no-referrer' | 'no-referrer-when-downgrade' | 'origin' | 'origin-when-cross-origin' | 'same-origin' | 'strict-origin' | 'strict-origin-when-cross-origin' | 'unsafe-url';
   integrity?: string;
   keepalive?: boolean;
   signal?: AbortSignal | null;
-};
+}
 
 interface UseCSRFReturn {
   /** The current CSRF token */

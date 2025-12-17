@@ -15,7 +15,7 @@ import {
   getFeatureLimit,
   canTransitionMode,
   canUseCinema,
-  canUseStoryForge,
+  canUseWritersRoom,
   canUseLiteraryWorks,
   TIER_FEATURES,
   getAvailableFeatures,
@@ -26,12 +26,12 @@ describe('hasFeatureAccess', () => {
   describe('valid nested object traversal', () => {
     it('should return true for enabled boolean features', () => {
       expect(hasFeatureAccess('free', 'literaryWorks.enabled')).toBe(true);
-      expect(hasFeatureAccess('pro', 'storyforge.enabled')).toBe(true);
+      expect(hasFeatureAccess('pro', 'writersRoom.enabled')).toBe(true);
       expect(hasFeatureAccess('enterprise', 'cinema.enabled')).toBe(true);
     });
 
     it('should return false for disabled boolean features', () => {
-      expect(hasFeatureAccess('free', 'storyforge.enabled')).toBe(false);
+      expect(hasFeatureAccess('free', 'writersRoom.enabled')).toBe(false);
       expect(hasFeatureAccess('free', 'literaryWorks.canonLocking')).toBe(false);
     });
 
@@ -79,9 +79,9 @@ describe('hasFeatureAccess', () => {
   describe('tier-specific access', () => {
     it('should correctly differentiate access between tiers', () => {
       // StoryForge only available for pro and enterprise
-      expect(hasFeatureAccess('free', 'storyforge.narrativeGeneration')).toBe(false);
-      expect(hasFeatureAccess('pro', 'storyforge.narrativeGeneration')).toBe(true);
-      expect(hasFeatureAccess('enterprise', 'storyforge.narrativeGeneration')).toBe(true);
+      expect(hasFeatureAccess('free', 'writersRoom.narrativeGeneration')).toBe(false);
+      expect(hasFeatureAccess('pro', 'writersRoom.narrativeGeneration')).toBe(true);
+      expect(hasFeatureAccess('enterprise', 'writersRoom.narrativeGeneration')).toBe(true);
     });
 
     it('should grant literary works access to all tiers', () => {
@@ -130,7 +130,7 @@ describe('getFeatureLimit', () => {
     it('should return 0 for boolean feature values', () => {
       // Boolean values are not numeric limits
       expect(getFeatureLimit('free', 'literaryWorks.enabled')).toBe(0);
-      expect(getFeatureLimit('pro', 'storyforge.narrativeGeneration')).toBe(0);
+      expect(getFeatureLimit('pro', 'writersRoom.narrativeGeneration')).toBe(0);
     });
   });
 });
@@ -138,22 +138,22 @@ describe('getFeatureLimit', () => {
 describe('canTransitionMode', () => {
   it('should allow same-mode transitions', () => {
     expect(canTransitionMode('literary', 'literary')).toBe(true);
-    expect(canTransitionMode('storyforge', 'storyforge')).toBe(true);
+    expect(canTransitionMode('writers-room', 'writers-room')).toBe(true);
     expect(canTransitionMode('cinema', 'cinema')).toBe(true);
   });
 
   it('should allow valid mode transitions', () => {
     // From literary
-    expect(canTransitionMode('literary', 'storyforge')).toBe(true);
+    expect(canTransitionMode('literary', 'writers-room')).toBe(true);
     expect(canTransitionMode('literary', 'cinema')).toBe(true);
 
-    // From storyforge
-    expect(canTransitionMode('storyforge', 'literary')).toBe(true);
-    expect(canTransitionMode('storyforge', 'cinema')).toBe(true);
+    // From writers-room
+    expect(canTransitionMode('writers-room', 'literary')).toBe(true);
+    expect(canTransitionMode('writers-room', 'cinema')).toBe(true);
 
     // From cinema
     expect(canTransitionMode('cinema', 'literary')).toBe(true);
-    expect(canTransitionMode('cinema', 'storyforge')).toBe(true);
+    expect(canTransitionMode('cinema', 'writers-room')).toBe(true);
   });
 });
 
@@ -166,14 +166,14 @@ describe('tier feature checks', () => {
     });
   });
 
-  describe('canUseStoryForge', () => {
+  describe('canUseWritersRoom', () => {
     it('should return false for free tier', () => {
-      expect(canUseStoryForge('free')).toBe(false);
+      expect(canUseWritersRoom('free')).toBe(false);
     });
 
     it('should return true for pro and enterprise tiers', () => {
-      expect(canUseStoryForge('pro')).toBe(true);
-      expect(canUseStoryForge('enterprise')).toBe(true);
+      expect(canUseWritersRoom('pro')).toBe(true);
+      expect(canUseWritersRoom('enterprise')).toBe(true);
     });
   });
 
@@ -199,7 +199,7 @@ describe('TIER_FEATURES structure', () => {
     for (const tier of tiers) {
       expect(TIER_FEATURES[tier]).toHaveProperty('maxProjects');
       expect(TIER_FEATURES[tier]).toHaveProperty('literaryWorks');
-      expect(TIER_FEATURES[tier]).toHaveProperty('storyforge');
+      expect(TIER_FEATURES[tier]).toHaveProperty('writersRoom');
       expect(TIER_FEATURES[tier]).toHaveProperty('cinema');
       expect(TIER_FEATURES[tier]).toHaveProperty('exports');
       expect(TIER_FEATURES[tier]).toHaveProperty('advanced');
@@ -229,10 +229,10 @@ describe('getAvailableFeatures', () => {
     expect(getAvailableFeatures('enterprise')).toContain('Literary Works Mode');
   });
 
-  it('should include StoryForge Mode only for pro and enterprise', () => {
-    expect(getAvailableFeatures('free')).not.toContain('StoryForge Mode');
-    expect(getAvailableFeatures('pro')).toContain('StoryForge Mode');
-    expect(getAvailableFeatures('enterprise')).toContain('StoryForge Mode');
+  it('should include Writer\'s Room Mode only for pro and enterprise', () => {
+    expect(getAvailableFeatures('free')).not.toContain('Writer\'s Room Mode');
+    expect(getAvailableFeatures('pro')).toContain('Writer\'s Room Mode');
+    expect(getAvailableFeatures('enterprise')).toContain('Writer\'s Room Mode');
   });
 
   it('should have more features for higher tiers', () => {
@@ -247,7 +247,7 @@ describe('getAvailableFeatures', () => {
 
 describe('isRuntimeFeatureEnabled', () => {
   it('should return boolean values for runtime flags', () => {
-    expect(typeof isRuntimeFeatureEnabled('ENABLE_STORYFORGE')).toBe('boolean');
+    expect(typeof isRuntimeFeatureEnabled('ENABLE_WRITERS_ROOM')).toBe('boolean');
     expect(typeof isRuntimeFeatureEnabled('ENABLE_CINEMA')).toBe('boolean');
     expect(typeof isRuntimeFeatureEnabled('ENABLE_LITERARY_WORKS')).toBe('boolean');
   });

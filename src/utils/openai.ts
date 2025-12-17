@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { GenerateImageRequest, GenerateImageResponse } from '@/types';
+import { GenerateImageRequest, GenerateImageResponse, ImageModel, ImageSize, ImageOutputFormat } from '@/types';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -113,8 +113,15 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
   try {
     // Build request parameters based on model
     // GPT Image 1.5 supports output_format, DALL-E 3 does not
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const requestParams: any = {
+    const requestParams: {
+      model: ImageModel;
+      prompt: string;
+      n: number;
+      size: ImageSize;
+      quality: 'standard' | 'hd';
+      style: 'natural' | 'vivid';
+      output_format?: ImageOutputFormat;
+    } = {
       model,
       prompt,
       n: 1,
