@@ -7,7 +7,7 @@ const CSRF_HEADER_NAME = 'x-csrf-token';
 interface FetchOptions {
   method?: string;
   headers?: Record<string, string> | [string, string][];
-  body?: string | FormData | Blob | ArrayBuffer | URLSearchParams | ReadableStream | null;
+  body?: string | FormData | Blob | ArrayBuffer | URLSearchParams | ReadableStream<Uint8Array> | null;
   credentials?: 'include' | 'omit' | 'same-origin';
   mode?: 'cors' | 'no-cors' | 'same-origin';
   cache?: 'default' | 'no-store' | 'reload' | 'no-cache' | 'force-cache' | 'only-if-cached';
