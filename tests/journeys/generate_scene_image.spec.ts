@@ -112,7 +112,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',
       creditsRemaining: 100,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
       subscriptionExpiresAt: null,
       lifetimeCreditsUsed: 0,
     });
@@ -145,14 +145,14 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',
       creditsRemaining: 100,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
       subscriptionExpiresAt: null,
       lifetimeCreditsUsed: 0,
     });
     vi.mocked(deductCredits).mockResolvedValue({
       id: 'user-123',
       creditsRemaining: 99,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
       subscriptionExpiresAt: null,
       lifetimeCreditsUsed: 1,
     });
@@ -216,14 +216,14 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',
       creditsRemaining: 100,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
       subscriptionExpiresAt: null,
       lifetimeCreditsUsed: 0,
     });
     vi.mocked(deductCredits).mockResolvedValue({
       id: 'user-123',
       creditsRemaining: 99,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
       subscriptionExpiresAt: null,
       lifetimeCreditsUsed: 1,
     });
@@ -260,14 +260,14 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',
       creditsRemaining: 100,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
       subscriptionExpiresAt: null,
       lifetimeCreditsUsed: 0,
     });
     vi.mocked(deductCredits).mockResolvedValue({
       id: 'user-123',
       creditsRemaining: 99,
-      subscriptionTier: 'free',
+      subscriptionTier: 'starter',
       subscriptionExpiresAt: null,
       lifetimeCreditsUsed: 1,
     });
