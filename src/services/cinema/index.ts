@@ -22,6 +22,17 @@
 import { SubscriptionTier, hasFeatureAccess, canUseCinema, ProjectMode } from '@/config/feature-flags';
 import { dbGetProjectById, dbGetProjectLore } from '@/utils/db';
 import { dbGetProjectChapters, dbGetChapterScenes } from '@/utils/db-literary';
+import {
+  generateVideo as generateVideoMedia,
+  generateMusic as generateMusicMedia,
+  generateVoiceover as generateVoiceoverMedia,
+  isVideoGenerationConfigured,
+  isMusicGenerationConfigured,
+  isVoiceoverGenerationConfigured,
+  getVideoCreditCost,
+  getMusicCreditCost,
+  getVoiceoverCreditCost,
+} from '@/services/media-generation';
 import type {
   SemanticSceneOutput,
   CinematicShot,
@@ -351,12 +362,21 @@ export class CinemaAdapter {
 
   /**
    * Generate video for a sequence.
+   * Uses Replicate (Stable Video Diffusion or Zeroscope).
    */
-  async generateVideo(sequenceId: string): Promise<{
+  async generateVideo(
+    sequenceId: string,
+    options?: {
+      prompt?: string;
+      imageUrl?: string;
+      quality?: 'standard' | 'professional' | 'premium';
+    }
+  ): Promise<{
     success: boolean;
     videoUrl?: string;
     error?: string;
     creditsUsed: number;
+    predictionId?: string;
   }> {
     const error = this.validateAccess('videoGeneration');
     if (error) {
@@ -367,17 +387,27 @@ export class CinemaAdapter {
       };
     }
 
-    return CinemaEngine.generateVideo(this.context, sequenceId);
+    return CinemaEngine.generateVideo(this.context, sequenceId, options);
   }
 
   /**
    * Generate music for a scene or project.
+   * Uses Replicate MusicGen (cheapest option).
    */
-  async generateMusic(mood: string, duration: number): Promise<{
+  async generateMusic(
+    mood: string,
+    duration: number,
+    options?: {
+      genre?: string;
+      tempo?: string;
+      quality?: 'standard' | 'professional' | 'premium';
+    }
+  ): Promise<{
     success: boolean;
     audioUrl?: string;
     error?: string;
     creditsUsed: number;
+    predictionId?: string;
   }> {
     const error = this.validateAccess('musicGeneration');
     if (error) {
@@ -388,13 +418,21 @@ export class CinemaAdapter {
       };
     }
 
-    return CinemaEngine.generateMusic(this.context, mood, duration);
+    return CinemaEngine.generateMusic(this.context, mood, duration, options);
   }
 
   /**
    * Generate voiceover for text.
+   * Uses OpenAI TTS (cheapest quality option at $0.015/1K chars).
    */
-  async generateVoiceover(text: string, voiceId?: string): Promise<{
+  async generateVoiceover(
+    text: string,
+    voiceId?: string,
+    options?: {
+      model?: 'tts-1' | 'tts-1-hd';
+      speed?: number;
+    }
+  ): Promise<{
     success: boolean;
     audioUrl?: string;
     duration?: number;
@@ -410,7 +448,7 @@ export class CinemaAdapter {
       };
     }
 
-    return CinemaEngine.generateVoiceover(this.context, text, voiceId);
+    return CinemaEngine.generateVoiceover(this.context, text, voiceId, options);
   }
 
   // ==========================================================================
@@ -639,46 +677,167 @@ const CinemaEngine = {
   },
 
   /**
-   * Generate video.
+   * Generate video for a shot sequence.
+   * Uses Replicate's video models (Stable Video Diffusion or Zeroscope).
+   * Cost: 10-25 credits depending on quality tier.
    */
   async generateVideo(
-    _context: CinemaContext,
-    _sequenceId: string
-  ): Promise<{ success: boolean; videoUrl?: string; error?: string; creditsUsed: number }> {
-    // TODO: Integrate with video generation API
+    context: CinemaContext,
+    sequenceId: string,
+    options?: {
+      prompt?: string;
+      imageUrl?: string;
+      quality?: 'standard' | 'professional' | 'premium';
+    }
+  ): Promise<{ success: boolean; videoUrl?: string; error?: string; creditsUsed: number; predictionId?: string }> {
+    if (!isVideoGenerationConfigured()) {
+      return {
+        success: false,
+        error: 'Video generation is not configured. Please set REPLICATE_API_TOKEN.',
+        creditsUsed: 0,
+      };
+    }
+
+    const quality = options?.quality || 'standard';
+    const creditsUsed = getVideoCreditCost(quality);
+
+    // Generate video using the media generation service
+    const result = await generateVideoMedia({
+      prompt: options?.prompt || `Cinematic sequence ${sequenceId}`,
+      imageUrl: options?.imageUrl,
+      duration: quality === 'premium' ? 'long' : 'short',
+      aspectRatio: '16:9',
+      projectId: context.projectId,
+      sceneId: sequenceId,
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        creditsUsed: 0,
+      };
+    }
+
     return {
       success: true,
-      creditsUsed: 10,
+      videoUrl: result.videoUrl,
+      predictionId: result.predictionId,
+      creditsUsed,
     };
   },
 
   /**
-   * Generate music.
+   * Generate music for a scene.
+   * Uses Replicate MusicGen (cheapest option at ~$0.03-0.05/generation).
+   * Cost: 5-10 credits depending on quality tier.
    */
   async generateMusic(
-    _context: CinemaContext,
-    _mood: string,
-    _duration: number
-  ): Promise<{ success: boolean; audioUrl?: string; error?: string; creditsUsed: number }> {
-    // TODO: Integrate with music generation API
+    context: CinemaContext,
+    mood: string,
+    duration: number,
+    options?: {
+      genre?: string;
+      tempo?: string;
+      quality?: 'standard' | 'professional' | 'premium';
+    }
+  ): Promise<{ success: boolean; audioUrl?: string; error?: string; creditsUsed: number; predictionId?: string }> {
+    if (!isMusicGenerationConfigured()) {
+      return {
+        success: false,
+        error: 'Music generation is not configured. Please set REPLICATE_API_TOKEN.',
+        creditsUsed: 0,
+      };
+    }
+
+    const quality = options?.quality || 'standard';
+    const creditsUsed = getMusicCreditCost(quality);
+
+    // Build a cinematic music prompt
+    const prompt = `Cinematic ${mood} background music, film score, orchestral`;
+
+    const result = await generateMusicMedia({
+      prompt,
+      duration: Math.min(30, Math.max(5, duration)),
+      genre: options?.genre || 'cinematic',
+      mood,
+      tempo: options?.tempo,
+      projectId: context.projectId,
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        creditsUsed: 0,
+      };
+    }
+
     return {
       success: true,
-      creditsUsed: 5,
+      audioUrl: result.audioUrl,
+      predictionId: result.predictionId,
+      creditsUsed,
     };
   },
 
   /**
-   * Generate voiceover.
+   * Generate voiceover for dialogue or narration.
+   * Uses OpenAI TTS (cheapest quality option at $0.015/1K chars).
+   * Cost: 2 credits per 1000 characters.
    */
   async generateVoiceover(
-    _context: CinemaContext,
-    _text: string,
-    _voiceId?: string
+    context: CinemaContext,
+    text: string,
+    voiceId?: string,
+    options?: {
+      model?: 'tts-1' | 'tts-1-hd';
+      speed?: number;
+    }
   ): Promise<{ success: boolean; audioUrl?: string; duration?: number; error?: string; creditsUsed: number }> {
-    // TODO: Integrate with TTS API
+    if (!isVoiceoverGenerationConfigured()) {
+      return {
+        success: false,
+        error: 'Voiceover generation is not configured. Please set OPENAI_API_KEY.',
+        creditsUsed: 0,
+      };
+    }
+
+    const trimmedText = text.trim();
+    if (!trimmedText) {
+      return {
+        success: false,
+        error: 'Text is required for voiceover generation',
+        creditsUsed: 0,
+      };
+    }
+
+    const creditsUsed = getVoiceoverCreditCost(trimmedText.length);
+
+    // Map voiceId to OpenAI voice
+    const voice = (voiceId as 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer') || 'nova';
+
+    const result = await generateVoiceoverMedia({
+      text: trimmedText,
+      voice,
+      model: options?.model || 'tts-1',
+      speed: options?.speed || 1.0,
+      projectId: context.projectId,
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error,
+        creditsUsed: 0,
+      };
+    }
+
     return {
       success: true,
-      creditsUsed: 2,
+      audioUrl: result.audioUrl,
+      duration: result.duration,
+      creditsUsed,
     };
   },
 };
