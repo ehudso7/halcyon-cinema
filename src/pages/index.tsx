@@ -1670,11 +1670,11 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
 export const getServerSideProps: GetServerSideProps<HomeProps> = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions);
 
-  // Redirect to landing if not authenticated
+  // Redirect to onboarding if not authenticated
   if (!session?.user?.id) {
     return {
       redirect: {
-        destination: '/landing',
+        destination: '/onboarding',
         permanent: false,
       },
     };

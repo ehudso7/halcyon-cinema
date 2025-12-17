@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { generateTextWithSettings } from '@/utils/openai';
-import { StoryForgeFeatureId, isValidStoryForgeFeatureId } from '@/types';
+import { WritersRoomFeatureId, isValidWritersRoomFeatureId } from '@/types';
 import {
   AIAuthorSettings,
   GenreType,
@@ -18,7 +18,7 @@ import {
 
 const MAX_CONTENT_LENGTH = 10000;
 
-interface StoryForgeRequest {
+interface WritersRoomRequest {
   projectId: string;
   feature: string;
   content: string;
@@ -30,7 +30,7 @@ interface StoryForgeRequest {
   qualityTier?: QualityTier;
 }
 
-const featurePrompts: Record<StoryForgeFeatureId, (content: string, options?: StoryForgeRequest['options']) => string> = {
+const featurePrompts: Record<WritersRoomFeatureId, (content: string, options?: WritersRoomRequest['options']) => string> = {
   'narrative-generation': (content) =>
     `You are a skilled storyteller. Generate a compelling narrative based on the following prompt or outline. Write in a engaging, immersive style with vivid descriptions and natural dialogue.
 
@@ -99,14 +99,14 @@ export default async function handler(
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { projectId, feature, content, options, authorSettings } = req.body as StoryForgeRequest;
+  const { projectId, feature, content, options, authorSettings } = req.body as WritersRoomRequest;
 
   if (!projectId || !feature) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
   // Validate feature ID at runtime
-  if (!isValidStoryForgeFeatureId(feature)) {
+  if (!isValidWritersRoomFeatureId(feature)) {
     return res.status(400).json({ error: 'Invalid feature type' });
   }
 
@@ -173,7 +173,7 @@ export default async function handler(
     const validatedSettings = validateAISettings(authorSettings || {});
 
     // Get and validate quality tier (derive valid tiers from QUALITY_TIERS keys)
-    const { qualityTier: requestedTier, genre: requestedGenre } = req.body as StoryForgeRequest;
+    const { qualityTier: requestedTier, genre: requestedGenre } = req.body as WritersRoomRequest;
     const tier: QualityTier = requestedTier && requestedTier in QUALITY_TIERS
       ? requestedTier
       : 'professional';
@@ -188,7 +188,7 @@ export default async function handler(
     const temperature = calculateTemperature(validatedSettings.creativity, tier);
 
     // Build the system prompt with genre and quality settings
-    const systemPrompt = buildSystemPrompt(validatedSettings, validatedGenre, tier, 'storyforge');
+    const systemPrompt = buildSystemPrompt(validatedSettings, validatedGenre, tier, 'writers-room');
 
     // Generate the content using OpenAI with full settings
     const result = await generateTextWithSettings(fullPrompt, {
@@ -209,7 +209,7 @@ export default async function handler(
       creditsUsed: TIER_CREDITS[tier],
     });
   } catch (error) {
-    console.error('StoryForge processing error:', error);
+    console.error('Writers Room processing error:', error);
     return res.status(500).json({
       error: error instanceof Error ? error.message : 'Failed to process content',
     });

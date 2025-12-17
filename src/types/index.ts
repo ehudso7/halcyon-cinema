@@ -4,8 +4,8 @@ export * from './literary';
 // Import ProjectMode for use in Project interface
 import type { ProjectMode } from '@/config/feature-flags';
 
-// StoryForge feature types
-export type StoryForgeFeatureId =
+// Writer's Room feature types
+export type WritersRoomFeatureId =
   | 'narrative-generation'
   | 'chapter-expansion'
   | 'scene-expansion'
@@ -13,7 +13,7 @@ export type StoryForgeFeatureId =
   | 'canon-validation'
   | 'ai-author-controls';
 
-export const STORYFORGE_FEATURE_IDS: readonly StoryForgeFeatureId[] = [
+export const WRITERS_ROOM_FEATURE_IDS: readonly WritersRoomFeatureId[] = [
   'narrative-generation',
   'chapter-expansion',
   'scene-expansion',
@@ -22,8 +22,8 @@ export const STORYFORGE_FEATURE_IDS: readonly StoryForgeFeatureId[] = [
   'ai-author-controls',
 ] as const;
 
-export function isValidStoryForgeFeatureId(id: string): id is StoryForgeFeatureId {
-  return STORYFORGE_FEATURE_IDS.includes(id as StoryForgeFeatureId);
+export function isValidWritersRoomFeatureId(id: string): id is WritersRoomFeatureId {
+  return WRITERS_ROOM_FEATURE_IDS.includes(id as WritersRoomFeatureId);
 }
 
 // User types

@@ -192,7 +192,7 @@ export interface TextGenerationSettings {
 
 /**
  * Generate text content using GPT-4o-mini.
- * Used by StoryForge for narrative generation, expansion, and editing.
+ * Used by Writer's Room for narrative generation, expansion, and editing.
  *
  * @param prompt - The prompt to generate content from
  * @param options - Generation options including temperature and max tokens
@@ -214,7 +214,7 @@ export async function generateText(
 /**
  * Generate text content using GPT-4o-mini with full settings control.
  * This is the primary function for AI-assisted content generation across
- * both StoryForge and Halcyon Cinema.
+ * both Writer's Room and Halcyon Cinema.
  *
  * @param prompt - The user prompt to generate content from
  * @param settings - Full generation settings including system prompt and model parameters
