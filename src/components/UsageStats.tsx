@@ -290,7 +290,7 @@ function UsageStatsContent({ usage }: { usage: UsageData }) {
     (new Date().getTime() - new Date(usage.memberSince).getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  const tierLabel = usage.subscriptionTier === 'enterprise' ? 'Enterprise' : usage.subscriptionTier === 'pro' ? 'Pro' : 'Free';
+  const tierLabel = usage.subscriptionTier === 'enterprise' ? 'Enterprise' : usage.subscriptionTier === 'pro' ? 'Pro' : 'Starter';
 
   return (
     <div className={styles.container}>
