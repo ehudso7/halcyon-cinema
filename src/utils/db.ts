@@ -479,6 +479,7 @@ async function doInitializeTables(): Promise<void> {
     `);
 
     // Create indexes for better query performance
+    // Foreign key indexes for efficient joins
     await query('CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id)');
     await query('CREATE INDEX IF NOT EXISTS idx_scenes_project_id ON scenes(project_id)');
     await query('CREATE INDEX IF NOT EXISTS idx_characters_project_id ON characters(project_id)');
@@ -486,6 +487,16 @@ async function doInitializeTables(): Promise<void> {
     await query('CREATE INDEX IF NOT EXISTS idx_sequences_project_id ON sequences(project_id)');
     await query('CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions(user_id)');
     await query('CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id)');
+
+    // Composite indexes for common query patterns
+    await query('CREATE INDEX IF NOT EXISTS idx_lore_project_type ON lore(project_id, type)');
+    await query('CREATE INDEX IF NOT EXISTS idx_projects_user_updated ON projects(user_id, updated_at DESC)');
+    await query('CREATE INDEX IF NOT EXISTS idx_scenes_project_created ON scenes(project_id, created_at DESC)');
+
+    // Sort indexes for efficient ORDER BY queries
+    await query('CREATE INDEX IF NOT EXISTS idx_scenes_created_at ON scenes(created_at DESC)');
+    await query('CREATE INDEX IF NOT EXISTS idx_credit_transactions_created_at ON credit_transactions(created_at DESC)');
+    await query('CREATE INDEX IF NOT EXISTS idx_projects_updated_at ON projects(updated_at DESC)');
 
     timer.end();
     dbLogger.info('Database tables initialized successfully');

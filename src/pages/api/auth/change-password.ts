@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth/next';
 import bcrypt from 'bcryptjs';
-import { authOptions } from './[...nextauth]';
+import { requireAuthWithCSRF } from '@/utils/api-auth';
 import { getUserById, updateUser } from '@/utils/users';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -10,10 +9,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user?.id) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  // Require authentication with CSRF protection for password changes
+  const userId = await requireAuthWithCSRF(req, res);
+  if (!userId) return;
 
   const { currentPassword, newPassword } = req.body;
 
@@ -26,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const user = await getUserById(session.user.id);
+    const user = await getUserById(userId);
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
@@ -46,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     // Update user with new password
-    await updateUser(session.user.id, { password: hashedPassword });
+    await updateUser(userId, { password: hashedPassword });
 
     return res.status(200).json({ success: true });
   } catch (error) {

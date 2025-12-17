@@ -157,6 +157,25 @@ export interface GenerateImageRequest {
   outputFormat?: ImageOutputFormat; // GPT Image 1.5 only
 }
 
+/** Upsell suggestion for when credits are insufficient */
+export interface UpsellSuggestion {
+  buyCredits?: {
+    description: string;
+    creditsProvided: number;
+    price: string;
+  };
+  upgradeSubscription?: {
+    description: string;
+    monthlyCredits: number;
+    price: string;
+  };
+  useLowerTier?: {
+    description: string;
+    qualityTier: string;
+    creditCost: number;
+  };
+}
+
 export interface GenerateImageResponse {
   success: boolean;
   imageUrl?: string;
@@ -167,6 +186,10 @@ export interface GenerateImageResponse {
   warning?: string;
   /** Remaining credits after generation */
   creditsRemaining?: number;
+  /** Credits used for this generation */
+  creditsUsed?: number;
+  /** Quality tier used for generation */
+  qualityTier?: string;
 }
 
 export interface ApiError {
@@ -174,6 +197,10 @@ export interface ApiError {
   details?: string;
   code?: string;
   creditsRemaining?: number;
+  /** Credits required for the operation */
+  creditsRequired?: number;
+  /** Upsell suggestions when credits are insufficient */
+  suggestions?: UpsellSuggestion;
 }
 
 // Lore Engine types

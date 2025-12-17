@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { requireCSRF } from './csrf';
 
 export interface AuthenticatedRequest extends NextApiRequest {
   userId?: string;
@@ -39,6 +40,25 @@ export async function requireAuth(
   }
 
   return userId;
+}
+
+/**
+ * Middleware helper that requires both CSRF validation and authentication.
+ * Use this for state-changing endpoints (POST, PUT, DELETE, PATCH).
+ * Returns 403 if CSRF fails, 401 if not authenticated.
+ */
+export async function requireAuthWithCSRF(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<string | null> {
+  // First validate CSRF for state-changing methods
+  const csrfValid = await requireCSRF(req, res);
+  if (!csrfValid) {
+    return null;
+  }
+
+  // Then validate authentication
+  return requireAuth(req, res);
 }
 
 /**
