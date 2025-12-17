@@ -130,14 +130,20 @@ export default async function handler(
   }
 
   try {
-    // Verify project ownership
-    const project = await getProjectByIdAsync(projectId);
-    if (!project) {
-      return res.status(404).json({ error: 'Project not found' });
-    }
+    // Special handling for onboarding demo - skip project verification
+    const isDemoMode = projectId === 'onboarding-demo';
+    let project = null;
 
-    if (project.userId !== session.user.id) {
-      return res.status(403).json({ error: 'Access denied' });
+    if (!isDemoMode) {
+      // Verify project ownership for real projects
+      project = await getProjectByIdAsync(projectId);
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found' });
+      }
+
+      if (project.userId !== session.user.id) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
     }
 
     // Build the prompt
@@ -148,10 +154,10 @@ export default async function handler(
 
     const prompt = promptBuilder(content, options);
 
-    // Build context from project data
+    // Build context from project data (skip for demo mode)
     let contextInfo = '';
 
-    if (project.lore && project.lore.length > 0) {
+    if (project && project.lore && project.lore.length > 0) {
       const loreContext = project.lore
         .slice(0, 5)
         .map((l) => `- ${l.name}: ${l.summary || l.description?.substring(0, 200) || ''}`)
@@ -159,7 +165,7 @@ export default async function handler(
       contextInfo += `\n\nWorld Lore Context:\n${loreContext}`;
     }
 
-    if (project.characters && project.characters.length > 0) {
+    if (project && project.characters && project.characters.length > 0) {
       const characterContext = project.characters
         .slice(0, 5)
         .map((c) => `- ${c.name}: ${c.description?.substring(0, 150) || ''}`)

@@ -8,16 +8,29 @@ interface DemoGenerateResponse {
   error?: string;
 }
 
+// Valid genres for demo generation
+const VALID_GENRES = ['fantasy', 'scifi', 'noir', 'romance', 'horror', 'action'];
+
 // Get client IP from various headers (handles proxies/load balancers)
-function getClientIP(req: NextApiRequest): string {
+// Returns null if IP cannot be determined to prevent rate limit bypass
+function getClientIP(req: NextApiRequest): string | null {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
+    const ip = forwarded.split(',')[0].trim();
+    if (ip) return ip;
   }
-  if (Array.isArray(forwarded)) {
+  if (Array.isArray(forwarded) && forwarded[0]) {
     return forwarded[0];
   }
-  return req.headers['x-real-ip'] as string || req.socket.remoteAddress || 'unknown';
+  const realIp = req.headers['x-real-ip'];
+  if (typeof realIp === 'string' && realIp) {
+    return realIp;
+  }
+  if (req.socket.remoteAddress) {
+    return req.socket.remoteAddress;
+  }
+  // Return null instead of 'unknown' to prevent shared rate limit bucket
+  return null;
 }
 
 /**
@@ -43,6 +56,14 @@ export default async function handler(
   // Get client IP for rate limiting
   const clientIP = getClientIP(req);
 
+  // Reject requests where IP cannot be determined to prevent rate limit bypass
+  if (!clientIP) {
+    return res.status(400).json({
+      success: false,
+      error: 'Unable to process request. Please try again or contact support.'
+    });
+  }
+
   // Strict rate limiting: 3 images per IP per hour
   if (!checkRateLimit(`demo-image:${clientIP}`, 3, 3600000)) {
     return res.status(429).json({
@@ -52,6 +73,14 @@ export default async function handler(
   }
 
   const { prompt, genre } = req.body;
+
+  // Validate genre if provided
+  if (genre && !VALID_GENRES.includes(genre)) {
+    return res.status(400).json({
+      success: false,
+      error: `Invalid genre. Must be one of: ${VALID_GENRES.join(', ')}`
+    });
+  }
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ success: false, error: 'Prompt is required' });
