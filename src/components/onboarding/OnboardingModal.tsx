@@ -274,7 +274,7 @@ function ExploreWritersRoomStep({ onNext, onBack }: StepProps) {
 }
 
 function TryAIGenerationStep({ onNext, onBack }: StepProps) {
-  const { markContentGenerated, useTrialCredit, progress } = useOnboarding();
+  const { markContentGenerated, consumeTrialCredit, progress } = useOnboarding();
   const [prompt, setPrompt] = useState('');
   const [generatedContent, setGeneratedContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -290,8 +290,8 @@ function TryAIGenerationStep({ onNext, onBack }: StepProps) {
 
     setIsGenerating(true);
     try {
-      // Use trial credit
-      const creditUsed = useTrialCredit();
+      // Consume trial credit
+      const creditUsed = consumeTrialCredit();
       if (!creditUsed) {
         return;
       }
