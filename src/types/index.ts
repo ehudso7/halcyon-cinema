@@ -34,7 +34,7 @@ export interface User {
   image?: string;
   passwordHash?: string;
   password?: string; // For password validation (hashed)
-  subscriptionTier?: 'free' | 'pro' | 'enterprise';
+  subscriptionTier?: 'starter' | 'pro' | 'enterprise';
   creditsRemaining?: number;
   createdAt: string;
   updatedAt: string;

@@ -12,7 +12,7 @@
 // Subscription Tiers
 // ============================================================================
 
-export type SubscriptionTier = 'free' | 'pro' | 'enterprise';
+export type SubscriptionTier = 'starter' | 'pro' | 'enterprise';
 
 export interface TierFeatures {
   // Core Features
@@ -90,7 +90,7 @@ export interface TierFeatures {
 // ============================================================================
 
 export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
-  free: {
+  starter: {
     maxProjects: 3,
     maxScenesPerProject: 20,
     maxCharactersPerProject: 10,

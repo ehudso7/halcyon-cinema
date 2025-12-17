@@ -117,7 +117,7 @@ export function checkFeatureAccess(
  * Find the minimum tier required for a feature.
  */
 function findRequiredTier(featurePath: string): SubscriptionTier {
-  const tiers: SubscriptionTier[] = ['free', 'pro', 'enterprise'];
+  const tiers: SubscriptionTier[] = ['starter', 'pro', 'enterprise'];
 
   for (const tier of tiers) {
     if (hasFeatureAccess(tier, featurePath)) {
@@ -155,7 +155,7 @@ export function checkFeatureLimit(
  * Find a tier with a higher limit for a feature.
  */
 function findTierWithHigherLimit(featurePath: string, currentLimit: number): SubscriptionTier {
-  const tiers: SubscriptionTier[] = ['free', 'pro', 'enterprise'];
+  const tiers: SubscriptionTier[] = ['starter', 'pro', 'enterprise'];
 
   for (const tier of tiers) {
     const limit = getFeatureLimit(tier, featurePath);
@@ -236,13 +236,13 @@ export function checkModeTransition(
 function findTierForMode(mode: ProjectMode): SubscriptionTier {
   switch (mode) {
     case 'literary':
-      return 'free';
+      return 'starter';
     case 'writers-room':
       return 'pro';
     case 'cinema':
-      return 'free'; // Basic cinema is free, advanced features need higher tier
+      return 'starter'; // Basic cinema available to starter, advanced features need higher tier
     default:
-      return 'free';
+      return 'starter';
   }
 }
 
@@ -266,7 +266,7 @@ export async function requireTier(
     return null;
   }
 
-  const tierOrder: SubscriptionTier[] = ['free', 'pro', 'enterprise'];
+  const tierOrder: SubscriptionTier[] = ['starter', 'pro', 'enterprise'];
   const requiredIndex = tierOrder.indexOf(requiredTier);
   const currentIndex = tierOrder.indexOf(tierInfo.tier);
 

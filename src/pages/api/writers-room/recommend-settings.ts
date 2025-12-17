@@ -1,4 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import OpenAI from 'openai';
 import { getProjectByIdAsync } from '@/utils/storage';
 import {
@@ -15,9 +17,10 @@ import {
   DialogueStyleType,
 } from '@/config/ai-settings';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI client only if API key is available
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 interface RecommendSettingsRequest {
   projectId: string;
@@ -111,7 +114,7 @@ const BESTSELLER_INSIGHTS: Record<GenreType, {
 };
 
 /**
- * AI-Assisted Settings Recommendation API
+ * AI-Assisted Settings Recommendation API (Writer's Room)
  *
  * Analyzes project content and recommends optimal AI author settings
  * based on best-seller data and project characteristics.
@@ -125,10 +128,21 @@ export default async function handler(
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 
+  // Authentication check
+  const session = await getServerSession(req, res, authOptions);
+  if (!session?.user?.id) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { projectId } = req.body as RecommendSettingsRequest;
 
   if (!projectId) {
     return res.status(400).json({ error: 'Project ID is required' });
+  }
+
+  // Validate projectId format (basic sanitization)
+  if (typeof projectId !== 'string' || projectId.length > 100) {
+    return res.status(400).json({ error: 'Invalid project ID format' });
   }
 
   try {
@@ -137,6 +151,11 @@ export default async function handler(
 
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Authorization check - verify project ownership
+    if (project.userId && project.userId !== session.user.id) {
+      return res.status(403).json({ error: 'Access denied' });
     }
 
     // Build project context for analysis
@@ -219,6 +238,12 @@ async function analyzeProjectWithAI(
   reasoning: string;
   confidence: number;
 }> {
+  // If OpenAI is not configured, use fallback heuristics
+  if (!openai) {
+    console.warn('[recommend-settings] OpenAI not configured, using fallback recommendations');
+    return generateFallbackRecommendations(context);
+  }
+
   const systemPrompt = `You are an expert literary analyst and publishing consultant. Your task is to analyze a creative project and recommend optimal AI writing settings that will maximize its potential based on current best-seller trends and reader preferences.
 
 You have access to best-seller performance data showing which settings combinations lead to higher reader engagement and commercial success across genres.

@@ -48,7 +48,7 @@ export interface ExportError {
  * Check if a user can export to a specific format.
  */
 export function canExportFormat(tier: SubscriptionTier, format: ExportFormat): boolean {
-  const formatKey = format as keyof typeof TIER_FEATURES.free.exports;
+  const formatKey = format as keyof typeof TIER_FEATURES.starter.exports;
   return hasFeatureAccess(tier, `exports.${formatKey}`);
 }
 
