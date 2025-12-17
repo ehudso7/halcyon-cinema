@@ -310,7 +310,7 @@ function TryAIGenerationStep({ onNext, onBack }: StepProps) {
       }
 
       // Call the generation API
-      const response = await fetch('/api/storyforge/process', {
+      const response = await fetch('/api/writers-room/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
