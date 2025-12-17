@@ -1,9 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import OpenAI from 'openai';
+import { checkRateLimit } from '@/utils/api-auth';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Get client IP for rate limiting
+function getClientIP(req: NextApiRequest): string {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim();
+  }
+  if (Array.isArray(forwarded)) {
+    return forwarded[0];
+  }
+  return req.headers['x-real-ip'] as string || req.socket.remoteAddress || 'unknown';
+}
 
 interface Suggestion {
   id: string;
@@ -33,6 +46,12 @@ export default async function handler(
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
+  }
+
+  // Rate limiting: 20 suggestions per IP per minute
+  const clientIP = getClientIP(req);
+  if (!checkRateLimit(`ai-assist:${clientIP}`, 20, 60000)) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Please wait before requesting more suggestions.' });
   }
 
   const { fieldName, currentValue, context } = req.body as AIAssistRequest;

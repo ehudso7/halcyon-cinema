@@ -70,6 +70,8 @@ export default function Onboarding() {
   const [storyIdea, setStoryIdea] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPreview, setGeneratedPreview] = useState<typeof sampleScenes[0] | null>(null);
+  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
@@ -88,14 +90,13 @@ export default function Onboarding() {
     setStep(2);
   }, []);
 
-  // Simulate AI generation for demo
+  // Generate AI content for demo
   const handleGenerate = useCallback(async () => {
     if (!storyIdea.trim()) return;
 
     setIsGenerating(true);
-
-    // Simulate generation delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    setImageError(null);
+    setGeneratedImageUrl(null);
 
     // Generate a preview based on the genre
     const genreData = genres.find(g => g.id === selectedGenre);
@@ -108,6 +109,29 @@ export default function Onboarding() {
             'Cinematic, Atmospheric',
       style: genreData?.name || 'Cinematic',
     });
+
+    // Call the demo image generation API
+    try {
+      const response = await fetch('/api/demo/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: storyIdea,
+          genre: selectedGenre,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.imageUrl) {
+        setGeneratedImageUrl(data.imageUrl);
+      } else {
+        setImageError(data.error || 'Failed to generate image');
+      }
+    } catch (error) {
+      console.error('Failed to generate image:', error);
+      setImageError('Failed to generate image. Please try again.');
+    }
 
     setIsGenerating(false);
     setStep(3);
@@ -246,14 +270,14 @@ export default function Onboarding() {
                 {isGenerating ? (
                   <>
                     <span className={styles.buttonSpinner} />
-                    Creating your preview...
+                    Generating your cinematic vision...
                   </>
                 ) : (
                   <>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                     </svg>
-                    Generate Preview
+                    Generate AI Preview
                   </>
                 )}
               </button>
@@ -288,24 +312,58 @@ export default function Onboarding() {
                 </button>
                 <span className={styles.stepBadge}>Step 3 of 3</span>
                 <h1 className={styles.heroTitle}>
-                  Your Vision, Realized
+                  {generatedImageUrl ? 'Your Vision, Realized' : 'Your Scene Preview'}
                 </h1>
                 <p className={styles.heroSubtitle}>
-                  This is just a preview of what Halcyon Cinema can create.
-                  Sign up to generate full scenes, build characters, and craft entire productions.
+                  {generatedImageUrl
+                    ? 'This is real AI-generated content based on your idea. Sign up to create unlimited scenes, build characters, and craft entire productions.'
+                    : 'Sign up to unlock full AI image generation and bring your stories to life.'}
                 </p>
               </div>
 
               <div className={styles.previewCard}>
                 <div className={styles.previewImage}>
-                  <div className={styles.previewPlaceholder}>
-                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
-                    </svg>
-                    <p>Sign up to generate images</p>
-                  </div>
+                  {generatedImageUrl ? (
+                    <Image
+                      src={generatedImageUrl}
+                      alt="Generated scene preview"
+                      fill
+                      className={styles.generatedImage}
+                      unoptimized
+                    />
+                  ) : isGenerating ? (
+                    <div className={styles.previewPlaceholder}>
+                      <div className={styles.imageGeneratingSpinner} />
+                      <p>Creating your vision...</p>
+                    </div>
+                  ) : imageError ? (
+                    <div className={styles.previewPlaceholder}>
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <p>{imageError}</p>
+                      <button
+                        className={styles.retryButton}
+                        onClick={() => {
+                          setStep(2);
+                          setImageError(null);
+                        }}
+                      >
+                        Try again
+                      </button>
+                    </div>
+                  ) : (
+                    <div className={styles.previewPlaceholder}>
+                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <p>Image preview</p>
+                    </div>
+                  )}
                 </div>
                 <div className={styles.previewContent}>
                   <h3 className={styles.previewTitle}>{generatedPreview.title}</h3>
