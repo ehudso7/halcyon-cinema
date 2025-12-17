@@ -38,7 +38,7 @@ const sampleScenes = [
   },
 ];
 
-// What you can create showcase
+// "What you'll unlock" section showcase items
 const showcaseItems = [
   {
     icon: '📝',
@@ -63,14 +63,13 @@ const showcaseItems = [
 ];
 
 export default function Onboarding() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [storyIdea, setStoryIdea] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPreview, setGeneratedPreview] = useState<typeof sampleScenes[0] | null>(null);
-  const [showDemo, setShowDemo] = useState(false);
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
@@ -144,7 +143,7 @@ export default function Onboarding() {
         {/* Navigation */}
         <nav className={styles.nav}>
           <Link href="/landing" className={styles.logo}>
-            <Image src="/images/logo.svg" alt="Halcyon Cinema" width={32} height={32} />
+            <Image src="/images/logo.svg" alt="Halcyon Cinema logo" width={32} height={32} />
             <span>HALCYON</span>
           </Link>
           <div className={styles.navActions}>
@@ -176,6 +175,7 @@ export default function Onboarding() {
                     className={styles.genreCard}
                     onClick={() => handleGenreSelect(genre.id)}
                     style={{ '--genre-color': genre.color } as React.CSSProperties}
+                    aria-label={`Select ${genre.name} genre`}
                   >
                     <span className={styles.genreIcon}>{genre.icon}</span>
                     <span className={styles.genreName}>{genre.name}</span>

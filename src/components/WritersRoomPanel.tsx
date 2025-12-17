@@ -268,7 +268,7 @@ export default function WritersRoomPanel({ project, featureId, onClose }: Writer
   const handleSwitchFeature = (newFeatureId: WritersRoomFeatureId) => {
     setInputContent('');
     setResult(null);
-    router.push(`/project/${project.id}?mode=storyforge&feature=${newFeatureId}`);
+    router.push(`/project/${project.id}?mode=writers-room&feature=${newFeatureId}`);
   };
 
   return (
