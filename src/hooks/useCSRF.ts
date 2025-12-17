@@ -3,10 +3,11 @@ import { useState, useEffect, useCallback } from 'react';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 
 // Simplified fetch options using string literals to avoid ESLint no-undef errors with global DOM types
+// Note: 'only-if-cached' cache mode can only be used with mode: 'same-origin'
 interface FetchOptions {
   method?: string;
   headers?: Record<string, string> | [string, string][];
-  body?: string | FormData | Blob | ArrayBuffer | URLSearchParams | null;
+  body?: string | FormData | Blob | ArrayBuffer | URLSearchParams | ReadableStream | null;
   credentials?: 'include' | 'omit' | 'same-origin';
   mode?: 'cors' | 'no-cors' | 'same-origin';
   cache?: 'default' | 'no-store' | 'reload' | 'no-cache' | 'force-cache' | 'only-if-cached';
