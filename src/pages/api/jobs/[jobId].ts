@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { requireAuth } from '@/utils/api-auth';
+import { requireAuth, requireAuthWithCSRF } from '@/utils/api-auth';
 import { getJob, cancelJob, Job } from '@/utils/job-queue';
 
 interface JobResponse {
@@ -12,10 +12,6 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<JobResponse>
 ) {
-  // Require authentication
-  const userId = await requireAuth(req, res);
-  if (!userId) return;
-
   const { jobId } = req.query;
 
   if (!jobId || typeof jobId !== 'string') {
@@ -29,7 +25,10 @@ export default async function handler(
   }
 
   if (req.method === 'GET') {
-    // Get job status
+    // Get job status - authentication only (no CSRF needed for GET)
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
     try {
       const job = await getJob(jobId);
 
@@ -48,7 +47,10 @@ export default async function handler(
       return res.status(500).json({ error: 'Failed to get job status' });
     }
   } else if (req.method === 'DELETE') {
-    // Cancel job
+    // Cancel job - requires CSRF protection for state-changing operation
+    const userId = await requireAuthWithCSRF(req, res);
+    if (!userId) return;
+
     try {
       const job = await getJob(jobId);
 

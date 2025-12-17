@@ -2,6 +2,22 @@ import { useState, useEffect, useCallback } from 'react';
 
 const CSRF_HEADER_NAME = 'x-csrf-token';
 
+// Type alias for fetch options to avoid ESLint no-undef error with global RequestInit
+type FetchOptions = {
+  method?: string;
+  headers?: HeadersInit;
+  body?: BodyInit | null;
+  credentials?: RequestCredentials;
+  mode?: RequestMode;
+  cache?: RequestCache;
+  redirect?: RequestRedirect;
+  referrer?: string;
+  referrerPolicy?: ReferrerPolicy;
+  integrity?: string;
+  keepalive?: boolean;
+  signal?: AbortSignal | null;
+};
+
 interface UseCSRFReturn {
   /** The current CSRF token */
   token: string | null;
@@ -14,7 +30,7 @@ interface UseCSRFReturn {
   /** Get headers object with CSRF token included */
   getHeaders: (additionalHeaders?: Record<string, string>) => Record<string, string>;
   /** Make a fetch request with CSRF token automatically included */
-  csrfFetch: (url: string, options?: RequestInit) => Promise<Response>;
+  csrfFetch: (url: string, options?: FetchOptions) => Promise<Response>;
 }
 
 /**
@@ -70,7 +86,7 @@ export function useCSRF(): UseCSRFReturn {
   );
 
   const csrfFetch = useCallback(
-    async (url: string, options: RequestInit = {}): Promise<Response> => {
+    async (url: string, options: FetchOptions = {}): Promise<Response> => {
       const headers = new Headers(options.headers);
 
       if (token) {
@@ -102,7 +118,7 @@ export function useCSRF(): UseCSRFReturn {
  */
 export async function fetchWithCSRF(
   url: string,
-  options: RequestInit = {}
+  options: FetchOptions = {}
 ): Promise<Response> {
   // First, get a CSRF token if we don't have one
   let csrfToken: string | null = null;

@@ -301,7 +301,7 @@ export async function failJob(
   retry: boolean = true
 ): Promise<void> {
   if (retry) {
-    // Reset to pending for retry if attempts remaining
+    // Reset to pending for retry if attempts remaining, otherwise mark as failed
     await query(`
       UPDATE jobs
       SET
@@ -310,7 +310,11 @@ export async function failJob(
           ELSE 'failed'
         END,
         error = $2,
-        started_at = NULL
+        started_at = NULL,
+        completed_at = CASE
+          WHEN attempts < max_attempts THEN NULL
+          ELSE NOW()
+        END
       WHERE id = $1::uuid
     `, [jobId, error]);
   } else {
