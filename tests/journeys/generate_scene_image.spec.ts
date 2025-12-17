@@ -10,6 +10,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 vi.mock('@/utils/api-auth', () => ({
   requireAuth: vi.fn(),
+  requireAuthWithCSRF: vi.fn(),
   checkRateLimit: vi.fn(),
 }));
 
@@ -43,7 +44,7 @@ vi.mock('@/utils/image-storage', () => ({
 }));
 
 import handler from '@/pages/api/generate-image';
-import { requireAuth, checkRateLimit } from '@/utils/api-auth';
+import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { getUserCredits, deductCredits } from '@/utils/db';
 import { generateImage } from '@/utils/openai';
 import { persistImage, isPersistedUrl } from '@/utils/image-storage';
@@ -87,7 +88,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   });
 
   it('should reject image generation for unauthenticated user', async () => {
-    vi.mocked(requireAuth).mockImplementation(async (_req, res) => {
+    vi.mocked(requireAuthWithCSRF).mockImplementation(async (_req, res) => {
       (res as unknown as typeof mockRes).status(401).json({ error: 'Unauthorized' });
       return null;
     });
@@ -106,7 +107,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   });
 
   it('should reject requests without required parameters', async () => {
-    vi.mocked(requireAuth).mockResolvedValue('user-123');
+    vi.mocked(requireAuthWithCSRF).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',
@@ -139,7 +140,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   });
 
   it('should successfully generate an image with valid prompt', async () => {
-    vi.mocked(requireAuth).mockResolvedValue('user-123');
+    vi.mocked(requireAuthWithCSRF).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',
@@ -191,7 +192,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   });
 
   it('should respect rate limiting', async () => {
-    vi.mocked(requireAuth).mockResolvedValue('user-123');
+    vi.mocked(requireAuthWithCSRF).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(false);
 
     mockReq.body = {
@@ -210,7 +211,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   });
 
   it('should return temporary urlType when storage is not configured', async () => {
-    vi.mocked(requireAuth).mockResolvedValue('user-123');
+    vi.mocked(requireAuthWithCSRF).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',
@@ -254,7 +255,7 @@ describe('Journey: generate_scene_image - Generate AI Image for Scene', () => {
   });
 
   it('should return temporary urlType when persistence fails', async () => {
-    vi.mocked(requireAuth).mockResolvedValue('user-123');
+    vi.mocked(requireAuthWithCSRF).mockResolvedValue('user-123');
     vi.mocked(checkRateLimit).mockReturnValue(true);
     vi.mocked(getUserCredits).mockResolvedValue({
       id: 'user-123',

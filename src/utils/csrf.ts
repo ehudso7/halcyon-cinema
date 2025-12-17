@@ -7,8 +7,12 @@ const CSRF_HEADER_NAME = 'x-csrf-token';
 const TOKEN_LENGTH = 32;
 const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-// Secret for HMAC signing - should be set in environment
-const CSRF_SECRET = process.env.CSRF_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-csrf-secret-change-in-production';
+// Secret for HMAC signing - must be set in production
+const CSRF_SECRET_ENV = process.env.CSRF_SECRET || process.env.NEXTAUTH_SECRET;
+if (!CSRF_SECRET_ENV && process.env.NODE_ENV === 'production') {
+  throw new Error('CSRF_SECRET or NEXTAUTH_SECRET must be set in production');
+}
+const CSRF_SECRET = CSRF_SECRET_ENV || 'dev-only-csrf-secret-not-for-production';
 
 interface CSRFTokenPayload {
   token: string;
@@ -200,23 +204,4 @@ export async function requireCSRF(
   }
 
   return true;
-}
-
-/**
- * Combined auth and CSRF protection
- * Use this for state-changing endpoints that require authentication
- */
-export async function requireAuthWithCSRF(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  requireAuthFn: (req: NextApiRequest, res: NextApiResponse) => Promise<string | null>
-): Promise<string | null> {
-  // First validate CSRF
-  const csrfValid = await requireCSRF(req, res);
-  if (!csrfValid) {
-    return null;
-  }
-
-  // Then validate authentication
-  return requireAuthFn(req, res);
 }
