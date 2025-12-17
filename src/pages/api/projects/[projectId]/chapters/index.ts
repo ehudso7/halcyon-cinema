@@ -8,7 +8,7 @@
  *
  * IMPORTANT: Chapter management is available to ALL tiers as part of
  * literary works support. Users can write novels and manuscripts
- * without ever touching StoryForge.
+ * without ever touching Writer's Room.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';

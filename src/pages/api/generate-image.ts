@@ -2,13 +2,18 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateImage, buildCinematicPrompt, sanitizePromptForImageGeneration } from '@/utils/openai';
 import { persistImage, isPersistedUrl } from '@/utils/image-storage';
 import { GenerateImageResponse, ApiError } from '@/types';
-import { requireAuth, checkRateLimit } from '@/utils/api-auth';
+import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
+import { TIER_CREDITS, QualityTier } from '@/config/ai-settings';
 
 // Valid parameter values for OpenAI API
-const VALID_SIZES = ['1024x1024', '1024x1792', '1792x1024'];
+const VALID_MODELS = ['dall-e-3', 'gpt-image-1.5'];
+const DALLE3_SIZES = ['1024x1024', '1024x1792', '1792x1024'];
+const GPT_IMAGE_SIZES = ['1024x1024', '1536x1024', '1024x1536', 'auto'];
 const VALID_QUALITIES = ['standard', 'hd'];
 const VALID_STYLES = ['vivid', 'natural'];
+const VALID_OUTPUT_FORMATS = ['png', 'jpeg', 'webp'];
+const VALID_QUALITY_TIERS: QualityTier[] = ['standard', 'professional', 'premium'];
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,8 +24,8 @@ export default async function handler(
     return res.status(405).json({ error: `Method ${req.method} not allowed` });
   }
 
-  // Require authentication
-  const userId = await requireAuth(req, res);
+  // Require authentication with CSRF protection
+  const userId = await requireAuthWithCSRF(req, res);
   if (!userId) return;
 
   // Rate limiting: 10 image generations per minute per user
@@ -34,14 +39,40 @@ export default async function handler(
     return res.status(403).json({ error: 'User not found or credits not available' });
   }
 
-  if (userCredits.creditsRemaining < 1) {
+  // Parse qualityTier early for credit cost calculation
+  const requestedQualityTier = req.body.qualityTier;
+  const effectiveQualityTier: QualityTier = requestedQualityTier && VALID_QUALITY_TIERS.includes(requestedQualityTier)
+    ? requestedQualityTier
+    : 'standard';
+  const requiredCredits = TIER_CREDITS[effectiveQualityTier];
+
+  if (userCredits.creditsRemaining < requiredCredits) {
+    // Smart upsell suggestions when credits are insufficient
     return res.status(402).json({
-      error: 'Insufficient credits. Please purchase more credits to continue generating images.',
-      creditsRemaining: 0,
+      error: `Insufficient credits. ${effectiveQualityTier} quality requires ${requiredCredits} credit(s).`,
+      creditsRemaining: userCredits.creditsRemaining,
+      creditsRequired: requiredCredits,
+      suggestions: {
+        buyCredits: {
+          description: 'Buy 100 credits for $9',
+          creditsProvided: 100,
+          price: '$9',
+        },
+        upgradeSubscription: {
+          description: 'Upgrade to Creator tier for 500 credits/month',
+          monthlyCredits: 500,
+          price: '$29/month',
+        },
+        useLowerTier: userCredits.creditsRemaining >= 1 ? {
+          description: 'Use standard quality instead (1 credit)',
+          qualityTier: 'standard',
+          creditCost: 1,
+        } : undefined,
+      },
     });
   }
 
-  const { prompt, shotType, style, lighting, mood, size, quality, imageStyle, projectId, sceneId } = req.body;
+  const { prompt, shotType, style, lighting, mood, size, quality, imageStyle, projectId, sceneId, model, outputFormat, qualityTier } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
@@ -59,9 +90,16 @@ export default async function handler(
     }
   }
 
-  // Validate OpenAI-specific parameters
-  if (size && !VALID_SIZES.includes(size)) {
-    return res.status(400).json({ error: `Invalid size. Must be one of: ${VALID_SIZES.join(', ')}` });
+  // Validate model parameter (default to gpt-image-1.5 for speed and cost)
+  const selectedModel = model || 'gpt-image-1.5';
+  if (!VALID_MODELS.includes(selectedModel)) {
+    return res.status(400).json({ error: `Invalid model. Must be one of: ${VALID_MODELS.join(', ')}` });
+  }
+
+  // Validate size based on selected model
+  const validSizes = selectedModel === 'dall-e-3' ? DALLE3_SIZES : GPT_IMAGE_SIZES;
+  if (size && !validSizes.includes(size)) {
+    return res.status(400).json({ error: `Invalid size for ${selectedModel}. Must be one of: ${validSizes.join(', ')}` });
   }
 
   if (quality && !VALID_QUALITIES.includes(quality)) {
@@ -70,6 +108,16 @@ export default async function handler(
 
   if (imageStyle && !VALID_STYLES.includes(imageStyle)) {
     return res.status(400).json({ error: `Invalid style. Must be one of: ${VALID_STYLES.join(', ')}` });
+  }
+
+  // Validate outputFormat (GPT Image 1.5 only)
+  if (outputFormat) {
+    if (selectedModel !== 'gpt-image-1.5') {
+      return res.status(400).json({ error: 'Output format is only supported for gpt-image-1.5 model' });
+    }
+    if (!VALID_OUTPUT_FORMATS.includes(outputFormat)) {
+      return res.status(400).json({ error: `Invalid output format. Must be one of: ${VALID_OUTPUT_FORMATS.join(', ')}` });
+    }
   }
 
   // Sanitize prompt to comply with DALL-E safety guidelines
@@ -86,9 +134,11 @@ export default async function handler(
 
   const result = await generateImage({
     prompt: enhancedPrompt,
+    model: selectedModel,
     size: size || '1024x1024',
     quality: quality || 'standard',
     style: imageStyle || 'vivid',
+    outputFormat: outputFormat || undefined,
   });
 
   if (!result.success || !result.imageUrl) {
@@ -98,13 +148,13 @@ export default async function handler(
     });
   }
 
-  // Deduct 1 credit for successful image generation (atomic operation)
+  // Deduct credits based on quality tier for successful image generation (atomic operation)
   let deductResult;
   try {
     deductResult = await deductCredits(
       userId,
-      1,
-      `Image generation for scene ${sceneId || 'unknown'}`,
+      requiredCredits,
+      `Image generation (${effectiveQualityTier} quality) for scene ${sceneId || 'unknown'}`,
       sceneId,
       'generation'
     );
@@ -150,7 +200,9 @@ export default async function handler(
         success: true,
         imageUrl: persistedUrl,
         urlType: 'permanent',
-        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - 1,
+        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - requiredCredits,
+        creditsUsed: requiredCredits,
+        qualityTier: effectiveQualityTier,
       });
     } else {
       // persistImage returned the original URL (storage not configured or failed silently)
@@ -159,7 +211,9 @@ export default async function handler(
         imageUrl: persistedUrl,
         urlType: 'temporary',
         warning: 'Image storage not configured. The image URL is temporary and will expire in about 1 hour.',
-        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - 1,
+        creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - requiredCredits,
+        creditsUsed: requiredCredits,
+        qualityTier: effectiveQualityTier,
       });
     }
   } catch (error) {
@@ -169,7 +223,9 @@ export default async function handler(
       ...result,
       urlType: 'temporary',
       warning: 'Image persistence failed. The image URL is temporary and will expire in about 1 hour.',
-      creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - 1,
+      creditsRemaining: deductResult?.creditsRemaining ?? userCredits.creditsRemaining - requiredCredits,
+      creditsUsed: requiredCredits,
+      qualityTier: effectiveQualityTier,
     });
   }
 }

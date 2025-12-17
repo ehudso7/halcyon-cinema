@@ -1,13 +1,13 @@
 /**
  * Project Mode API
  *
- * Handles project mode management (literary, storyforge, cinema).
+ * Handles project mode management (literary, writers-room, cinema).
  *
  * GET: Get current project mode
  * PUT: Update project mode (with tier validation)
  *
  * IMPORTANT: This endpoint ensures users with existing literary works can
- * continue using Halcyon Cinema without ever touching StoryForge.
+ * continue using Halcyon Cinema without ever touching Writer's Room.
  * Literary mode is ALWAYS available to all tiers.
  */
 
@@ -67,9 +67,9 @@ export default async function handler(
     // Determine available modes based on tier
     const availableModes: ProjectMode[] = ['literary']; // Always available
 
-    // Check for StoryForge access
-    if (tierInfo.features.storyforge.enabled) {
-      availableModes.push('storyforge');
+    // Check for Writer's Room access
+    if (tierInfo.features.writersRoom.enabled) {
+      availableModes.push('writers-room');
     }
 
     // Check for Cinema access
@@ -90,7 +90,7 @@ export default async function handler(
       return res.status(400).json({ error: 'Mode is required' });
     }
 
-    const validModes: ProjectMode[] = ['literary', 'storyforge', 'cinema'];
+    const validModes: ProjectMode[] = ['literary', 'writers-room', 'cinema'];
     if (!validModes.includes(mode)) {
       return res.status(400).json({
         error: 'Invalid mode',
@@ -107,7 +107,7 @@ export default async function handler(
     if (!transitionResult.allowed) {
       // Determine available modes for the error response
       const availableModes: ProjectMode[] = ['literary'];
-      if (tierInfo.features.storyforge.enabled) availableModes.push('storyforge');
+      if (tierInfo.features.writersRoom.enabled) availableModes.push('writers-room');
       if (tierInfo.features.cinema.enabled) availableModes.push('cinema');
 
       return res.status(403).json({
@@ -140,7 +140,7 @@ export default async function handler(
 
     // Determine available modes
     const availableModes: ProjectMode[] = ['literary'];
-    if (tierInfo.features.storyforge.enabled) availableModes.push('storyforge');
+    if (tierInfo.features.writersRoom.enabled) availableModes.push('writers-room');
     if (tierInfo.features.cinema.enabled) availableModes.push('cinema');
 
     return res.status(200).json({

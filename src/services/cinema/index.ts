@@ -11,12 +11,12 @@
  *
  * ARCHITECTURE CONSTRAINTS:
  * - Cinema lives at: /src/services/cinema
- * - Cinema NEVER imports StoryForge internals
- * - Cinema only accesses StoryForge through the public adapter
- * - Scene semantic data is obtained via StoryForgeAdapter.extractSemanticScene()
+ * - Cinema NEVER imports Writer's Room internals
+ * - Cinema only accesses Writer's Room through the public adapter
+ * - Scene semantic data is obtained via WritersRoomAdapter.extractSemanticScene()
  *
  * IMPORTANT: Cinema is an OPTIONAL escalation. Users can use literary works
- * mode or StoryForge mode indefinitely without ever touching Cinema features.
+ * mode or Writer's Room mode indefinitely without ever touching Cinema features.
  */
 
 import { SubscriptionTier, hasFeatureAccess, canUseCinema, ProjectMode } from '@/config/feature-flags';
@@ -215,7 +215,7 @@ export class CinemaAdapter {
   /**
    * Translate a semantic scene to cinematic shots.
    *
-   * This takes semantic output (obtained via StoryForgeAdapter.extractSemanticScene)
+   * This takes semantic output (obtained via WritersRoomAdapter.extractSemanticScene)
    * and generates shot breakdowns.
    */
   async translateSceneToShots(

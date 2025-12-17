@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { requireAuth, checkRateLimit } from '@/utils/api-auth';
+import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import { persistAudio } from '@/utils/media-storage';
 import { ApiError } from '@/types';
@@ -7,8 +7,14 @@ import { ApiError } from '@/types';
 // Replicate API for music generation
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
-// Credit cost for music generation
-const MUSIC_CREDIT_COST = 5;
+// Music quality tiers with bitrate and credit costs
+type MusicQualityTier = 'standard' | 'professional' | 'premium';
+const MUSIC_QUALITY_CREDITS: Record<MusicQualityTier, { credits: number; quality: string }> = {
+  standard: { credits: 5, quality: '128kbps' },
+  professional: { credits: 7, quality: '320kbps' },
+  premium: { credits: 10, quality: 'Lossless' },
+};
+const VALID_MUSIC_QUALITY_TIERS: MusicQualityTier[] = ['standard', 'professional', 'premium'];
 
 // Timeout for Replicate API calls (10 seconds for initial request)
 const REPLICATE_REQUEST_TIMEOUT_MS = 10000;
@@ -58,8 +64,8 @@ export default async function handler(
     });
   }
 
-  // Require authentication
-  const userId = await requireAuth(req, res);
+  // Require authentication with CSRF protection
+  const userId = await requireAuthWithCSRF(req, res);
   if (!userId) return;
 
   // Rate limiting: 5 music generations per minute per user
@@ -75,12 +81,33 @@ export default async function handler(
     return res.status(403).json({ error: 'User not found or credits not available' });
   }
 
-  if (userCredits.creditsRemaining < MUSIC_CREDIT_COST) {
+  // Parse quality tier for credit calculation
+  const requestedQualityTier = req.body.qualityTier;
+  const effectiveQualityTier: MusicQualityTier = requestedQualityTier && VALID_MUSIC_QUALITY_TIERS.includes(requestedQualityTier)
+    ? requestedQualityTier
+    : 'standard';
+  const { credits: requiredCredits, quality: audioQuality } = MUSIC_QUALITY_CREDITS[effectiveQualityTier];
+
+  if (userCredits.creditsRemaining < requiredCredits) {
     return res.status(402).json({
-      error: `Insufficient credits. Music generation requires ${MUSIC_CREDIT_COST} credits.`,
+      error: `Insufficient credits. ${effectiveQualityTier} music (${audioQuality}) requires ${requiredCredits} credits.`,
       creditsRemaining: userCredits.creditsRemaining,
+      creditsRequired: requiredCredits,
+      suggestions: {
+        buyCredits: {
+          description: 'Buy 100 credits for $9',
+          creditsProvided: 100,
+          price: '$9',
+        },
+        useLowerTier: userCredits.creditsRemaining >= 5 ? {
+          description: 'Use standard quality instead (5 credits)',
+          qualityTier: 'standard',
+          creditCost: 5,
+        } : undefined,
+      },
     });
   }
+
 
   const { prompt, duration = 10, genre, mood, tempo, projectId: rawProjectId, sceneId: rawSceneId } = req.body;
 
@@ -212,13 +239,13 @@ export default async function handler(
     }
 
     if (finalPrediction.status === 'succeeded' && finalPrediction.output) {
-      // Deduct credits for successful generation
+      // Deduct credits for successful generation based on quality tier
       let deductResult;
       try {
         deductResult = await deductCredits(
           userId,
-          MUSIC_CREDIT_COST,
-          `Music generation: ${enhancedPrompt.substring(0, 50)}`,
+          requiredCredits,
+          `Music generation (${effectiveQualityTier} - ${audioQuality}): ${enhancedPrompt.substring(0, 50)}`,
           prediction.id,
           'generation'
         );

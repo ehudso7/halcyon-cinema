@@ -73,8 +73,8 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
           <Link href="/" className={styles.navLink}>
             Projects
           </Link>
-          <Link href="/storyforge" className={styles.navLink}>
-            StoryForge
+          <Link href="/writers-room" className={styles.navLink}>
+            Writer&apos;s Room
           </Link>
           <Link href="/library" className={styles.navLink}>
             Library
@@ -234,14 +234,14 @@ export default function Header({ showBackLink, backLinkHref = '/', backLinkText 
             Projects
           </Link>
 
-          <Link href="/storyforge" className={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>
+          <Link href="/writers-room" className={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M12 19l7-7 3 3-7 7-3-3z" />
               <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
               <path d="M2 2l7.586 7.586" />
               <circle cx="11" cy="11" r="2" />
             </svg>
-            StoryForge
+            Writer&apos;s Room
           </Link>
 
           <Link href="/library" className={styles.mobileNavLink} onClick={() => setMobileMenuOpen(false)}>

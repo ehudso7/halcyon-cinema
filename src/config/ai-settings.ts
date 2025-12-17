@@ -1,7 +1,7 @@
 /**
  * AI Settings Configuration
  *
- * Centralized AI configuration for both StoryForge and Halcyon Cinema.
+ * Centralized AI configuration for both Writer's Room and Halcyon Cinema.
  * Settings are optimized based on analysis of best-selling works across genres.
  *
  * ARCHITECTURE:
@@ -435,7 +435,7 @@ export function buildSystemPrompt(
   settings: AIAuthorSettings,
   genre?: GenreType,
   qualityTier: QualityTier = 'professional',
-  mode: 'storyforge' | 'cinema' = 'storyforge'
+  mode: 'writers-room' | 'cinema' = 'writers-room'
 ): string {
   const basePrompt = mode === 'cinema' ? BASE_CINEMA_PROMPT : BASE_WRITER_PROMPT;
   const qualityAddition = QUALITY_TIERS[qualityTier].systemPromptAddition;

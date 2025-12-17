@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { requireAuth, checkRateLimit } from '@/utils/api-auth';
+import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import { persistVideo } from '@/utils/media-storage';
 import { ApiError } from '@/types';
@@ -7,8 +7,14 @@ import { ApiError } from '@/types';
 // Replicate API for video generation
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
-// Credit cost for video generation (more expensive than images)
-const VIDEO_CREDIT_COST = 10;
+// Video quality tiers with resolution and credit costs
+type VideoQualityTier = 'standard' | 'professional' | 'premium';
+const VIDEO_QUALITY_CREDITS: Record<VideoQualityTier, { credits: number; resolution: string }> = {
+  standard: { credits: 10, resolution: '720p' },
+  professional: { credits: 15, resolution: '1080p' },
+  premium: { credits: 25, resolution: '4K' },
+};
+const VALID_VIDEO_QUALITY_TIERS: VideoQualityTier[] = ['standard', 'professional', 'premium'];
 
 // Timeout for Replicate API calls (10 seconds for initial request)
 const REPLICATE_REQUEST_TIMEOUT_MS = 10000;
@@ -44,8 +50,8 @@ export default async function handler(
     });
   }
 
-  // Require authentication
-  const userId = await requireAuth(req, res);
+  // Require authentication with CSRF protection
+  const userId = await requireAuthWithCSRF(req, res);
   if (!userId) return;
 
   // Rate limiting: 2 video generations per minute per user
@@ -61,14 +67,40 @@ export default async function handler(
     return res.status(403).json({ error: 'User not found or credits not available' });
   }
 
-  if (userCredits.creditsRemaining < VIDEO_CREDIT_COST) {
+  // Parse quality tier for credit calculation
+  const requestedQualityTier = req.body.qualityTier;
+  const effectiveQualityTier: VideoQualityTier = requestedQualityTier && VALID_VIDEO_QUALITY_TIERS.includes(requestedQualityTier)
+    ? requestedQualityTier
+    : 'standard';
+  const { credits: requiredCredits, resolution } = VIDEO_QUALITY_CREDITS[effectiveQualityTier];
+
+  if (userCredits.creditsRemaining < requiredCredits) {
+    // Smart upsell suggestions
     return res.status(402).json({
-      error: `Insufficient credits. Video generation requires ${VIDEO_CREDIT_COST} credits.`,
+      error: `Insufficient credits. ${effectiveQualityTier} video (${resolution}) requires ${requiredCredits} credits.`,
       creditsRemaining: userCredits.creditsRemaining,
+      creditsRequired: requiredCredits,
+      suggestions: {
+        buyCredits: {
+          description: 'Buy 250 credits for $20',
+          creditsProvided: 250,
+          price: '$20',
+        },
+        upgradeSubscription: {
+          description: 'Upgrade to Studio tier for 2000 credits/month',
+          monthlyCredits: 2000,
+          price: '$79/month',
+        },
+        useLowerTier: userCredits.creditsRemaining >= 10 ? {
+          description: 'Use standard quality instead (10 credits, 720p)',
+          qualityTier: 'standard',
+          creditCost: 10,
+        } : undefined,
+      },
     });
   }
 
-  const { prompt, imageUrl, duration, aspectRatio, projectId: rawProjectId, sceneId: rawSceneId } = req.body;
+  const { prompt, imageUrl, duration, aspectRatio, projectId: rawProjectId, sceneId: rawSceneId, qualityTier } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
     return res.status(400).json({ error: 'Prompt is required' });
@@ -187,13 +219,13 @@ export default async function handler(
     }
 
     if (finalPrediction.status === 'succeeded' && finalPrediction.output) {
-      // Deduct credits for successful generation
+      // Deduct credits for successful generation based on quality tier
       let deductResult;
       try {
         deductResult = await deductCredits(
           userId,
-          VIDEO_CREDIT_COST,
-          'Video generation',
+          requiredCredits,
+          `Video generation (${effectiveQualityTier} - ${resolution})`,
           prediction.id,
           'generation'
         );

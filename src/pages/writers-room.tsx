@@ -10,13 +10,13 @@ import { useToast } from '@/components/Toast';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { Project } from '@/types';
 import { getAllProjectsAsync } from '@/utils/storage';
-import styles from '@/styles/StoryForge.module.css';
+import styles from '@/styles/WritersRoom.module.css';
 
-interface StoryForgeProps {
+interface WritersRoomProps {
   projects: Project[];
 }
 
-type StoryForgeFeature = {
+type WritersRoomFeature = {
   id: string;
   title: string;
   description: string;
@@ -25,7 +25,7 @@ type StoryForgeFeature = {
   action: string;
 };
 
-const features: StoryForgeFeature[] = [
+const features: WritersRoomFeature[] = [
   {
     id: 'narrative-generation',
     title: 'AI Narrative Generation',
@@ -117,20 +117,20 @@ const features: StoryForgeFeature[] = [
   },
 ];
 
-export default function StoryForge({ projects }: StoryForgeProps) {
+export default function WritersRoom({ projects }: WritersRoomProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const { showToast } = useToast();
   const [selectedProject, setSelectedProject] = useState<string>('');
 
-  const handleFeatureClick = (feature: StoryForgeFeature) => {
+  const handleFeatureClick = (feature: WritersRoomFeature) => {
     if (!selectedProject) {
       showToast('Please select a project first', 'warning');
       return;
     }
 
-    // Navigate to project with StoryForge mode
-    router.push(`/project/${selectedProject}?mode=storyforge&feature=${feature.id}`);
+    // Navigate to project with Writer's Room mode
+    router.push(`/project/${selectedProject}?mode=writers-room&feature=${feature.id}`);
   };
 
   const userName = session?.user?.name?.split(' ')[0] || 'Creator';
@@ -138,7 +138,7 @@ export default function StoryForge({ projects }: StoryForgeProps) {
   return (
     <>
       <Head>
-        <title>StoryForge | HALCYON-Cinema</title>
+        <title>Writer&apos;s Room | Halcyon Cinema</title>
         <meta name="description" content="AI-powered narrative engine for creating compelling stories, chapters, and scenes" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
       </Head>
@@ -157,10 +157,10 @@ export default function StoryForge({ projects }: StoryForgeProps) {
                 <circle cx="11" cy="11" r="2" />
               </svg>
             </div>
-            <h1 className={styles.title}>StoryForge</h1>
+            <h1 className={styles.title}>Writer&apos;s Room</h1>
             <p className={styles.subtitle}>
               Your AI-powered narrative engine. Craft compelling stories, expand chapters,
-              and maintain perfect canon consistency across your literary works.
+              and maintain perfect canon consistency across your cinematic works.
             </p>
           </div>
 
@@ -188,14 +188,14 @@ export default function StoryForge({ projects }: StoryForgeProps) {
                 <Link href="/" className={styles.createLink}>
                   Create your first project
                 </Link>{' '}
-                to get started with StoryForge.
+                to get started with Writer&apos;s Room.
               </p>
             )}
           </div>
 
           {/* Features Grid */}
           <section className={styles.featuresSection}>
-            <h2 className={styles.sectionTitle}>StoryForge Features</h2>
+            <h2 className={styles.sectionTitle}>Writer&apos;s Room Features</h2>
             <div className={styles.featuresGrid}>
               {features.map((feature) => (
                 <div
@@ -230,13 +230,13 @@ export default function StoryForge({ projects }: StoryForgeProps) {
 
           {/* How It Works */}
           <section className={styles.howItWorks}>
-            <h2 className={styles.sectionTitle}>How StoryForge Works</h2>
+            <h2 className={styles.sectionTitle}>How Writer&apos;s Room Works</h2>
             <div className={styles.stepsGrid}>
               <div className={styles.step}>
                 <div className={styles.stepNumber}>1</div>
                 <h3 className={styles.stepTitle}>Select Your Project</h3>
                 <p className={styles.stepDescription}>
-                  Choose an existing project or create a new one to begin your StoryForge journey.
+                  Choose an existing project or create a new one to begin your creative journey.
                 </p>
               </div>
               <div className={styles.step}>
@@ -266,9 +266,9 @@ export default function StoryForge({ projects }: StoryForgeProps) {
           {/* CTA Section */}
           <section className={styles.ctaSection}>
             <div className={styles.ctaContent}>
-              <h2 className={styles.ctaTitle}>Ready to forge your story?</h2>
+              <h2 className={styles.ctaTitle}>Ready to write your story?</h2>
               <p className={styles.ctaDescription}>
-                StoryForge features are available to Pro and Enterprise subscribers.
+                Writer&apos;s Room features are available to Pro and Enterprise subscribers.
                 Upgrade today to unlock the full power of AI-assisted storytelling.
               </p>
               <div className={styles.ctaButtons}>
@@ -287,14 +287,14 @@ export default function StoryForge({ projects }: StoryForgeProps) {
   );
 }
 
-export const getServerSideProps: GetServerSideProps<StoryForgeProps> = async (context) => {
+export const getServerSideProps: GetServerSideProps<WritersRoomProps> = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions);
 
   // Redirect to landing if not authenticated
   if (!session?.user?.id) {
     return {
       redirect: {
-        destination: '/auth/signin?callbackUrl=/storyforge',
+        destination: '/auth/signin?callbackUrl=/writers-room',
         permanent: false,
       },
     };

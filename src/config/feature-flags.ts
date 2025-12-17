@@ -4,8 +4,8 @@
  * This module defines all feature flags for the Halcyon Cinema platform.
  * Features are gated by subscription tier and project mode.
  *
- * IMPORTANT: StoryForge is OPTIONAL - users with existing literary works
- * can continue using Halcyon Cinema without ever touching StoryForge.
+ * IMPORTANT: Writer's Room is OPTIONAL - users with existing literary works
+ * can continue using Halcyon Cinema without ever touching Writer's Room.
  */
 
 // ============================================================================
@@ -25,7 +25,7 @@ export interface TierFeatures {
   monthlyCredits: number;
   creditRolloverMultiplier: number;
 
-  // Literary Works Features (available without StoryForge)
+  // Literary Works Features (available without Writer's Room)
   literaryWorks: {
     enabled: boolean;
     novelImport: boolean;
@@ -38,8 +38,8 @@ export interface TierFeatures {
     canonVersioning: boolean;
   };
 
-  // StoryForge Features (optional escalation)
-  storyforge: {
+  // Writer's Room Features (optional escalation)
+  writersRoom: {
     enabled: boolean;
     narrativeGeneration: boolean;
     chapterExpansion: boolean;
@@ -51,7 +51,7 @@ export interface TierFeatures {
     aiAuthorControls: boolean;
   };
 
-  // Cinema Features (optional escalation from StoryForge or direct)
+  // Cinema Features (optional escalation from Writer's Room or direct)
   cinema: {
     enabled: boolean;
     sceneToShotTranslation: boolean;
@@ -110,7 +110,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
       canonVersioning: false,
     },
 
-    storyforge: {
+    writersRoom: {
       enabled: false,
       narrativeGeneration: false,
       chapterExpansion: false,
@@ -173,7 +173,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
       canonVersioning: true,
     },
 
-    storyforge: {
+    writersRoom: {
       enabled: true,
       narrativeGeneration: true,
       chapterExpansion: true,
@@ -236,7 +236,7 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
       canonVersioning: true,
     },
 
-    storyforge: {
+    writersRoom: {
       enabled: true,
       narrativeGeneration: true,
       chapterExpansion: true,
@@ -287,14 +287,14 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
 /**
  * Project modes determine the available features and UI for a project.
  *
- * - 'literary': Pure literary work (novel, manuscript) - no StoryForge, no Cinema
- * - 'storyforge': StoryForge-enabled writing mode
+ * - 'literary': Pure literary work (novel, manuscript) - no Writer's Room, no Cinema
+ * - 'writers-room': Writer's Room-enabled writing mode
  * - 'cinema': Cinema mode for visual production
  *
  * IMPORTANT: Users can work in 'literary' mode indefinitely without ever
- * using StoryForge or Cinema features. Cinema is an OPTIONAL escalation.
+ * using Writer's Room or Cinema features. Cinema is an OPTIONAL escalation.
  */
-export type ProjectMode = 'literary' | 'storyforge' | 'cinema';
+export type ProjectMode = 'literary' | 'writers-room' | 'cinema';
 
 export interface ProjectModeConfig {
   name: string;
@@ -307,7 +307,7 @@ export const PROJECT_MODE_CONFIG: Record<ProjectMode, ProjectModeConfig> = {
   literary: {
     name: 'Literary Works',
     description: 'Write novels, manuscripts, and screenplays with full creative control. No AI assistance required.',
-    allowedTransitions: ['storyforge', 'cinema'],
+    allowedTransitions: ['writers-room', 'cinema'],
     features: [
       'Novel writing and editing',
       'Manuscript management',
@@ -317,8 +317,8 @@ export const PROJECT_MODE_CONFIG: Record<ProjectMode, ProjectModeConfig> = {
       'Export to publishing formats',
     ],
   },
-  storyforge: {
-    name: 'StoryForge',
+  'writers-room': {
+    name: 'Writer\'s Room',
     description: 'AI-powered narrative engine for long-form writing with canon enforcement.',
     allowedTransitions: ['literary', 'cinema'],
     features: [
@@ -335,7 +335,7 @@ export const PROJECT_MODE_CONFIG: Record<ProjectMode, ProjectModeConfig> = {
   cinema: {
     name: 'Cinema',
     description: 'Transform your story into stunning visuals with AI-powered cinematic tools.',
-    allowedTransitions: ['literary', 'storyforge'],
+    allowedTransitions: ['literary', 'writers-room'],
     features: [
       'Scene to shot translation',
       'Cinematic prompt generation',
@@ -416,11 +416,11 @@ export function canUseCinema(tier: SubscriptionTier): boolean {
 }
 
 /**
- * Check if a user can use StoryForge features.
- * StoryForge is an optional escalation available for pro/enterprise tiers.
+ * Check if a user can use Writer's Room features.
+ * Writer's Room is an optional escalation available for pro/enterprise tiers.
  */
-export function canUseStoryForge(tier: SubscriptionTier): boolean {
-  return TIER_FEATURES[tier].storyforge.enabled;
+export function canUseWritersRoom(tier: SubscriptionTier): boolean {
+  return TIER_FEATURES[tier].writersRoom.enabled;
 }
 
 /**
@@ -449,13 +449,13 @@ export function getAvailableFeatures(tier: SubscriptionTier): string[] {
     if (tierFeatures.literaryWorks.canonVersioning) features.push('Canon Versioning');
   }
 
-  // StoryForge
-  if (tierFeatures.storyforge.enabled) {
-    features.push('StoryForge Mode');
-    if (tierFeatures.storyforge.narrativeGeneration) features.push('AI Narrative Generation');
-    if (tierFeatures.storyforge.chapterExpansion) features.push('Chapter Expansion');
-    if (tierFeatures.storyforge.sceneExpansion) features.push('Scene Expansion');
-    if (tierFeatures.storyforge.canonValidation) features.push('Canon Validation');
+  // Writer's Room
+  if (tierFeatures.writersRoom.enabled) {
+    features.push('Writer\'s Room Mode');
+    if (tierFeatures.writersRoom.narrativeGeneration) features.push('AI Narrative Generation');
+    if (tierFeatures.writersRoom.chapterExpansion) features.push('Chapter Expansion');
+    if (tierFeatures.writersRoom.sceneExpansion) features.push('Scene Expansion');
+    if (tierFeatures.writersRoom.canonValidation) features.push('Canon Validation');
   }
 
   // Cinema
@@ -489,7 +489,7 @@ export function getAvailableFeatures(tier: SubscriptionTier): string[] {
  */
 export const RUNTIME_FLAGS = {
   // Core features
-  ENABLE_STORYFORGE: process.env.FEATURE_STORYFORGE !== 'false',
+  ENABLE_WRITERS_ROOM: process.env.FEATURE_WRITERS_ROOM !== 'false',
   ENABLE_CINEMA: process.env.FEATURE_CINEMA !== 'false',
   ENABLE_LITERARY_WORKS: process.env.FEATURE_LITERARY_WORKS !== 'false',
 
