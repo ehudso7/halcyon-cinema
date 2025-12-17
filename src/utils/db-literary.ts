@@ -8,7 +8,7 @@
  * - Character relationships
  *
  * IMPORTANT: These operations support users who want to use Halcyon Cinema
- * for literary works WITHOUT ever touching StoryForge.
+ * for literary works WITHOUT ever touching Writer's Room.
  */
 
 import { query } from './db';

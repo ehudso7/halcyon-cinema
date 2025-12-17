@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { GenerateImageRequest, GenerateImageResponse } from '@/types';
+import { GenerateImageRequest, GenerateImageResponse, ImageModel, ImageSize, ImageOutputFormat } from '@/types';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -94,7 +94,14 @@ OUTPUT: Return ONLY the safe, rewritten prompt. Keep it under 150 words. Make it
 }
 
 export async function generateImage(request: GenerateImageRequest): Promise<GenerateImageResponse> {
-  const { prompt, size = '1024x1024', quality = 'standard', style = 'vivid' } = request;
+  const {
+    prompt,
+    model = 'gpt-image-1.5', // Default to the faster, cheaper GPT Image 1.5
+    size = '1024x1024',
+    quality = 'standard',
+    style = 'vivid',
+    outputFormat,
+  } = request;
 
   if (!process.env.OPENAI_API_KEY) {
     return {
@@ -104,14 +111,31 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
   }
 
   try {
-    const response = await openai.images.generate({
-      model: 'dall-e-3',
+    // Build request parameters based on model
+    // GPT Image 1.5 supports output_format, DALL-E 3 does not
+    const requestParams: {
+      model: ImageModel;
+      prompt: string;
+      n: number;
+      size: ImageSize;
+      quality: 'standard' | 'hd';
+      style: 'natural' | 'vivid';
+      output_format?: ImageOutputFormat;
+    } = {
+      model,
       prompt,
       n: 1,
       size,
       quality,
       style,
-    });
+    };
+
+    // Add output_format for GPT Image 1.5 only
+    if (model === 'gpt-image-1.5' && outputFormat) {
+      requestParams.output_format = outputFormat;
+    }
+
+    const response = await openai.images.generate(requestParams);
 
     const imageUrl = response.data?.[0]?.url;
 
@@ -192,7 +216,7 @@ export interface TextGenerationSettings {
 
 /**
  * Generate text content using GPT-4o-mini.
- * Used by StoryForge for narrative generation, expansion, and editing.
+ * Used by Writer's Room for narrative generation, expansion, and editing.
  *
  * @param prompt - The prompt to generate content from
  * @param options - Generation options including temperature and max tokens
@@ -214,7 +238,7 @@ export async function generateText(
 /**
  * Generate text content using GPT-4o-mini with full settings control.
  * This is the primary function for AI-assisted content generation across
- * both StoryForge and Halcyon Cinema.
+ * both Writer's Room and Halcyon Cinema.
  *
  * @param prompt - The user prompt to generate content from
  * @param settings - Full generation settings including system prompt and model parameters

@@ -4,8 +4,8 @@
  * This module defines all feature flags for the Halcyon Cinema platform.
  * Features are gated by subscription tier and project mode.
  *
- * IMPORTANT: StoryForge is OPTIONAL - users with existing literary works
- * can continue using Halcyon Cinema without ever touching StoryForge.
+ * IMPORTANT: Writer's Room is OPTIONAL - users with existing literary works
+ * can continue using Halcyon Cinema without ever touching Writer's Room.
  */
 
 // ============================================================================
@@ -25,7 +25,7 @@ export interface TierFeatures {
   monthlyCredits: number;
   creditRolloverMultiplier: number;
 
-  // Literary Works Features (available without StoryForge)
+  // Literary Works Features (available without Writer's Room)
   literaryWorks: {
     enabled: boolean;
     novelImport: boolean;
@@ -38,7 +38,7 @@ export interface TierFeatures {
     canonVersioning: boolean;
   };
 
-  // Writer's Room Features (AI-powered narrative generation)
+  // Writer's Room Features (optional escalation)
   writersRoom: {
     enabled: boolean;
     narrativeGeneration: boolean;
@@ -288,13 +288,13 @@ export const TIER_FEATURES: Record<SubscriptionTier, TierFeatures> = {
  * Project modes determine the available features and UI for a project.
  *
  * - 'literary': Pure literary work (novel, manuscript) - no Writer's Room, no Cinema
- * - 'writersRoom': Writer's Room AI-powered writing mode
+ * - 'writers-room': Writer's Room-enabled writing mode
  * - 'cinema': Cinema mode for visual production
  *
  * IMPORTANT: Users can work in 'literary' mode indefinitely without ever
  * using Writer's Room or Cinema features. Cinema is an OPTIONAL escalation.
  */
-export type ProjectMode = 'literary' | 'writersRoom' | 'cinema';
+export type ProjectMode = 'literary' | 'writers-room' | 'cinema';
 
 export interface ProjectModeConfig {
   name: string;
@@ -307,7 +307,7 @@ export const PROJECT_MODE_CONFIG: Record<ProjectMode, ProjectModeConfig> = {
   literary: {
     name: 'Literary Works',
     description: 'Write novels, manuscripts, and screenplays with full creative control. No AI assistance required.',
-    allowedTransitions: ['writersRoom', 'cinema'],
+    allowedTransitions: ['writers-room', 'cinema'],
     features: [
       'Novel writing and editing',
       'Manuscript management',
@@ -317,8 +317,8 @@ export const PROJECT_MODE_CONFIG: Record<ProjectMode, ProjectModeConfig> = {
       'Export to publishing formats',
     ],
   },
-  writersRoom: {
-    name: "Writer's Room",
+  'writers-room': {
+    name: 'Writer\'s Room',
     description: 'AI-powered narrative engine for long-form writing with canon enforcement.',
     allowedTransitions: ['literary', 'cinema'],
     features: [
@@ -335,7 +335,7 @@ export const PROJECT_MODE_CONFIG: Record<ProjectMode, ProjectModeConfig> = {
   cinema: {
     name: 'Cinema',
     description: 'Transform your story into stunning visuals with AI-powered cinematic tools.',
-    allowedTransitions: ['literary', 'writersRoom'],
+    allowedTransitions: ['literary', 'writers-room'],
     features: [
       'Scene to shot translation',
       'Cinematic prompt generation',
@@ -451,7 +451,7 @@ export function getAvailableFeatures(tier: SubscriptionTier): string[] {
 
   // Writer's Room
   if (tierFeatures.writersRoom.enabled) {
-    features.push("Writer's Room Mode");
+    features.push('Writer\'s Room Mode');
     if (tierFeatures.writersRoom.narrativeGeneration) features.push('AI Narrative Generation');
     if (tierFeatures.writersRoom.chapterExpansion) features.push('Chapter Expansion');
     if (tierFeatures.writersRoom.sceneExpansion) features.push('Scene Expansion');

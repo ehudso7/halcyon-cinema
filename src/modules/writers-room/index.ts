@@ -5,7 +5,7 @@
  * All external access to Writer's Room functionality MUST go through this module.
  *
  * ARCHITECTURE CONSTRAINTS:
- * - Writer's Room lives at: /src/modules/storyforge (internal path)
+ * - Writer's Room lives at: /src/modules/writers-room
  * - Cinema lives at: /src/services/cinema
  * - Cinema NEVER imports Writer's Room internals
  * - Canon is the single source of truth
@@ -26,8 +26,8 @@ import type {
   CanonValidationError,
   CanonConflictResolution,
   CanonResolutionAction,
-  StoryForgeGenerationRequest,
-  StoryForgeGenerationResult,
+  WritersRoomGenerationRequest,
+  WritersRoomGenerationResult,
   SemanticSceneOutput,
 } from '@/types/literary';
 
@@ -35,14 +35,14 @@ import type {
 // Types
 // ============================================================================
 
-export interface StoryForgeContext {
+export interface WritersRoomContext {
   userId: string;
   projectId: string;
   tier: SubscriptionTier;
   mode: ProjectMode;
 }
 
-export interface StoryForgeError {
+export interface WritersRoomError {
   code: 'FEATURE_DISABLED' | 'INSUFFICIENT_TIER' | 'INVALID_MODE' | 'GENERATION_ERROR' | 'CANON_CONFLICT';
   message: string;
   details?: unknown;
@@ -79,20 +79,20 @@ const featurePathMap = {
 } as const;
 
 // ============================================================================
-// StoryForge Engine Adapter
+// Writer's Room Engine Adapter
 // ============================================================================
 
 /**
- * StoryForge Engine Adapter
+ * Writer's Room Engine Adapter
  *
- * This class provides the public API for all StoryForge functionality.
+ * This class provides the public API for all Writer's Room functionality.
  * It handles feature gating, mode validation, and delegates to internal
  * engine components.
  */
-export class StoryForgeAdapter {
-  private context: StoryForgeContext;
+export class WritersRoomAdapter {
+  private context: WritersRoomContext;
 
-  constructor(context: StoryForgeContext) {
+  constructor(context: WritersRoomContext) {
     this.context = context;
   }
 
@@ -106,11 +106,11 @@ export class StoryForgeAdapter {
   /**
    * Validate that the user can use Writer's Room features.
    */
-  private validateAccess(feature: keyof typeof featurePathMap): StoryForgeError | null {
+  private validateAccess(feature: keyof typeof featurePathMap): WritersRoomError | null {
     if (!this.isAvailable()) {
       return {
         code: 'INSUFFICIENT_TIER',
-        message: "Writer's Room features require a Pro or Enterprise subscription",
+        message: 'Writer\'s Room features require a Pro or Enterprise subscription',
       };
     }
 
@@ -136,7 +136,7 @@ export class StoryForgeAdapter {
    * - Scene expansion
    * - Rewrite/condense/continue operations
    */
-  async generate(request: StoryForgeGenerationRequest): Promise<StoryForgeGenerationResult> {
+  async generate(request: WritersRoomGenerationRequest): Promise<WritersRoomGenerationResult> {
     const error = this.validateAccess('narrativeGeneration');
     if (error) {
       return {
@@ -147,13 +147,13 @@ export class StoryForgeAdapter {
     }
 
     // Delegate to internal engine
-    return StoryForgeEngine.generate(this.context, request);
+    return WritersRoomEngine.generate(this.context, request);
   }
 
   /**
    * Expand a chapter with AI assistance.
    */
-  async expandChapter(chapterId: string, prompt?: string): Promise<StoryForgeGenerationResult> {
+  async expandChapter(chapterId: string, prompt?: string): Promise<WritersRoomGenerationResult> {
     const error = this.validateAccess('chapterExpansion');
     if (error) {
       return {
@@ -180,7 +180,7 @@ export class StoryForgeAdapter {
   /**
    * Expand a scene with AI assistance.
    */
-  async expandScene(sceneId: string, prompt?: string): Promise<StoryForgeGenerationResult> {
+  async expandScene(sceneId: string, prompt?: string): Promise<WritersRoomGenerationResult> {
     const error = this.validateAccess('sceneExpansion');
     if (error) {
       return {
@@ -207,7 +207,7 @@ export class StoryForgeAdapter {
   /**
    * Rewrite content with AI assistance.
    */
-  async rewrite(targetType: 'chapter' | 'scene' | 'paragraph', targetId: string, prompt?: string): Promise<StoryForgeGenerationResult> {
+  async rewrite(targetType: 'chapter' | 'scene' | 'paragraph', targetId: string, prompt?: string): Promise<WritersRoomGenerationResult> {
     const error = this.validateAccess('rewriteCondenseContinue');
     if (error) {
       return {
@@ -234,7 +234,7 @@ export class StoryForgeAdapter {
   /**
    * Condense content with AI assistance.
    */
-  async condense(targetType: 'chapter' | 'scene' | 'paragraph', targetId: string): Promise<StoryForgeGenerationResult> {
+  async condense(targetType: 'chapter' | 'scene' | 'paragraph', targetId: string): Promise<WritersRoomGenerationResult> {
     const error = this.validateAccess('rewriteCondenseContinue');
     if (error) {
       return {
@@ -260,7 +260,7 @@ export class StoryForgeAdapter {
   /**
    * Continue content with AI assistance.
    */
-  async continue(targetType: 'chapter' | 'scene', targetId: string, prompt?: string): Promise<StoryForgeGenerationResult> {
+  async continue(targetType: 'chapter' | 'scene', targetId: string, prompt?: string): Promise<WritersRoomGenerationResult> {
     const error = this.validateAccess('rewriteCondenseContinue');
     if (error) {
       return {
@@ -303,7 +303,7 @@ export class StoryForgeAdapter {
       };
     }
 
-    return StoryForgeEngine.validateCanon(this.context, content, chapterId);
+    return WritersRoomEngine.validateCanon(this.context, content, chapterId);
   }
 
   /**
@@ -327,7 +327,7 @@ export class StoryForgeAdapter {
       };
     }
 
-    return StoryForgeEngine.resolveConflict(this.context, errorId, action, newValue, notes);
+    return WritersRoomEngine.resolveConflict(this.context, errorId, action, newValue, notes);
   }
 
   // ==========================================================================
@@ -337,18 +337,18 @@ export class StoryForgeAdapter {
   /**
    * Extract semantic scene output for cinema translation.
    *
-   * This is the ONLY way cinema should access StoryForge data.
-   * Cinema NEVER imports StoryForge internals directly.
+   * This is the ONLY way cinema should access Writer's Room data.
+   * Cinema NEVER imports Writer's Room internals directly.
    */
   async extractSemanticScene(sceneId: string): Promise<SemanticSceneOutput | null> {
-    return StoryForgeEngine.extractSemanticScene(this.context, sceneId);
+    return WritersRoomEngine.extractSemanticScene(this.context, sceneId);
   }
 
   /**
    * Extract semantic outputs for all scenes in a chapter.
    */
   async extractChapterSemantics(chapterId: string): Promise<SemanticSceneOutput[]> {
-    return StoryForgeEngine.extractChapterSemantics(this.context, chapterId);
+    return WritersRoomEngine.extractChapterSemantics(this.context, chapterId);
   }
 }
 
@@ -357,19 +357,19 @@ export class StoryForgeAdapter {
 // ============================================================================
 
 /**
- * Internal StoryForge Engine implementation.
+ * Internal Writer's Room Engine implementation.
  *
  * This is NOT exported and should NEVER be accessed directly.
- * All access goes through the StoryForgeAdapter.
+ * All access goes through the WritersRoomAdapter.
  */
-const StoryForgeEngine = {
+const WritersRoomEngine = {
   /**
    * Generate content using AI.
    */
   async generate(
-    _context: StoryForgeContext,
-    _request: StoryForgeGenerationRequest
-  ): Promise<StoryForgeGenerationResult> {
+    _context: WritersRoomContext,
+    _request: WritersRoomGenerationRequest
+  ): Promise<WritersRoomGenerationResult> {
     // TODO: Implement AI generation using OpenAI
     // This will integrate with the existing openai.ts utility
     return {
@@ -383,7 +383,7 @@ const StoryForgeEngine = {
    * Validate content against canon.
    */
   async validateCanon(
-    _context: StoryForgeContext,
+    _context: WritersRoomContext,
     _content: string,
     _chapterId?: string
   ): Promise<{ valid: boolean; errors: CanonValidationError[] }> {
@@ -398,7 +398,7 @@ const StoryForgeEngine = {
    * Resolve a canon conflict.
    */
   async resolveConflict(
-    context: StoryForgeContext,
+    context: WritersRoomContext,
     errorId: string,
     action: CanonResolutionAction,
     newValue?: string,
@@ -422,7 +422,7 @@ const StoryForgeEngine = {
    * Extract semantic scene output.
    */
   async extractSemanticScene(
-    _context: StoryForgeContext,
+    _context: WritersRoomContext,
     sceneId: string
   ): Promise<SemanticSceneOutput | null> {
     // TODO: Implement semantic extraction
@@ -440,7 +440,7 @@ const StoryForgeEngine = {
    * Extract chapter semantics.
    */
   async extractChapterSemantics(
-    _context: StoryForgeContext,
+    _context: WritersRoomContext,
     _chapterId: string
   ): Promise<SemanticSceneOutput[]> {
     // TODO: Implement chapter semantic extraction
@@ -453,10 +453,10 @@ const StoryForgeEngine = {
 // ============================================================================
 
 /**
- * Create a StoryForge adapter for a user context.
+ * Create a Writer's Room adapter for a user context.
  */
-export function createStoryForgeAdapter(context: StoryForgeContext): StoryForgeAdapter {
-  return new StoryForgeAdapter(context);
+export function createWritersRoomAdapter(context: WritersRoomContext): WritersRoomAdapter {
+  return new WritersRoomAdapter(context);
 }
 
 // ============================================================================
@@ -471,7 +471,7 @@ export type {
   CanonValidationError,
   CanonConflictResolution,
   CanonResolutionAction,
-  StoryForgeGenerationRequest,
-  StoryForgeGenerationResult,
+  WritersRoomGenerationRequest,
+  WritersRoomGenerationResult,
   SemanticSceneOutput,
 };

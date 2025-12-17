@@ -3,7 +3,7 @@
  *
  * Types for managing novels, manuscripts, screenplays, and other literary content.
  * These types support users who want to use Halcyon Cinema for literary work
- * WITHOUT ever touching StoryForge.
+ * WITHOUT ever touching Writer's Room.
  */
 
 import { ProjectMode } from '@/config/feature-flags';
@@ -415,13 +415,13 @@ export interface ExportResult {
 }
 
 // ============================================================================
-// StoryForge Types (for optional escalation)
+// Writer's Room Types (for optional escalation)
 // ============================================================================
 
 /**
- * StoryForge generation request.
+ * Writer's Room generation request.
  */
-export interface StoryForgeGenerationRequest {
+export interface WritersRoomGenerationRequest {
   projectId: string;
   action: 'generate' | 'expand' | 'rewrite' | 'condense' | 'continue';
   targetType: 'chapter' | 'scene' | 'paragraph';
@@ -442,9 +442,9 @@ export interface StoryForgeGenerationRequest {
 }
 
 /**
- * StoryForge generation result.
+ * Writer's Room generation result.
  */
-export interface StoryForgeGenerationResult {
+export interface WritersRoomGenerationResult {
   success: boolean;
   content?: string;
   canonValidation?: {

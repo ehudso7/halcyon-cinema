@@ -184,7 +184,7 @@ export function checkModeAccess(tier: SubscriptionTier): ModeAccessResult {
 
   // Writer's Room requires pro or enterprise
   if (canUseWritersRoom(tier)) {
-    availableModes.push('writersRoom');
+    availableModes.push('writers-room');
   }
 
   // Cinema is available to all paid tiers
@@ -237,7 +237,7 @@ function findTierForMode(mode: ProjectMode): SubscriptionTier {
   switch (mode) {
     case 'literary':
       return 'starter';
-    case 'writersRoom':
+    case 'writers-room':
       return 'pro';
     case 'cinema':
       return 'starter'; // Basic cinema available to starter, advanced features need higher tier

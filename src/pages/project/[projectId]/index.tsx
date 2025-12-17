@@ -13,7 +13,7 @@ import Pagination from '@/components/Pagination';
 import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import GenerationProgress from '@/components/GenerationProgress';
 import Warning from '@/components/Warning';
-import StoryForgePanel from '@/components/StoryForgePanel';
+import WritersRoomPanel from '@/components/WritersRoomPanel';
 import { trackGeneration } from '@/components/UsageStats';
 import { Project, Scene, WritersRoomFeatureId, isValidWritersRoomFeatureId } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
@@ -55,7 +55,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Writer's Room mode detection from query parameters
-  const isWritersRoomMode = router.query.mode === 'storyforge';
+  const isWritersRoomMode = router.query.mode === 'writers-room';
   const queryFeature = router.query.feature as string | undefined;
   const writersRoomFeature = queryFeature && isValidWritersRoomFeatureId(queryFeature)
     ? queryFeature
@@ -543,7 +543,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
           {/* Writer's Room Mode Panel */}
           {isWritersRoomMode && (
-            <StoryForgePanel
+            <WritersRoomPanel
               project={project}
               featureId={writersRoomFeature}
               onClose={handleExitWritersRoom}

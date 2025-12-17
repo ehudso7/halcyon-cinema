@@ -14,11 +14,11 @@ import {
   getAvailableGenres,
   getGenreSettings,
 } from '@/config/ai-settings';
-import styles from './StoryForgePanel.module.css';
+import styles from './WritersRoomPanel.module.css';
 
 const MAX_CONTENT_LENGTH = 10000;
 
-interface StoryForgePanelProps {
+interface WritersRoomPanelProps {
   project: Project;
   featureId: WritersRoomFeatureId | null;
   onClose: () => void;
@@ -123,7 +123,7 @@ const featureConfigs: Record<WritersRoomFeatureId, FeatureConfig> = {
 
 type RewriteMode = 'rewrite' | 'condense' | 'continue';
 
-export default function StoryForgePanel({ project, featureId, onClose }: StoryForgePanelProps) {
+export default function WritersRoomPanel({ project, featureId, onClose }: WritersRoomPanelProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const [inputContent, setInputContent] = useState('');
@@ -154,7 +154,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
     setRecommendationReasoning(null);
 
     try {
-      const response = await fetch('/api/storyforge/recommend-settings', {
+      const response = await fetch('/api/writers-room/recommend-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId: project.id }),
@@ -244,8 +244,8 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
     setResult(null);
 
     try {
-      // Call the StoryForge API
-      const response = await fetch('/api/storyforge/process', {
+      // Call the Writer's Room API
+      const response = await fetch('/api/writers-room/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -310,7 +310,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
   const handleSwitchFeature = (newFeatureId: WritersRoomFeatureId) => {
     setInputContent('');
     setResult(null);
-    router.push(`/project/${project.id}?mode=storyforge&feature=${newFeatureId}`);
+    router.push(`/project/${project.id}?mode=writers-room&feature=${newFeatureId}`);
   };
 
   return (
@@ -683,7 +683,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
       </div>
 
       <div className={styles.footer}>
-        <Link href="/storyforge" className={styles.backLink}>
+        <Link href="/writers-room" className={styles.backLink}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />

@@ -1,7 +1,7 @@
 /**
  * Project Mode API
  *
- * Handles project mode management (literary, writersRoom, cinema).
+ * Handles project mode management (literary, writers-room, cinema).
  *
  * GET: Get current project mode
  * PUT: Update project mode (with tier validation)
@@ -69,7 +69,7 @@ export default async function handler(
 
     // Check for Writer's Room access
     if (tierInfo.features.writersRoom.enabled) {
-      availableModes.push('writersRoom');
+      availableModes.push('writers-room');
     }
 
     // Check for Cinema access
@@ -90,7 +90,7 @@ export default async function handler(
       return res.status(400).json({ error: 'Mode is required' });
     }
 
-    const validModes: ProjectMode[] = ['literary', 'writersRoom', 'cinema'];
+    const validModes: ProjectMode[] = ['literary', 'writers-room', 'cinema'];
     if (!validModes.includes(mode)) {
       return res.status(400).json({
         error: 'Invalid mode',
@@ -107,7 +107,7 @@ export default async function handler(
     if (!transitionResult.allowed) {
       // Determine available modes for the error response
       const availableModes: ProjectMode[] = ['literary'];
-      if (tierInfo.features.writersRoom.enabled) availableModes.push('writersRoom');
+      if (tierInfo.features.writersRoom.enabled) availableModes.push('writers-room');
       if (tierInfo.features.cinema.enabled) availableModes.push('cinema');
 
       return res.status(403).json({
@@ -140,7 +140,7 @@ export default async function handler(
 
     // Determine available modes
     const availableModes: ProjectMode[] = ['literary'];
-    if (tierInfo.features.writersRoom.enabled) availableModes.push('writersRoom');
+    if (tierInfo.features.writersRoom.enabled) availableModes.push('writers-room');
     if (tierInfo.features.cinema.enabled) availableModes.push('cinema');
 
     return res.status(200).json({

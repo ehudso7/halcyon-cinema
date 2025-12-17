@@ -136,12 +136,44 @@ export interface AISuggestion {
   promptAddition?: string;
 }
 
+// Image generation model types
+export type ImageModel = 'dall-e-3' | 'gpt-image-1.5';
+
+// Size options vary by model
+export type DallE3Size = '1024x1024' | '1792x1024' | '1024x1792';
+export type GptImageSize = '1024x1024' | '1536x1024' | '1024x1536' | 'auto';
+export type ImageSize = DallE3Size | GptImageSize;
+
+// Output format (GPT Image 1.5 only)
+export type ImageOutputFormat = 'png' | 'jpeg' | 'webp';
+
 // API types
 export interface GenerateImageRequest {
   prompt: string;
-  size?: '1024x1024' | '1792x1024' | '1024x1792';
+  model?: ImageModel;
+  size?: ImageSize;
   quality?: 'standard' | 'hd';
   style?: 'vivid' | 'natural';
+  outputFormat?: ImageOutputFormat; // GPT Image 1.5 only
+}
+
+/** Upsell suggestion for when credits are insufficient */
+export interface UpsellSuggestion {
+  buyCredits?: {
+    description: string;
+    creditsProvided: number;
+    price: string;
+  };
+  upgradeSubscription?: {
+    description: string;
+    monthlyCredits: number;
+    price: string;
+  };
+  useLowerTier?: {
+    description: string;
+    qualityTier: string;
+    creditCost: number;
+  };
 }
 
 export interface GenerateImageResponse {
@@ -154,6 +186,10 @@ export interface GenerateImageResponse {
   warning?: string;
   /** Remaining credits after generation */
   creditsRemaining?: number;
+  /** Credits used for this generation */
+  creditsUsed?: number;
+  /** Quality tier used for generation */
+  qualityTier?: string;
 }
 
 export interface ApiError {
@@ -161,6 +197,10 @@ export interface ApiError {
   details?: string;
   code?: string;
   creditsRemaining?: number;
+  /** Credits required for the operation */
+  creditsRequired?: number;
+  /** Upsell suggestions when credits are insufficient */
+  suggestions?: UpsellSuggestion;
 }
 
 // Lore Engine types
