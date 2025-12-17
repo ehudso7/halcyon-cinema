@@ -199,7 +199,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
               <circle cx="11" cy="11" r="2" />
             </svg>
           </div>
-          <h3>Select a StoryForge Feature</h3>
+          <h3>Select a Writer&apos;s Room Feature</h3>
           <p>Choose a feature from below to get started with AI-assisted writing.</p>
           <div className={styles.featureButtons}>
             {Object.values(featureConfigs).map((config) => (
@@ -677,7 +677,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
             )}
           </div>
           <p className={styles.contextNote}>
-            StoryForge uses your project&apos;s world lore and characters to maintain consistency.
+            Writer&apos;s Room uses your project&apos;s world lore and characters to maintain consistency.
           </p>
         </div>
       </div>
@@ -688,7 +688,7 @@ export default function StoryForgePanel({ project, featureId, onClose }: StoryFo
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
           </svg>
-          Back to StoryForge Hub
+          Back to Writer&apos;s Room
         </Link>
         <span className={styles.tierBadge}>Pro Feature</span>
       </div>
