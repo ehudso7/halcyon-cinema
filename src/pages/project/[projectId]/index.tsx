@@ -15,6 +15,7 @@ import GenerationProgress from '@/components/GenerationProgress';
 import Warning from '@/components/Warning';
 import WritersRoomPanel from '@/components/WritersRoomPanel';
 import ProduceEpisodeButton from '@/components/ProduceEpisodeButton';
+import ProduceBatchButton from '@/components/ProduceBatchButton';
 import { trackGeneration } from '@/components/UsageStats';
 import { Project, Scene, WritersRoomFeatureId, isValidWritersRoomFeatureId } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
@@ -521,6 +522,10 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
                 projectId={project.id}
                 projectName={project.name}
                 sceneCount={project.scenes.length}
+              />
+              <ProduceBatchButton
+                projectId={project.id}
+                projectName={project.name}
               />
               <button
                 onClick={handleExport}
