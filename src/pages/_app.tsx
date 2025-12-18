@@ -11,6 +11,32 @@ import '@/styles/globals.css';
 // Pages that should not show the footer
 const noFooterPages = ['/auth/signin', '/auth/signup', '/auth/error', '/landing'];
 
+// Hook to reset scroll position on route changes
+function useScrollReset() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Reset scroll to top on route change
+    const handleRouteChange = () => {
+      // Use setTimeout to ensure DOM is updated before scrolling
+      setTimeout(() => {
+        window.scrollTo(0, 0);
+      }, 0);
+    };
+
+    // Also reset on initial load
+    if (typeof window !== 'undefined') {
+      window.history.scrollRestoration = 'manual';
+      window.scrollTo(0, 0);
+    }
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
+}
+
 // Pages that should not show onboarding
 const noOnboardingPages = ['/auth/signin', '/auth/signup', '/auth/error', '/landing', '/pricing', '/onboarding'];
 
@@ -109,6 +135,9 @@ export default function App({ Component, pageProps: { session, ...pageProps } }:
 
   // Initialize preferences (theme, accessibility, language) from localStorage
   usePreferencesInitialization();
+
+  // Reset scroll position on route changes to prevent pages loading at wrong position
+  useScrollReset();
 
   return (
     <SessionProvider session={session}>
