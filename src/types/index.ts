@@ -178,6 +178,11 @@ export type DallE3Size = '1024x1024' | '1792x1024' | '1024x1792';
 export type GptImageSize = '1024x1024' | '1536x1024' | '1024x1536' | 'auto';
 export type ImageSize = DallE3Size | GptImageSize;
 
+// Quality options vary by model
+export type DallE3Quality = 'standard' | 'hd';
+export type GptImageQuality = 'low' | 'medium' | 'high' | 'auto';
+export type ImageQuality = DallE3Quality | GptImageQuality;
+
 // Output format (GPT Image 1.5 only)
 export type ImageOutputFormat = 'png' | 'jpeg' | 'webp';
 
@@ -186,7 +191,7 @@ export interface GenerateImageRequest {
   prompt: string;
   model?: ImageModel;
   size?: ImageSize;
-  quality?: 'standard' | 'hd';
+  quality?: ImageQuality;
   style?: 'vivid' | 'natural';
   outputFormat?: ImageOutputFormat; // GPT Image 1.5 only
 }
