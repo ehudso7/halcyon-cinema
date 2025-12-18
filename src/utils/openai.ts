@@ -157,8 +157,9 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
       };
     }
 
-    // If we got base64 data, convert to data URL
-    const finalUrl = imageUrl || `data:image/png;base64,${b64Json}`;
+    // If we got base64 data, convert to data URL with correct MIME type
+    const mimeType = outputFormat === 'jpeg' ? 'jpeg' : outputFormat === 'webp' ? 'webp' : 'png';
+    const finalUrl = imageUrl || `data:image/${mimeType};base64,${b64Json}`;
 
     return {
       success: true,

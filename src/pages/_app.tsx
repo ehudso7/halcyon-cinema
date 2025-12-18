@@ -15,20 +15,22 @@ const noFooterPages = ['/auth/signin', '/auth/signup', '/auth/error', '/landing'
 function useScrollReset() {
   const router = useRouter();
 
+  // Set scrollRestoration once on mount
   useEffect(() => {
-    // Reset scroll to top on route change
+    if (typeof window !== 'undefined') {
+      window.history.scrollRestoration = 'manual';
+      window.scrollTo(0, 0);
+    }
+  }, []);
+
+  // Listen for route changes
+  useEffect(() => {
     const handleRouteChange = () => {
       // Use setTimeout to ensure DOM is updated before scrolling
       setTimeout(() => {
         window.scrollTo(0, 0);
       }, 0);
     };
-
-    // Also reset on initial load
-    if (typeof window !== 'undefined') {
-      window.history.scrollRestoration = 'manual';
-      window.scrollTo(0, 0);
-    }
 
     router.events.on('routeChangeComplete', handleRouteChange);
     return () => {
