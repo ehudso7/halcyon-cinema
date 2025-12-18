@@ -328,7 +328,7 @@ This error occurs when the redirect URI in your OAuth request doesn't match what
 3. For Vercel deployments, add both your production domain and preview URLs
 4. Make sure `NEXTAUTH_URL` is set correctly in your environment variables
 
-**OAuth buttons not appearing**
+### OAuth Buttons Not Appearing
 
 If OAuth buttons don't appear on the sign-in page, the provider credentials are not configured.
 
