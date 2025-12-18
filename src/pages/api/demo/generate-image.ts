@@ -119,13 +119,13 @@ export default async function handler(
       mood: genreStyle.mood,
     });
 
-    // Generate the image (standard quality only for demo)
-    // Note: gpt-image-1.5 doesn't support style parameter (DALL-E 3 only)
+    // Generate the image (medium quality for demo)
+    // Note: gpt-image-1.5 uses 'low'/'medium'/'high'/'auto' quality values
     const result = await generateImage({
       prompt: enhancedPrompt,
       model: 'gpt-image-1.5', // Fast and cost-effective
       size: '1024x1024',
-      quality: 'standard',
+      quality: 'medium',
     });
 
     if (!result.success || !result.imageUrl) {

@@ -112,35 +112,39 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
 
   try {
     // Build request parameters based on model capabilities:
-    // - DALL-E 3: supports 'style' parameter (natural/vivid)
-    // - GPT Image 1.5: supports 'output_format' parameter, does NOT support 'style'
-    const requestParams: {
-      model: ImageModel;
-      prompt: string;
-      n: number;
-      size: ImageSize;
-      quality: 'standard' | 'hd';
-      style?: 'natural' | 'vivid';
-      output_format?: ImageOutputFormat;
-    } = {
+    // - DALL-E 3: supports 'style' (natural/vivid), 'quality' (standard/hd)
+    // - GPT Image 1.5: supports 'output_format', 'quality' (low/medium/high/auto), does NOT support 'style'
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const requestParams: Record<string, any> = {
       model,
       prompt,
       n: 1,
       size,
-      quality,
     };
 
-    // Add style parameter for DALL-E 3 only
+    // Handle model-specific quality parameter
     if (model === 'dall-e-3') {
+      // DALL-E 3 uses 'standard' or 'hd'
+      requestParams.quality = quality === 'hd' ? 'hd' : 'standard';
+      // Add style for DALL-E 3
       requestParams.style = style;
+    } else if (model === 'gpt-image-1.5') {
+      // GPT Image 1.5 uses 'low', 'medium', 'high', or 'auto'
+      // Map DALL-E 3 quality values if provided
+      if (quality === 'standard') {
+        requestParams.quality = 'medium';
+      } else if (quality === 'hd') {
+        requestParams.quality = 'high';
+      } else if (quality) {
+        requestParams.quality = quality;
+      }
+      // Add output_format for GPT Image 1.5
+      if (outputFormat) {
+        requestParams.output_format = outputFormat;
+      }
     }
 
-    // Add output_format for GPT Image 1.5 only
-    if (model === 'gpt-image-1.5' && outputFormat) {
-      requestParams.output_format = outputFormat;
-    }
-
-    const response = await openai.images.generate(requestParams);
+    const response = await openai.images.generate(requestParams as Parameters<typeof openai.images.generate>[0]) as OpenAI.Images.ImagesResponse;
 
     const imageUrl = response.data?.[0]?.url;
 
