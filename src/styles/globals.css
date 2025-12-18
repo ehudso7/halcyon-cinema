@@ -897,15 +897,12 @@ select {
 @media (max-width: 768px) and (orientation: landscape) {
   .modal {
     max-height: 85vh;
+    border-radius: 16px;
   }
 
   .modal-overlay {
     align-items: center;
     padding: 16px;
-  }
-
-  .modal {
-    border-radius: 16px;
   }
 }
 
