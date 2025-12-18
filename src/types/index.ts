@@ -103,8 +103,42 @@ export interface Project {
   characters?: Character[];
   lore?: LoreEntry[];
   sequences?: SceneSequence[];
+  // Cinema production settings
+  cinemaSettings?: CinemaProductionSettings;
   createdAt: string;
   updatedAt: string;
+}
+
+// Cinema production settings for full video output
+export interface CinemaProductionSettings {
+  // Assembly toggle - enables full video assembly
+  autoAssemble?: boolean;
+
+  // Assembly preferences
+  assemblyPreferences?: {
+    resolution?: '720p' | '1080p' | '4k';
+    aspectRatio?: '16:9' | '9:16' | '1:1' | '4:3';
+    transitionType?: 'cut' | 'fade' | 'dissolve' | 'wipe';
+    transitionDuration?: number;
+    format?: 'mp4' | 'webm' | 'gif';
+    quality?: 'low' | 'medium' | 'high';
+  };
+
+  // Audio preferences
+  audioPreferences?: {
+    includeMusicTrack?: boolean;
+    includeVoiceover?: boolean;
+    musicVolume?: number; // 0-1
+    voiceoverVolume?: number; // 0-1
+    defaultVoice?: string;
+  };
+
+  // Generation preferences
+  generationPreferences?: {
+    videoQuality?: 'standard' | 'professional' | 'premium';
+    musicGenre?: string;
+    musicMood?: string;
+  };
 }
 
 // Literary work types (re-exported from literary.ts)
