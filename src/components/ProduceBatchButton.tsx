@@ -71,7 +71,8 @@ export default function ProduceBatchButton({
   const [seriesTitle, setSeriesTitle] = useState('');
   const [seriesSynopsis, setSeriesSynopsis] = useState('');
   const [seriesGenre, setSeriesGenre] = useState('drama');
-  const [episodeDuration, setEpisodeDuration] = useState(60);
+  const [episodeDurationInput, setEpisodeDurationInput] = useState('60');
+  const episodeDuration = episodeDurationInput === '' ? 0 : Number(episodeDurationInput);
   const [episodes, setEpisodes] = useState<EpisodeInput[]>([
     { episodeNumber: 1, title: 'Pilot', synopsis: '' },
   ]);
@@ -80,7 +81,8 @@ export default function ProduceBatchButton({
   const [movieTitle, setMovieTitle] = useState('');
   const [movieSynopsis, setMovieSynopsis] = useState('');
   const [movieGenre, setMovieGenre] = useState('drama');
-  const [movieDuration, setMovieDuration] = useState(5);
+  const [movieDurationInput, setMovieDurationInput] = useState('5');
+  const movieDuration = movieDurationInput === '' ? 0 : Number(movieDurationInput);
   const [useCustomActs, setUseCustomActs] = useState(false);
   const [acts, setActs] = useState<ActInput[]>([
     { actNumber: 1, title: 'Setup', synopsis: '', duration: 1 },
@@ -363,8 +365,13 @@ export default function ProduceBatchButton({
                             type="number"
                             min={30}
                             max={180}
-                            value={episodeDuration}
-                            onChange={e => setEpisodeDuration(Number(e.target.value))}
+                            value={episodeDurationInput}
+                            onChange={e => setEpisodeDurationInput(e.target.value)}
+                            onBlur={() => {
+                              if (episodeDurationInput === '' || episodeDuration < 30) {
+                                setEpisodeDurationInput('30');
+                              }
+                            }}
                             className={styles.input}
                           />
                         </div>
@@ -470,8 +477,13 @@ export default function ProduceBatchButton({
                             type="number"
                             min={1}
                             max={30}
-                            value={movieDuration}
-                            onChange={e => setMovieDuration(Number(e.target.value))}
+                            value={movieDurationInput}
+                            onChange={e => setMovieDurationInput(e.target.value)}
+                            onBlur={() => {
+                              if (movieDurationInput === '' || movieDuration < 1) {
+                                setMovieDurationInput('1');
+                              }
+                            }}
                             className={styles.input}
                           />
                         </div>

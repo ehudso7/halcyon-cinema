@@ -90,6 +90,7 @@ Transform written works into visual storyboards:
 ### Authentication & Security
 - Secure email/password authentication
 - Google OAuth integration
+- GitHub OAuth integration
 - Password reset via email
 - bcrypt password hashing
 - JWT session management
@@ -161,12 +162,39 @@ OPENAI_API_KEY=sk-your-openai-api-key
 # Replicate (Optional - for video/music generation)
 REPLICATE_API_TOKEN=your-replicate-token
 
+# Google OAuth (Optional - for social login)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# GitHub OAuth (Optional - for social login)
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+
 # Stripe (Optional - for payments)
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 See `.env.example` for the complete list of configuration options.
+
+### OAuth Configuration
+
+For Google and GitHub OAuth to work correctly, you must configure redirect URIs in their respective developer consoles:
+
+**Google Cloud Console:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Navigate to APIs & Services > Credentials
+3. Add these authorized redirect URIs:
+   - `http://localhost:3000/api/auth/callback/google` (development)
+   - `https://your-domain.com/api/auth/callback/google` (production)
+   - `https://your-app.vercel.app/api/auth/callback/google` (Vercel preview)
+
+**GitHub Developer Settings:**
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Create or select your OAuth App
+3. Set the Authorization callback URL:
+   - `http://localhost:3000/api/auth/callback/github` (development)
+   - `https://your-domain.com/api/auth/callback/github` (production)
 
 ### Running Locally
 
@@ -283,6 +311,39 @@ See [docs/API.md](docs/API.md) for complete API documentation.
 - [Architecture](docs/ARCHITECTURE.md) - System design and architecture
 - [Contributing](CONTRIBUTING.md) - How to contribute
 - [Changelog](CHANGELOG.md) - Version history
+
+---
+
+## Troubleshooting
+
+### OAuth Errors
+
+**Error: `redirect_uri_mismatch`**
+
+This error occurs when the redirect URI in your OAuth request doesn't match what's registered in the provider's console.
+
+**Solution:**
+1. Check the error message for the exact redirect URI being used
+2. Add that exact URI to your OAuth provider's authorized redirect URIs
+3. For Vercel deployments, add both your production domain and preview URLs
+4. Make sure `NEXTAUTH_URL` is set correctly in your environment variables
+
+**OAuth buttons not appearing**
+
+If OAuth buttons don't appear on the sign-in page, the provider credentials are not configured.
+
+**Solution:**
+1. Ensure `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set for Google
+2. Ensure `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set for GitHub
+3. Restart your development server after adding environment variables
+
+### Mobile Layout Issues
+
+The app is optimized for mobile browsers with:
+- Touch-friendly button sizes (minimum 44px tap targets)
+- Bottom sheet modals for better mobile UX
+- Safe area insets for notched devices
+- iOS zoom prevention on form inputs
 
 ---
 
