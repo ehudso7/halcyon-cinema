@@ -39,7 +39,8 @@ export default function ProduceEpisodeButton({
 
   // Form state
   const [prompt, setPrompt] = useState('');
-  const [duration, setDuration] = useState(30);
+  const [durationInput, setDurationInput] = useState('30');
+  const duration = durationInput === '' ? 0 : Number(durationInput);
   const [genre, setGenre] = useState('cinematic');
   const [includeMusic, setIncludeMusic] = useState(true);
   const [includeVoiceover, setIncludeVoiceover] = useState(false);
@@ -230,8 +231,14 @@ export default function ProduceEpisodeButton({
                         type="number"
                         min={10}
                         max={300}
-                        value={duration}
-                        onChange={e => setDuration(Number(e.target.value))}
+                        value={durationInput}
+                        onChange={e => setDurationInput(e.target.value)}
+                        onBlur={() => {
+                          // Reset to minimum if empty or below minimum
+                          if (durationInput === '' || duration < 10) {
+                            setDurationInput('10');
+                          }
+                        }}
                         className={styles.input}
                       />
                     </div>

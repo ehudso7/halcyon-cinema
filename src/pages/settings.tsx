@@ -787,7 +787,7 @@ export default function Settings({ user }: SettingsProps) {
                   <option value="ja">日本語 (Japanese)</option>
                   <option value="zh">中文 (Chinese)</option>
                 </select>
-                <p className={styles.hint}>Choose your preferred language for the interface</p>
+                <p className={styles.hint}>Your language preference is saved. Full translation support is in development.</p>
               </div>
             </section>
 

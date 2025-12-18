@@ -764,3 +764,239 @@ select {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/* ===== Mobile-First Responsive Design ===== */
+
+/* Mobile viewport optimizations */
+@supports (padding: max(0px)) {
+  body {
+    /* Support for notched devices (iPhone X+, etc.) */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Mobile-specific global styles */
+@media (max-width: 768px) {
+  /* Improve touch targets for mobile */
+  .btn,
+  button:not([class*="icon"]) {
+    min-height: 44px;
+    padding: 12px 20px;
+  }
+
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Container adjustments */
+  .container {
+    padding: 0 16px;
+  }
+
+  /* Page layout */
+  .page {
+    padding: 16px 0;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+
+  .page-subtitle {
+    font-size: 1rem;
+  }
+
+  /* Card spacing */
+  .card {
+    padding: 16px;
+  }
+
+  /* Form elements */
+  .input,
+  textarea,
+  select {
+    padding: 14px 16px;
+    font-size: 16px; /* Prevent iOS zoom on focus */
+  }
+
+  /* Modal optimizations for mobile */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    padding: 24px 16px;
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Grid adjustments */
+  .grid {
+    gap: 16px;
+  }
+
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Empty state */
+  .empty-state {
+    padding: 48px 16px;
+  }
+
+  /* Pagination */
+  .pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .pagination-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Small mobile devices (iPhone SE, etc.) */
+@media (max-width: 375px) {
+  .container {
+    padding: 0 12px;
+  }
+
+  .btn {
+    padding: 10px 16px;
+    font-size: 0.875rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .card {
+    padding: 12px;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .modal {
+    max-height: 85vh;
+  }
+
+  .modal-overlay {
+    align-items: center;
+    padding: 16px;
+  }
+
+  .modal {
+    border-radius: 16px;
+  }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable hover effects on touch devices */
+  .btn-animated:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-animated:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn-glow:hover:not(:disabled) {
+    transform: none;
+    box-shadow: none;
+  }
+
+  .btn-glow:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  /* Better active states for touch */
+  .card:active {
+    transform: scale(0.99);
+    transition: transform 0.1s ease;
+  }
+
+  /* Larger tap targets */
+  a,
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* High DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Sharper borders on retina displays */
+  .card,
+  .input,
+  .btn {
+    border-width: 0.5px;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .modal {
+    animation: none;
+  }
+}
+
+/* Dark mode system preference (fallback if no theme set) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+  }
+}
+
+/* Print styles */
+@media print {
+  .btn,
+  button,
+  .modal-overlay {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    color: black;
+  }
+
+  .card {
+    border: 1px solid #ccc;
+    break-inside: avoid;
+  }
+}

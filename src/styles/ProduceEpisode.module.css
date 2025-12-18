@@ -603,36 +603,237 @@
 
 /* Responsive */
 @media (max-width: 640px) {
+  .modalOverlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
   .modal {
-    width: 95%;
-    margin: 1rem;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    animation: slideUpModal 0.3s ease;
+  }
+
+  .modalLarge {
+    max-width: 100%;
+  }
+
+  @keyframes slideUpModal {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .modalHeader {
+    padding: 1.25rem 1rem;
+    position: sticky;
+    top: 0;
+    background: var(--bg-secondary, #1a1a2e);
+    z-index: 10;
+  }
+
+  .modalHeader h2 {
+    font-size: 1.25rem;
+  }
+
+  .modalContent {
+    padding: 1rem;
+    padding-bottom: env(safe-area-inset-bottom, 16px);
   }
 
   .formRow {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .formGroup label {
+    font-size: 0.8125rem;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    padding: 0.875rem;
+    font-size: 16px; /* Prevent iOS zoom */
+  }
+
+  .textarea {
+    min-height: 100px;
   }
 
   .resultActions {
     flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .resultActions .btn,
+  .resultActions a {
+    width: 100%;
+    justify-content: center;
   }
 
   .modalFooter {
     flex-direction: column-reverse;
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    gap: 0.75rem;
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-tertiary, #252536);
+  }
+
+  .modalFooter button,
+  .modalFooter .btn {
+    width: 100%;
+    min-height: 48px;
   }
 
   .typeSelector {
     flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .typeButton {
+    flex-direction: row;
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+
+  .episodeList {
+    margin-top: 1rem;
+  }
+
+  .episodeListHeader {
+    padding: 0.875rem;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+
+  .addButton {
+    width: 100%;
+    padding: 0.75rem;
   }
 
   .episodeHeader {
     flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .episodeNumber {
+    order: -1;
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+
+  .episodeTitleInput {
+    width: 100%;
+    flex: none;
+  }
+
+  .removeButton {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .episodeItem {
+    position: relative;
+    padding: 0.875rem;
   }
 
   .actItem {
     flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .actNumber {
+    width: 100%;
+  }
+
+  .actTitleInput {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .actDurationInput {
+    width: 80px;
   }
 
   .videoItem {
     flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .videoTitle {
+    width: 100%;
+    margin-bottom: 0.25rem;
+  }
+
+  .videoItem a,
+  .videoItem .btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .estimate {
+    margin-top: 0.75rem;
+    padding: 0.875rem;
+  }
+
+  .refreshEstimate {
+    padding: 0.75rem 0;
+    width: 100%;
+  }
+
+  .progressSection {
+    padding: 1.5rem 0;
+  }
+
+  .segmentList {
+    max-height: 150px;
+  }
+
+  .produceButton {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 375px) {
+  .modalHeader h2 {
+    font-size: 1.125rem;
+  }
+
+  .typeButton svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .formGroup label {
+    font-size: 0.75rem;
+  }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+  .modal {
+    max-height: 85vh;
+    border-radius: 16px;
+  }
+
+  .modalOverlay {
+    padding: 8px;
+    align-items: center;
   }
 }
