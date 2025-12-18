@@ -14,6 +14,7 @@ import PromptBuilder, { PromptData } from '@/components/PromptBuilder';
 import GenerationProgress from '@/components/GenerationProgress';
 import Warning from '@/components/Warning';
 import WritersRoomPanel from '@/components/WritersRoomPanel';
+import ProduceEpisodeButton from '@/components/ProduceEpisodeButton';
 import { trackGeneration } from '@/components/UsageStats';
 import { Project, Scene, WritersRoomFeatureId, isValidWritersRoomFeatureId } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
@@ -516,6 +517,11 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
                 </svg>
                 Add Scene
               </button>
+              <ProduceEpisodeButton
+                projectId={project.id}
+                projectName={project.name}
+                sceneCount={project.scenes.length}
+              />
               <button
                 onClick={handleExport}
                 className="btn btn-secondary"
