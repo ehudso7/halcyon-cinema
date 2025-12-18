@@ -300,7 +300,6 @@ export async function assembleVideo(
         renderId,
         status: finalStatus.status as 'queued' | 'rendering',
         progress: finalStatus.progress,
-        error: 'Video assembly is still in progress. Poll for updates.',
       };
     }
   } catch (error) {
