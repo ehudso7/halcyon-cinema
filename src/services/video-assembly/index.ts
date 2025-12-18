@@ -294,12 +294,13 @@ export async function assembleVideo(
         status: 'failed',
       };
     } else {
-      // Still processing - return render ID for polling
+      // Still processing - return false with render ID for polling
       return {
-        success: true,
+        success: false,
         renderId,
         status: finalStatus.status as 'queued' | 'rendering',
         progress: finalStatus.progress,
+        error: 'Video assembly is still in progress. Poll for updates.',
       };
     }
   } catch (error) {

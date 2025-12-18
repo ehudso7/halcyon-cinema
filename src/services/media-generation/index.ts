@@ -213,18 +213,20 @@ export async function generateVideo(
         status: 'failed',
       };
     } else {
-      // Still processing
+      // Still processing - return false with processing status for polling
       return {
-        success: true,
+        success: false,
         predictionId: prediction.id,
         status: 'processing',
+        error: 'Video generation is still in progress. Poll for updates.',
       };
     }
   } catch (error) {
     console.error('[media-generation] Video generation error:', error);
+    const isTimeout = error instanceof Error && error.name === 'AbortError';
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate video',
+      error: isTimeout ? 'Video generation request timed out' : (error instanceof Error ? error.message : 'Failed to generate video'),
     };
   }
 }
@@ -339,17 +341,20 @@ export async function generateMusic(
         status: 'failed',
       };
     } else {
+      // Still processing - return false with processing status for polling
       return {
-        success: true,
+        success: false,
         predictionId: prediction.id,
         status: 'processing',
+        error: 'Music generation is still in progress. Poll for updates.',
       };
     }
   } catch (error) {
     console.error('[media-generation] Music generation error:', error);
+    const isTimeout = error instanceof Error && error.name === 'AbortError';
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate music',
+      error: isTimeout ? 'Music generation request timed out' : (error instanceof Error ? error.message : 'Failed to generate music'),
     };
   }
 }
@@ -378,9 +383,12 @@ export async function generateVoiceover(
     voice = 'nova',
     model = 'tts-1',
     speed = 1.0,
-    projectId,
-    sceneId,
+    // Reserved for future persistence support
+    projectId: _projectId,
+    sceneId: _sceneId,
   } = options;
+  void _projectId;
+  void _sceneId;
 
   const trimmedText = text.trim();
   if (!trimmedText) {

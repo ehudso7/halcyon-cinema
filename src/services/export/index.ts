@@ -736,8 +736,13 @@ export class ExportAdapter {
     dialogue: string;
     parenthetical?: string;
   } | null {
+    // Quote patterns: matches straight quotes (") and curly quotes (" ")
+    // Using Unicode escape sequences to avoid linter confusion with quote characters
+    const openQuote = '[\u0022\u201C]'; // " or "
+    const closeQuote = '[\u0022\u201D]'; // " or "
+
     // Pattern 1: "dialogue," Character said/replied/exclaimed
-    const pattern1 = /^[""](.+?)[""],?\s+(\w+)\s+(said|replied|exclaimed|asked|whispered|shouted|muttered|continued|added|answered)/i;
+    const pattern1 = new RegExp(`^${openQuote}(.+?)${closeQuote},?\\s+(\\w+)\\s+(said|replied|exclaimed|asked|whispered|shouted|muttered|continued|added|answered)`, 'i');
     const match1 = paragraph.match(pattern1);
     if (match1) {
       return {
@@ -747,7 +752,7 @@ export class ExportAdapter {
     }
 
     // Pattern 2: Character said/replied, "dialogue"
-    const pattern2 = /^(\w+)\s+(said|replied|exclaimed|asked|whispered|shouted|muttered),?\s+[""](.+?)[""]\.?$/i;
+    const pattern2 = new RegExp(`^(\\w+)\\s+(said|replied|exclaimed|asked|whispered|shouted|muttered),?\\s+${openQuote}(.+?)${closeQuote}\\.?$`, 'i');
     const match2 = paragraph.match(pattern2);
     if (match2) {
       const parenthetical = this.getParentheticalFromVerb(match2[2]);
@@ -759,7 +764,7 @@ export class ExportAdapter {
     }
 
     // Pattern 3: Direct quote with attribution at the end
-    const pattern3 = /^[""](.+?)[""],?\s+(\w+)\s/i;
+    const pattern3 = new RegExp(`^${openQuote}(.+?)${closeQuote},?\\s+(\\w+)\\s`, 'i');
     const match3 = paragraph.match(pattern3);
     if (match3 && match3[1].length < 500) {
       return {

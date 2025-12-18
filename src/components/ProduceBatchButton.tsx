@@ -244,7 +244,7 @@ export default function ProduceBatchButton({
   }, [isProducing]);
 
   const isFormValid = productionType === 'series'
-    ? seriesTitle && seriesSynopsis && episodes.some(ep => ep.synopsis)
+    ? seriesTitle && seriesSynopsis && episodes.some(ep => ep.title && ep.synopsis)
     : movieTitle && movieSynopsis;
 
   return (
