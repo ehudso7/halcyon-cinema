@@ -114,8 +114,7 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
     // Build request parameters based on model capabilities:
     // - DALL-E 3: supports 'style' (natural/vivid), 'quality' (standard/hd)
     // - GPT Image 1.5: supports 'output_format', 'quality' (low/medium/high/auto), does NOT support 'style'
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const requestParams: Record<string, any> = {
+    const requestParams: Record<string, unknown> = {
       model,
       prompt,
       n: 1,
@@ -144,7 +143,7 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
       }
     }
 
-    const response = await openai.images.generate(requestParams as Parameters<typeof openai.images.generate>[0]) as OpenAI.Images.ImagesResponse;
+    const response = await openai.images.generate(requestParams as unknown as Parameters<typeof openai.images.generate>[0]) as OpenAI.Images.ImagesResponse;
 
     const imageUrl = response.data?.[0]?.url;
 
