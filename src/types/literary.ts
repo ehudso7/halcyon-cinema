@@ -410,6 +410,12 @@ export interface ExportResult {
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
+  /** The actual content for text-based exports (markdown, fountain, html, txt) */
+  content?: string;
+  /** Base64-encoded content for binary exports (docx, epub, pdf) */
+  base64Content?: string;
+  /** MIME type for the exported file */
+  mimeType?: string;
   error?: string;
   createdAt: string;
 }
