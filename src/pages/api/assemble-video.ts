@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
+import { requireAuth, requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import {
   assembleVideo,
@@ -39,6 +39,10 @@ export default async function handler(
 ) {
   // Handle GET for status checking
   if (req.method === 'GET') {
+    // Require authentication for status checks (no CSRF needed for GET)
+    const userId = await requireAuth(req, res);
+    if (!userId) return;
+
     const { renderId } = req.query;
 
     if (!renderId || typeof renderId !== 'string') {

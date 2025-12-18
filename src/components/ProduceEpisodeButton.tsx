@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import styles from '@/styles/ProduceEpisode.module.css';
 
 interface ProduceEpisodeButtonProps {
@@ -92,9 +92,14 @@ export default function ProduceEpisodeButton({
     if (!prompt) {
       setPrompt(`Create a ${genre} scene for ${projectName}`);
     }
-    // Fetch initial estimate
-    setTimeout(fetchEstimate, 100);
-  }, [prompt, genre, projectName, fetchEstimate]);
+  }, [prompt, genre, projectName]);
+
+  // Fetch estimate when modal opens
+  useEffect(() => {
+    if (showModal && !result && !progress) {
+      fetchEstimate();
+    }
+  }, [showModal, result, progress, fetchEstimate]);
 
   const handleProduce = useCallback(async () => {
     setIsProducing(true);

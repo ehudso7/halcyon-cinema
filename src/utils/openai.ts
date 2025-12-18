@@ -111,9 +111,9 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
   }
 
   try {
-    // Build request parameters based on model
-    // GPT Image 1.5 supports output_format but NOT style parameter
-    // DALL-E 3 supports style but NOT output_format
+    // Build request parameters based on model capabilities:
+    // - DALL-E 3: supports 'style' parameter (natural/vivid)
+    // - GPT Image 1.5: supports 'output_format' parameter, does NOT support 'style'
     const requestParams: {
       model: ImageModel;
       prompt: string;
