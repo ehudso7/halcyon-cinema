@@ -218,7 +218,6 @@ export async function generateVideo(
         success: false,
         predictionId: prediction.id,
         status: 'processing',
-        error: 'Video generation is still in progress. Poll for updates.',
       };
     }
   } catch (error) {
@@ -346,7 +345,6 @@ export async function generateMusic(
         success: false,
         predictionId: prediction.id,
         status: 'processing',
-        error: 'Music generation is still in progress. Poll for updates.',
       };
     }
   } catch (error) {
@@ -387,8 +385,6 @@ export async function generateVoiceover(
     projectId: _projectId,
     sceneId: _sceneId,
   } = options;
-  void _projectId;
-  void _sceneId;
 
   const trimmedText = text.trim();
   if (!trimmedText) {
