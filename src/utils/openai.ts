@@ -145,18 +145,24 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
 
     const response = await openai.images.generate(requestParams as unknown as Parameters<typeof openai.images.generate>[0]) as OpenAI.Images.ImagesResponse;
 
-    const imageUrl = response.data?.[0]?.url;
+    // GPT Image 1.5 may return b64_json instead of url depending on output_format
+    const imageData = response.data?.[0];
+    const imageUrl = imageData?.url;
+    const b64Json = (imageData as { b64_json?: string })?.b64_json;
 
-    if (!imageUrl) {
+    if (!imageUrl && !b64Json) {
       return {
         success: false,
-        error: 'No image URL returned from API',
+        error: 'No image data returned from API',
       };
     }
 
+    // If we got base64 data, convert to data URL
+    const finalUrl = imageUrl || `data:image/png;base64,${b64Json}`;
+
     return {
       success: true,
-      imageUrl,
+      imageUrl: finalUrl,
     };
   } catch (error) {
     console.error('OpenAI API error:', error);
