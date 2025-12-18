@@ -17,10 +17,8 @@ function useScrollReset() {
 
   // Set scrollRestoration once on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      window.history.scrollRestoration = 'manual';
-      window.scrollTo(0, 0);
-    }
+    window.history.scrollRestoration = 'manual';
+    window.scrollTo(0, 0);
   }, []);
 
   // Listen for route changes
