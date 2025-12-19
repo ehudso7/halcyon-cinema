@@ -1,3 +1,17 @@
+/**
+ * Scene Detail Page Component
+ *
+ * Displays a single scene's details and provides functionality for:
+ * - Viewing the scene image/video in fullscreen with zoom controls
+ * - Regenerating scene media with new prompts
+ * - Managing scene notes and metadata
+ * - Viewing image generation history
+ * - Comparing different versions of generated images
+ * - Sharing scene content
+ *
+ * @module pages/project/[projectId]/scene/[sceneId]
+ */
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
