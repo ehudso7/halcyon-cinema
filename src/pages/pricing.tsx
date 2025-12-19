@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';
 import Head from 'next/head';
@@ -48,11 +48,18 @@ interface CreditPack {
 
 export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining, stripeConfigured, priceIds }: PricingPageProps) {
   const router = useRouter();
-  const { csrfFetch } = useCSRF();
+  const { csrfFetch, loading: csrfLoading, error: csrfError } = useCSRF();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreditPacks, setShowCreditPacks] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+
+  // Handle CSRF errors
+  useEffect(() => {
+    if (csrfError) {
+      setError('Security token failed to load. Please refresh the page.');
+    }
+  }, [csrfError]);
 
   // Sweet-spot pricing with clear value progression
   const plans: PricingPlan[] = [
@@ -299,7 +306,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
                   <button
                     className={`btn ${plan.popular ? 'btn-primary' : 'btn-secondary'} btn-full`}
                     onClick={() => handleSubscribe(plan)}
-                    disabled={isLoading === plan.id || !stripeConfigured}
+                    disabled={isLoading === plan.id || !stripeConfigured || csrfLoading || !!csrfError}
                   >
                     {isLoading === plan.id ? (
                       <>
@@ -354,7 +361,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
                     <button
                       className="btn btn-secondary"
                       onClick={() => handleBuyCredits(pack)}
-                      disabled={isLoading === `credits-${pack.credits}` || !stripeConfigured}
+                      disabled={isLoading === `credits-${pack.credits}` || !stripeConfigured || csrfLoading || !!csrfError}
                     >
                       {isLoading === `credits-${pack.credits}` ? (
                         <span className={styles.spinner} />
