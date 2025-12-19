@@ -5,6 +5,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Header from '@/components/Header';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/Pricing.module.css';
 
 interface PricingPageProps {
@@ -47,6 +48,7 @@ interface CreditPack {
 
 export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining, stripeConfigured, priceIds }: PricingPageProps) {
   const router = useRouter();
+  const { csrfFetch } = useCSRF();
   const [isLoading, setIsLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreditPacks, setShowCreditPacks] = useState(false);
@@ -131,7 +133,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
     const priceId = billingPeriod === 'yearly' ? plan.yearlyPriceId : plan.monthlyPriceId;
 
     try {
-      const response = await fetch('/api/payments/create-checkout', {
+      const response = await csrfFetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -164,7 +166,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
     setError(null);
 
     try {
-      const response = await fetch('/api/payments/create-checkout', {
+      const response = await csrfFetch('/api/payments/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
