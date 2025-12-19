@@ -99,6 +99,7 @@ function WelcomeStep({ onNext, onSkip, onSelectPath }: WelcomeStepProps) {
 
       <div className={styles.featurePreview}>
         <button
+          type="button"
           className={styles.previewCardClickable}
           onClick={() => handlePathSelect('writers-room')}
         >
@@ -107,6 +108,7 @@ function WelcomeStep({ onNext, onSkip, onSelectPath }: WelcomeStepProps) {
           <p>AI-powered writing that understands your story</p>
         </button>
         <button
+          type="button"
           className={styles.previewCardClickable}
           onClick={() => handlePathSelect('cinema')}
         >
@@ -115,6 +117,7 @@ function WelcomeStep({ onNext, onSkip, onSelectPath }: WelcomeStepProps) {
           <p>Visualize scenes with cinematic precision</p>
         </button>
         <button
+          type="button"
           className={styles.previewCardClickable}
           onClick={() => handlePathSelect('instant-export')}
         >
@@ -531,7 +534,10 @@ function TryCinemaGenerationStep({ onNext, onBack }: StepProps) {
     setHasAttempted(true);
     try {
       const creditUsed = consumeTrialCredit();
-      if (!creditUsed) return;
+      if (!creditUsed) {
+        setIsGenerating(false);
+        return;
+      }
 
       const response = await fetch('/api/demo/generate-image', {
         method: 'POST',
@@ -541,6 +547,10 @@ function TryCinemaGenerationStep({ onNext, onBack }: StepProps) {
           genre: 'cinematic',
         }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
 
       const data = await response.json();
       if (data.success && data.imageUrl) {

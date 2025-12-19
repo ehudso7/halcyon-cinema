@@ -13,9 +13,10 @@ import { authOptions } from '@/pages/api/auth/[...nextauth]';
 // Mock the users module
 vi.mock('@/utils/users', () => ({
   validateUser: vi.fn(),
+  getUserByEmail: vi.fn(),
 }));
 
-import { validateUser } from '@/utils/users';
+import { validateUser, getUserByEmail } from '@/utils/users';
 
 describe('Journey: login_email - User Login with Email/Password', () => {
   beforeEach(() => {
@@ -133,6 +134,16 @@ describe('Journey: login_email - User Login with Email/Password', () => {
       const mockUser = { id: 'user-123', email: 'test@example.com', name: 'Test' };
       const mockToken = { id: '' };
 
+      // Mock getUserByEmail to return user with subscription tier
+      vi.mocked(getUserByEmail).mockResolvedValue({
+        id: 'user-123',
+        email: 'test@example.com',
+        name: 'Test',
+        subscriptionTier: 'starter',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
       const result = await jwtCallback?.({
         token: mockToken,
         user: mockUser,
@@ -140,8 +151,9 @@ describe('Journey: login_email - User Login with Email/Password', () => {
         trigger: 'signIn',
       });
 
-      // Expected: Token includes user id
+      // Expected: Token includes user id and subscription tier
       expect(result?.id).toBe('user-123');
+      expect(result?.subscriptionTier).toBe('starter');
     });
 
     it('should add user id to session', async () => {

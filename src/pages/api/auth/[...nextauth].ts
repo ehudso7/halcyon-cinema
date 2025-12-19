@@ -120,14 +120,13 @@ export const authOptions: NextAuthOptions = {
       // Handle session updates from client
       if (trigger === 'update' && session) {
         // Update token with new values from client
+        // Note: Only name and image can be updated by client
+        // subscriptionTier is managed server-side only (via Stripe webhooks)
         if (session.name !== undefined) {
           token.name = session.name;
         }
         if (session.image !== undefined) {
           token.image = session.image;
-        }
-        if (session.subscriptionTier !== undefined) {
-          token.subscriptionTier = session.subscriptionTier;
         }
       }
       return token;
