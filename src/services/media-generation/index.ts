@@ -173,10 +173,30 @@ export async function generateVideo(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[media-generation] Replicate video API error:', errorText);
+      console.error('[media-generation] Replicate video API error:', response.status, errorText);
+
+      // Parse and provide more helpful error messages
+      let userMessage = 'Failed to start video generation';
+      try {
+        const errorData = JSON.parse(errorText);
+        if (response.status === 401 || response.status === 403) {
+          userMessage = 'Video generation service authentication failed. Please check API configuration.';
+        } else if (response.status === 404) {
+          userMessage = 'Video generation model not found. The model may have been updated or deprecated.';
+        } else if (response.status === 422) {
+          userMessage = errorData.detail || 'Invalid video generation parameters';
+        } else if (response.status === 429) {
+          userMessage = 'Video generation rate limit exceeded. Please try again later.';
+        } else if (errorData.detail) {
+          userMessage = `Video generation failed: ${errorData.detail}`;
+        }
+      } catch {
+        // If we can't parse the error, use the default message
+      }
+
       return {
         success: false,
-        error: 'Failed to start video generation',
+        error: userMessage,
       };
     }
 
@@ -299,10 +319,30 @@ export async function generateMusic(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[media-generation] Replicate music API error:', errorText);
+      console.error('[media-generation] Replicate music API error:', response.status, errorText);
+
+      // Parse and provide more helpful error messages
+      let userMessage = 'Failed to start music generation';
+      try {
+        const errorData = JSON.parse(errorText);
+        if (response.status === 401 || response.status === 403) {
+          userMessage = 'Music generation service authentication failed. Please check API configuration.';
+        } else if (response.status === 404) {
+          userMessage = 'Music generation model not found. The model may have been updated or deprecated.';
+        } else if (response.status === 422) {
+          userMessage = errorData.detail || 'Invalid music generation parameters';
+        } else if (response.status === 429) {
+          userMessage = 'Music generation rate limit exceeded. Please try again later.';
+        } else if (errorData.detail) {
+          userMessage = `Music generation failed: ${errorData.detail}`;
+        }
+      } catch {
+        // If we can't parse the error, use the default message
+      }
+
       return {
         success: false,
-        error: 'Failed to start music generation',
+        error: userMessage,
       };
     }
 
