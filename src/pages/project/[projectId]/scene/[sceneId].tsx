@@ -183,11 +183,20 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
           }),
         });
 
-        const videoResult = await videoResponse.json();
-
         if (!videoResponse.ok) {
-          throw new Error(videoResult.error || `Video generation failed with status ${videoResponse.status}`);
+          let errorMessage = `Video generation failed with status ${videoResponse.status}`;
+          try {
+            const errorData = await videoResponse.json();
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch {
+            // Response body is not JSON; use status-based message
+          }
+          throw new Error(errorMessage);
         }
+
+        const videoResult = await videoResponse.json();
 
         if (!videoResult.success && videoResult.status !== 'processing') {
           throw new Error(videoResult.error || 'Failed to generate video');
