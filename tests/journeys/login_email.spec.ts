@@ -129,7 +129,7 @@ describe('Journey: login_email - User Login with Email/Password', () => {
   });
 
   describe('callbacks', () => {
-    it('should add user id to JWT token', async () => {
+    it('should add user id and subscriptionTier to JWT token', async () => {
       const jwtCallback = authOptions.callbacks?.jwt;
       const mockUser = { id: 'user-123', email: 'test@example.com', name: 'Test' };
       const mockToken = { id: '' };
