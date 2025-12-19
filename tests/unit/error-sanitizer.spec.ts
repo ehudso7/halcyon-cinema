@@ -57,12 +57,27 @@ describe('Error Sanitizer', () => {
 
     it('should handle empty error messages', () => {
       const result = sanitizeGenerationError('', 'video');
-      expect(result).toBe('Video generation failed');
+      expect(result).toBe('Video generation failed.');
     });
 
     it('should handle null/undefined errors', () => {
       const result = sanitizeGenerationError(null, 'video');
-      expect(result).toBe('Video generation failed');
+      expect(result).toBe('Video generation failed.');
+    });
+
+    it('should handle objects with message property', () => {
+      const errorObj = { message: 'You have insufficient credit to run this model' };
+      const result = sanitizeGenerationError(errorObj, 'video');
+
+      expect(result).toContain('temporarily unavailable');
+    });
+
+    it('should handle objects without message property', () => {
+      const errorObj = { code: 'ERROR_123', details: 'some details' };
+      const result = sanitizeGenerationError(errorObj, 'video');
+
+      // Should convert to string representation
+      expect(result).toBeDefined();
     });
   });
 

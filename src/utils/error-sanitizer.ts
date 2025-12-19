@@ -37,10 +37,17 @@ const AUTH_PATTERNS = [
 ];
 
 /**
- * Sanitizes an error message from Replicate or other external AI services
+ * Sanitizes an error message from Replicate, OpenAI, or other external AI services
  * to provide a user-friendly message without exposing internal billing details.
  *
- * @param error - The raw error message or Error object
+ * Handles:
+ * - Replicate billing/credit errors
+ * - OpenAI API errors
+ * - Rate limit errors from any service
+ * - Authentication/authorization errors
+ * - URLs in error messages (stripped for security)
+ *
+ * @param error - The raw error message, Error object, or object with message property
  * @param mediaType - The type of media being generated (for context in messages)
  * @returns A sanitized, user-friendly error message
  */
@@ -48,7 +55,23 @@ export function sanitizeGenerationError(
   error: string | Error | unknown,
   mediaType: 'video' | 'image' | 'music' | 'voiceover' = 'video'
 ): string {
-  const errorMessage = error instanceof Error ? error.message : String(error || '');
+  // Extract error message from various error formats
+  const errorMessage = (() => {
+    if (typeof error === 'string') {
+      return error;
+    }
+    if (error instanceof Error) {
+      return error.message;
+    }
+    // Handle plain objects with message property (common in API responses)
+    if (error && typeof error === 'object') {
+      const maybeMessage = (error as { message?: unknown }).message;
+      if (typeof maybeMessage === 'string' && maybeMessage.trim()) {
+        return maybeMessage;
+      }
+    }
+    return String(error ?? '');
+  })();
 
   // Check for Replicate billing/credit errors - replace with generic message
   if (REPLICATE_BILLING_PATTERNS.some(pattern => pattern.test(errorMessage))) {
@@ -74,7 +97,7 @@ export function sanitizeGenerationError(
       .trim();
 
     // If the message is now empty or too short, return a generic message
-    if (cleanedMessage.length < 10) {
+    if (cleanedMessage.length < 5) {
       return `${capitalize(mediaType)} generation failed. Please try again.`;
     }
 
@@ -83,7 +106,7 @@ export function sanitizeGenerationError(
 
   // Return the original message if it doesn't match any patterns
   // but ensure it's not empty
-  return errorMessage || `${capitalize(mediaType)} generation failed`;
+  return errorMessage || `${capitalize(mediaType)} generation failed.`;
 }
 
 /**

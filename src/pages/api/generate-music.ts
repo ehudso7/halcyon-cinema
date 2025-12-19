@@ -319,7 +319,7 @@ export default async function handler(
     console.error('[generate-music] Error:', error);
     return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate music',
+      error: sanitizeGenerationError(error, 'music'),
     });
   }
 }

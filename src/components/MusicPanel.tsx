@@ -137,7 +137,7 @@ export default function MusicPanel({
       attempts++;
 
       try {
-        const statusResponse = await fetch(`/api/prediction-status/${predictionId}`);
+        const statusResponse = await fetch(`/api/prediction-status/${predictionId}?type=music`);
         const statusResult = await statusResponse.json();
 
         setProgress(`Generating music... (${Math.round((attempts / maxAttempts) * 100)}%)`);

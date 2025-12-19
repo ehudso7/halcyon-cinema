@@ -137,7 +137,7 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
       } else if (quality) {
         requestParams.quality = quality;
       }
-      // Add output_format for GPT Image 1.5
+      // Add output_format for GPT Image 1
       if (outputFormat) {
         requestParams.output_format = outputFormat;
       }
