@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuth } from '@/utils/api-auth';
+import { sanitizeGenerationError } from '@/utils/error-sanitizer';
 import { ApiError } from '@/types';
 
 // Replicate API for checking prediction status
@@ -98,14 +99,14 @@ export default async function handler(
       success: prediction.status === 'succeeded',
       status: prediction.status,
       output,
-      error: prediction.error,
+      error: prediction.error ? sanitizeGenerationError(prediction.error, 'video') : undefined,
     });
   } catch (error) {
     console.error('[prediction-status] Error:', error);
     return res.status(500).json({
       success: false,
       status: 'failed',
-      error: error instanceof Error ? error.message : 'Failed to check prediction status',
+      error: sanitizeGenerationError(error, 'video'),
     });
   }
 }

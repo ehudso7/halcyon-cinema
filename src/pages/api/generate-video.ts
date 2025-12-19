@@ -17,6 +17,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import { persistVideo } from '@/utils/media-storage';
+import { sanitizeGenerationError } from '@/utils/error-sanitizer';
 import { ApiError } from '@/types';
 
 /** Replicate API token for video generation */
@@ -342,7 +343,7 @@ export default async function handler(
     } else if (finalPrediction.status === 'failed') {
       return res.status(500).json({
         success: false,
-        error: finalPrediction.error || 'Video generation failed',
+        error: sanitizeGenerationError(finalPrediction.error, 'video'),
         status: 'failed',
         predictionId: prediction.id,
       });

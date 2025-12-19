@@ -13,6 +13,7 @@
  */
 
 import { persistVideo, persistAudio } from '@/utils/media-storage';
+import { sanitizeGenerationError } from '@/utils/error-sanitizer';
 
 // ============================================================================
 // Configuration
@@ -228,7 +229,7 @@ export async function generateVideo(
     } else if (finalPrediction.status === 'failed') {
       return {
         success: false,
-        error: finalPrediction.error || 'Video generation failed',
+        error: sanitizeGenerationError(finalPrediction.error, 'video'),
         predictionId: prediction.id,
         status: 'failed',
       };
@@ -245,7 +246,7 @@ export async function generateVideo(
     const isTimeout = error instanceof Error && error.name === 'AbortError';
     return {
       success: false,
-      error: isTimeout ? 'Video generation request timed out' : (error instanceof Error ? error.message : 'Failed to generate video'),
+      error: isTimeout ? 'Video generation request timed out' : sanitizeGenerationError(error, 'video'),
     };
   }
 }
@@ -375,7 +376,7 @@ export async function generateMusic(
     } else if (finalPrediction.status === 'failed') {
       return {
         success: false,
-        error: finalPrediction.error || 'Music generation failed',
+        error: sanitizeGenerationError(finalPrediction.error, 'music'),
         predictionId: prediction.id,
         status: 'failed',
       };
@@ -392,7 +393,7 @@ export async function generateMusic(
     const isTimeout = error instanceof Error && error.name === 'AbortError';
     return {
       success: false,
-      error: isTimeout ? 'Music generation request timed out' : (error instanceof Error ? error.message : 'Failed to generate music'),
+      error: isTimeout ? 'Music generation request timed out' : sanitizeGenerationError(error, 'music'),
     };
   }
 }
@@ -499,7 +500,7 @@ export async function generateVoiceover(
     console.error('[media-generation] Voiceover generation error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate voiceover',
+      error: sanitizeGenerationError(error, 'voiceover'),
     };
   }
 }

@@ -1209,7 +1209,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
                   </svg>
                 </div>
                 <div className={styles.statInfo}>
-                  <span className={styles.statValue}>?</span>
+                  <span className={styles.statValue}>6</span>
                   <span className={styles.statLabel}>Shortcuts</span>
                 </div>
               </button>
