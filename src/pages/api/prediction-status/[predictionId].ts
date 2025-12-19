@@ -42,11 +42,14 @@ export default async function handler(
   const userId = await requireAuth(req, res);
   if (!userId) return;
 
-  const { predictionId } = req.query;
+  const { predictionId, type } = req.query;
 
   if (!predictionId || typeof predictionId !== 'string') {
     return res.status(400).json({ error: 'Prediction ID is required' });
   }
+
+  // Determine media type for error messages (default to 'video')
+  const mediaType: 'video' | 'music' = type === 'music' ? 'music' : 'video';
 
   // Validate prediction ID format (UUID-like)
   if (!/^[a-z0-9]{20,}$/i.test(predictionId)) {
@@ -99,14 +102,14 @@ export default async function handler(
       success: prediction.status === 'succeeded',
       status: prediction.status,
       output,
-      error: prediction.error ? sanitizeGenerationError(prediction.error, 'video') : undefined,
+      error: prediction.error ? sanitizeGenerationError(prediction.error, mediaType) : undefined,
     });
   } catch (error) {
     console.error('[prediction-status] Error:', error);
     return res.status(500).json({
       success: false,
       status: 'failed',
-      error: sanitizeGenerationError(error, 'video'),
+      error: sanitizeGenerationError(error, mediaType),
     });
   }
 }
