@@ -54,10 +54,13 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
   const [showCreditPacks, setShowCreditPacks] = useState(false);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
-  // Handle CSRF errors
+  // Handle CSRF errors - set error when csrfError is truthy, clear when resolved
   useEffect(() => {
     if (csrfError) {
       setError('Security token failed to load. Please refresh the page.');
+    } else {
+      // Clear CSRF-related error when token loads successfully
+      setError(prev => prev === 'Security token failed to load. Please refresh the page.' ? null : prev);
     }
   }, [csrfError]);
 
@@ -306,7 +309,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
                   <button
                     className={`btn ${plan.popular ? 'btn-primary' : 'btn-secondary'} btn-full`}
                     onClick={() => handleSubscribe(plan)}
-                    disabled={isLoading === plan.id || !stripeConfigured || csrfLoading || !!csrfError}
+                    disabled={isLoading === plan.id || !stripeConfigured || csrfLoading || csrfError !== null}
                   >
                     {isLoading === plan.id ? (
                       <>
@@ -361,7 +364,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
                     <button
                       className="btn btn-secondary"
                       onClick={() => handleBuyCredits(pack)}
-                      disabled={isLoading === `credits-${pack.credits}` || !stripeConfigured || csrfLoading || !!csrfError}
+                      disabled={isLoading === `credits-${pack.credits}` || !stripeConfigured || csrfLoading || csrfError !== null}
                     >
                       {isLoading === `credits-${pack.credits}` ? (
                         <span className={styles.spinner} />
