@@ -85,7 +85,7 @@ export default function ProduceEpisodeButton({
     } finally {
       setIsEstimating(false);
     }
-  }, [projectId, projectName, prompt, duration, genre, includeMusic, includeVoiceover, resolution]);
+  }, [projectId, projectName, prompt, duration, genre, includeMusic, includeVoiceover, resolution, csrfFetch]);
 
   const handleOpenModal = useCallback(() => {
     setShowModal(true);
@@ -166,7 +166,7 @@ export default function ProduceEpisodeButton({
     } finally {
       setIsProducing(false);
     }
-  }, [projectId, projectName, prompt, duration, genre, includeMusic, includeVoiceover, resolution]);
+  }, [projectId, projectName, prompt, duration, genre, includeMusic, includeVoiceover, resolution, csrfFetch]);
 
   const handleClose = useCallback(() => {
     if (!isProducing) {

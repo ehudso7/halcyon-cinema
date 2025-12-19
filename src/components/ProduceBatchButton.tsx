@@ -167,7 +167,7 @@ export default function ProduceBatchButton({
     }
   }, [
     projectId, productionType, seriesTitle, seriesSynopsis, seriesGenre, episodeDuration, episodes,
-    movieTitle, movieSynopsis, movieGenre, movieDuration, useCustomActs, acts, projectName
+    movieTitle, movieSynopsis, movieGenre, movieDuration, useCustomActs, acts, projectName, csrfFetch
   ]);
 
   const handleOpenModal = useCallback(() => {
@@ -238,7 +238,7 @@ export default function ProduceBatchButton({
     }
   }, [
     projectId, productionType, seriesTitle, seriesSynopsis, seriesGenre, episodeDuration, episodes,
-    movieTitle, movieSynopsis, movieGenre, movieDuration, useCustomActs, acts, projectName
+    movieTitle, movieSynopsis, movieGenre, movieDuration, useCustomActs, acts, projectName, csrfFetch
   ]);
 
   const handleClose = useCallback(() => {
