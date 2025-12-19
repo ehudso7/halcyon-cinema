@@ -329,6 +329,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       email: dbUser.email,
       name: dbUser.name,
       image: dbUser.image || undefined,
+      subscriptionTier: dbUser.subscriptionTier as 'starter' | 'pro' | 'enterprise',
       createdAt: dbUser.createdAt,
       updatedAt: dbUser.updatedAt,
     };

@@ -105,11 +105,17 @@ export const authOptions: NextAuthOptions = {
           token.id = dbUser.id;
           token.name = dbUser.name || profile.name;
           token.image = dbUser.image || (profile as { picture?: string }).picture;
+          token.subscriptionTier = dbUser.subscriptionTier || 'starter';
         }
       } else if (user) {
         token.id = user.id;
         token.name = user.name;
         token.image = user.image;
+        // For credentials sign-in, fetch subscription tier from database
+        if (user.email) {
+          const dbUser = await getUserByEmail(user.email);
+          token.subscriptionTier = dbUser?.subscriptionTier || 'starter';
+        }
       }
       // Handle session updates from client
       if (trigger === 'update' && session) {
@@ -120,6 +126,9 @@ export const authOptions: NextAuthOptions = {
         if (session.image !== undefined) {
           token.image = session.image;
         }
+        if (session.subscriptionTier !== undefined) {
+          token.subscriptionTier = session.subscriptionTier;
+        }
       }
       return token;
     },
@@ -128,6 +137,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.name = token.name as string;
         session.user.image = token.image as string | undefined;
+        session.user.subscriptionTier = token.subscriptionTier as 'starter' | 'pro' | 'enterprise' | undefined;
       }
       return session;
     },
