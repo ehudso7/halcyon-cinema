@@ -341,7 +341,10 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   if (!user) return null;
 
   const { passwordHash: _, ...safeUser } = user;
-  return safeUser as User;
+  return {
+    ...safeUser,
+    subscriptionTier: (safeUser.subscriptionTier as 'starter' | 'pro' | 'enterprise') || 'starter',
+  } as User;
 }
 
 export async function updateUser(id: string, updates: Partial<Pick<User, 'name'> & { image?: string | null; password?: string }>): Promise<User | null> {
