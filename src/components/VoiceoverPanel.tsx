@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { MicrophoneIcon, CogIcon } from './Icons';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from './VoiceoverPanel.module.css';
 
 interface VoiceoverPanelProps {
@@ -31,6 +32,7 @@ export default function VoiceoverPanel({
   projectId,
   sceneId,
 }: VoiceoverPanelProps) {
+  const { csrfFetch } = useCSRF();
   const [editableText, setEditableText] = useState(text);
   const [selectedVoice, setSelectedVoice] = useState<AIVoice>('nova');
   const [speed, setSpeed] = useState(1.0);
@@ -95,7 +97,7 @@ export default function VoiceoverPanel({
     setError(null);
 
     try {
-      const response = await fetch('/api/generate-voiceover', {
+      const response = await csrfFetch('/api/generate-voiceover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

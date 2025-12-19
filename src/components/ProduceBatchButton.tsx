@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/ProduceEpisode.module.css';
 
 type ProductionType = 'series' | 'movie';
@@ -58,6 +59,7 @@ export default function ProduceBatchButton({
   projectName,
   disabled = false,
 }: ProduceBatchButtonProps) {
+  const { csrfFetch } = useCSRF();
   const [showModal, setShowModal] = useState(false);
   const [productionType, setProductionType] = useState<ProductionType>('series');
   const [isProducing, setIsProducing] = useState(false);
@@ -148,7 +150,7 @@ export default function ProduceBatchButton({
             },
           };
 
-      const response = await fetch('/api/produce-batch', {
+      const response = await csrfFetch('/api/produce-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -209,7 +211,7 @@ export default function ProduceBatchButton({
             },
           };
 
-      const response = await fetch('/api/produce-batch', {
+      const response = await csrfFetch('/api/produce-batch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

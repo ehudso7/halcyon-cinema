@@ -20,6 +20,7 @@ import { trackGeneration } from '@/components/UsageStats';
 import { Project, Scene, WritersRoomFeatureId, isValidWritersRoomFeatureId } from '@/types';
 import { getProjectByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/Project.module.css';
 
 const SCENES_PER_PAGE = 12;
@@ -33,6 +34,7 @@ interface ProjectPageProps {
 
 export default function ProjectPage({ project: initialProject }: ProjectPageProps) {
   const router = useRouter();
+  const { csrfFetch } = useCSRF();
   const [project, setProject] = useState<Project>(initialProject);
   const [filteredScenes, setFilteredScenes] = useState<Scene[]>(initialProject.scenes);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -192,7 +194,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
 
       if (data.contentType === 'video') {
         // Generate video
-        const videoResponse = await fetch('/api/generate-video', {
+        const videoResponse = await csrfFetch('/api/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -248,7 +250,7 @@ export default function ProjectPage({ project: initialProject }: ProjectPageProp
         mediaType = 'video';
       } else {
         // Generate image
-        const imageResponse = await fetch('/api/generate-image', {
+        const imageResponse = await csrfFetch('/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

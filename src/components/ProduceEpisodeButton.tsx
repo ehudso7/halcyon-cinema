@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/ProduceEpisode.module.css';
 
 interface ProduceEpisodeButtonProps {
@@ -30,6 +31,7 @@ export default function ProduceEpisodeButton({
   sceneCount,
   disabled = false,
 }: ProduceEpisodeButtonProps) {
+  const { csrfFetch } = useCSRF();
   const [showModal, setShowModal] = useState(false);
   const [isProducing, setIsProducing] = useState(false);
   const [progress, setProgress] = useState<ProductionProgress | null>(null);
@@ -49,7 +51,7 @@ export default function ProduceEpisodeButton({
   const fetchEstimate = useCallback(async () => {
     setIsEstimating(true);
     try {
-      const response = await fetch('/api/produce-episode', {
+      const response = await csrfFetch('/api/produce-episode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -114,7 +116,7 @@ export default function ProduceEpisodeButton({
     setResult(null);
 
     try {
-      const response = await fetch('/api/produce-episode', {
+      const response = await csrfFetch('/api/produce-episode', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

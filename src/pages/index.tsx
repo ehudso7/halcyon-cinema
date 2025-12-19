@@ -16,6 +16,7 @@ import { FilmIcon, DocumentIcon, PaletteIcon, ExportIcon } from '@/components/Ic
 import { Project } from '@/types';
 import { getAllProjectsAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/Home.module.css';
 
 // Constants for error logging
@@ -34,6 +35,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
   const router = useRouter();
   const { data: session } = useSession();
   const { showToast } = useToast();
+  const { csrfFetch } = useCSRF();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Core state
@@ -559,7 +561,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
           const scene = createdScenes[i];
           setGenerationStep(`Generating image ${i + 1} of ${createdScenes.length}...`);
           try {
-            const imageResponse = await fetch('/api/generate-image', {
+            const imageResponse = await csrfFetch('/api/generate-image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -966,7 +968,7 @@ export default function Home({ projects: initialProjects, isNewUser }: HomeProps
           setGenerationStep(`Generating image ${i + 1} of ${createdScenes.length}...`);
 
           try {
-            const imageResponse = await fetch('/api/generate-image', {
+            const imageResponse = await csrfFetch('/api/generate-image', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
