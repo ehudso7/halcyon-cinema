@@ -1,3 +1,16 @@
+/**
+ * Project Page Component
+ *
+ * Displays a project's details, scenes, and provides functionality for:
+ * - Viewing and managing scenes in grid or list mode
+ * - Generating new scenes with images or videos via AI
+ * - Filtering and sorting scenes
+ * - Bulk operations on selected scenes
+ * - Writer's Room mode for collaborative features
+ *
+ * @module pages/project/[projectId]
+ */
+
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { GetServerSideProps } from 'next';
 import { getServerSession } from 'next-auth';

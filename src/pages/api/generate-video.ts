@@ -1,40 +1,82 @@
+/**
+ * Video Generation API Endpoint
+ *
+ * Generates AI-powered videos using the Replicate API with support for:
+ * - Text-to-video generation (Zeroscope model)
+ * - Image-to-video generation (Stable Video Diffusion model)
+ * - Multiple quality tiers (standard, professional, premium)
+ * - Credit-based usage tracking
+ * - Rate limiting (2 requests per minute per user)
+ *
+ * @endpoint POST /api/generate-video
+ * @auth Required - Requires authenticated session with CSRF protection
+ * @ratelimit 2 requests per minute per user
+ */
+
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import { persistVideo } from '@/utils/media-storage';
 import { ApiError } from '@/types';
 
-// Replicate API for video generation
+/** Replicate API token for video generation */
 const REPLICATE_API_TOKEN = process.env.REPLICATE_API_TOKEN;
 
-// Video quality tiers with resolution and credit costs
+/** Video quality tier options */
 type VideoQualityTier = 'standard' | 'professional' | 'premium';
+
+/** Credit costs and resolution for each video quality tier */
 const VIDEO_QUALITY_CREDITS: Record<VideoQualityTier, { credits: number; resolution: string }> = {
   standard: { credits: 10, resolution: '720p' },
   professional: { credits: 15, resolution: '1080p' },
   premium: { credits: 25, resolution: '4K' },
 };
+
+/** Valid video quality tier values for validation */
 const VALID_VIDEO_QUALITY_TIERS: VideoQualityTier[] = ['standard', 'professional', 'premium'];
 
-// Timeout for Replicate API calls (10 seconds for initial request)
+/** Timeout for Replicate API calls (10 seconds for initial request) */
 const REPLICATE_REQUEST_TIMEOUT_MS = 10000;
 
+/**
+ * Response structure for video generation API
+ */
 interface GenerateVideoResponse {
+  /** Whether the generation was successful */
   success: boolean;
+  /** URL of the generated video (if completed) */
   videoUrl?: string;
+  /** Error message (if failed) */
   error?: string;
+  /** User's remaining credits after generation */
   creditsRemaining?: number;
+  /** Current status of the generation */
   status?: 'processing' | 'completed' | 'failed';
+  /** Replicate prediction ID for polling status */
   predictionId?: string;
 }
 
+/**
+ * Replicate API prediction response structure
+ */
 interface ReplicatePrediction {
+  /** Unique prediction identifier */
   id: string;
+  /** Current prediction status */
   status: 'starting' | 'processing' | 'succeeded' | 'failed' | 'canceled';
+  /** Output URL(s) when succeeded */
   output?: string | string[];
+  /** Error message when failed */
   error?: string;
 }
 
+/**
+ * Handles video generation requests
+ *
+ * @param req - Next.js API request containing prompt, imageUrl, duration, aspectRatio, etc.
+ * @param res - Next.js API response
+ * @returns Generated video URL or error response
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<GenerateVideoResponse | ApiError>
