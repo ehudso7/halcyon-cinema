@@ -8,6 +8,8 @@ import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/Pricing.module.css';
 
+const CSRF_ERROR_MESSAGE = 'Security token failed to load. Please refresh the page.';
+
 interface PricingPageProps {
   isLoggedIn: boolean;
   currentTier?: string;
@@ -57,10 +59,10 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
   // Handle CSRF errors - set error when csrfError is truthy, clear when resolved
   useEffect(() => {
     if (csrfError) {
-      setError('Security token failed to load. Please refresh the page.');
+      setError(CSRF_ERROR_MESSAGE);
     } else {
       // Clear CSRF-related error when token loads successfully
-      setError(prev => prev === 'Security token failed to load. Please refresh the page.' ? null : prev);
+      setError(prev => prev === CSRF_ERROR_MESSAGE ? null : prev);
     }
   }, [csrfError]);
 
