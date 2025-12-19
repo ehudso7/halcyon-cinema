@@ -171,7 +171,7 @@ export interface AISuggestion {
 }
 
 // Image generation model types
-export type ImageModel = 'dall-e-3' | 'gpt-image-1.5';
+export type ImageModel = 'dall-e-3' | 'gpt-image-1';
 
 // Size options vary by model
 export type DallE3Size = '1024x1024' | '1792x1024' | '1024x1792';
@@ -183,7 +183,7 @@ export type DallE3Quality = 'standard' | 'hd';
 export type GptImageQuality = 'low' | 'medium' | 'high' | 'auto';
 export type ImageQuality = DallE3Quality | GptImageQuality;
 
-// Output format (GPT Image 1.5 only)
+// Output format (GPT Image 1 only)
 export type ImageOutputFormat = 'png' | 'jpeg' | 'webp';
 
 // API types

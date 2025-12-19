@@ -115,7 +115,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
       credits: 100,
       features: [
         '100 generation credits/month',
-        'Image generation (DALL-E 3)',
+        'Image generation (GPT Image 1)',
         'All visual styles',
         'Project management',
         'Scene organization',
@@ -436,7 +436,7 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
             <h3>Credit Usage</h3>
             <div className={styles.creditTable}>
               <div className={styles.creditRow}>
-                <span>Image Generation (DALL-E 3)</span>
+                <span>Image Generation (GPT Image 1)</span>
                 <span className={styles.creditCost}>1 credit</span>
               </div>
               <div className={styles.creditRow}>

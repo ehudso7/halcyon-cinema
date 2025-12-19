@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuthWithCSRF, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import { persistAudio } from '@/utils/media-storage';
+import { sanitizeGenerationError } from '@/utils/error-sanitizer';
 import { ApiError } from '@/types';
 
 // Replicate API for music generation
@@ -301,7 +302,7 @@ export default async function handler(
     } else if (finalPrediction.status === 'failed') {
       return res.status(500).json({
         success: false,
-        error: finalPrediction.error || 'Music generation failed',
+        error: sanitizeGenerationError(finalPrediction.error, 'music'),
         status: 'failed',
         predictionId: prediction.id,
       });

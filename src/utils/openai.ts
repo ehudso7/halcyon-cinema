@@ -96,7 +96,7 @@ OUTPUT: Return ONLY the safe, rewritten prompt. Keep it under 150 words. Make it
 export async function generateImage(request: GenerateImageRequest): Promise<GenerateImageResponse> {
   const {
     prompt,
-    model = 'gpt-image-1.5', // Default to the faster, cheaper GPT Image 1.5
+    model = 'gpt-image-1', // Default to OpenAI's latest native image generation model
     size = '1024x1024',
     quality = 'standard',
     style = 'vivid',
@@ -113,7 +113,7 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
   try {
     // Build request parameters based on model capabilities:
     // - DALL-E 3: supports 'style' (natural/vivid), 'quality' (standard/hd)
-    // - GPT Image 1.5: supports 'output_format', 'quality' (low/medium/high/auto), does NOT support 'style'
+    // - GPT Image 1: supports 'output_format', 'quality' (low/medium/high/auto), does NOT support 'style'
     const requestParams: Record<string, unknown> = {
       model,
       prompt,
@@ -127,8 +127,8 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
       requestParams.quality = quality === 'hd' ? 'hd' : 'standard';
       // Add style for DALL-E 3
       requestParams.style = style;
-    } else if (model === 'gpt-image-1.5') {
-      // GPT Image 1.5 uses 'low', 'medium', 'high', or 'auto'
+    } else if (model === 'gpt-image-1') {
+      // GPT Image 1 uses 'low', 'medium', 'high', or 'auto'
       // Map DALL-E 3 quality values if provided
       if (quality === 'standard') {
         requestParams.quality = 'medium';
@@ -145,7 +145,7 @@ export async function generateImage(request: GenerateImageRequest): Promise<Gene
 
     const response = await openai.images.generate(requestParams as unknown as Parameters<typeof openai.images.generate>[0]) as OpenAI.Images.ImagesResponse;
 
-    // GPT Image 1.5 may return b64_json instead of url depending on output_format
+    // GPT Image 1 may return b64_json instead of url depending on output_format
     const imageData = response.data?.[0];
     const imageUrl = imageData?.url;
     const b64Json = (imageData as { b64_json?: string })?.b64_json;

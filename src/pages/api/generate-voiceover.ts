@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { requireAuth, checkRateLimit } from '@/utils/api-auth';
 import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import { getSupabaseServerClient, isSupabaseAdminConfigured } from '@/utils/supabase';
+import { sanitizeGenerationError } from '@/utils/error-sanitizer';
 import { ApiError } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -264,7 +265,7 @@ export default async function handler(
     console.error('[generate-voiceover] Error:', error);
     return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate voiceover',
+      error: sanitizeGenerationError(error, 'voiceover'),
     });
   }
 }

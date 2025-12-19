@@ -39,7 +39,7 @@ const STAGE_INFO: Record<GenerationStage, { label: string; description: string; 
   },
   rendering: {
     label: 'Rendering',
-    description: 'DALL-E 3 is creating your cinematic vision...',
+    description: 'GPT Image 1 is creating your cinematic vision...',
     duration: 8000,
   },
   enhancing: {
