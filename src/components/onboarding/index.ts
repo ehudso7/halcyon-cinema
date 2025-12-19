@@ -8,6 +8,7 @@ export {
   OnboardingProvider,
   useOnboarding,
   type OnboardingStep,
+  type OnboardingPath,
   type OnboardingProgress,
   type OnboardingContextValue,
 } from './OnboardingContext';

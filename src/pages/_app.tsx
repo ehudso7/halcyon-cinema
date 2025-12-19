@@ -112,7 +112,7 @@ function AppContent({ Component, pageProps, showFooter, showOnboarding }: {
   // Determine user state for onboarding
   // User is considered new if: logged in, session loaded, and no previous onboarding progress
   const isNewUser = status === 'authenticated' && session?.user && !hasOnboardingProgress;
-  const subscriptionTier = (session?.user as { subscriptionTier?: string })?.subscriptionTier as 'starter' | 'pro' | 'enterprise' || 'starter';
+  const subscriptionTier = session?.user?.subscriptionTier || 'starter';
 
   return (
     <OnboardingProvider

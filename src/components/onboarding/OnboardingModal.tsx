@@ -76,7 +76,16 @@ interface StepProps {
   onBack?: () => void;
 }
 
-function WelcomeStep({ onNext, onSkip }: StepProps) {
+interface WelcomeStepProps extends StepProps {
+  onSelectPath: (path: 'writers-room' | 'cinema' | 'instant-export') => void;
+}
+
+function WelcomeStep({ onNext, onSkip, onSelectPath }: WelcomeStepProps) {
+  const handlePathSelect = (path: 'writers-room' | 'cinema' | 'instant-export') => {
+    onSelectPath(path);
+    onNext();
+  };
+
   return (
     <div className={styles.stepContent}>
       <div className={styles.stepIcon}>
@@ -84,32 +93,38 @@ function WelcomeStep({ onNext, onSkip }: StepProps) {
       </div>
       <h2 className={styles.stepTitle}>Welcome to Your Creative Studio</h2>
       <p className={styles.stepDescription}>
-        Transform your ideas into stunning visual stories. In the next few minutes,
-        you&apos;ll experience the power of AI-assisted storytelling firsthand.
+        Transform your ideas into stunning visual stories. Choose your path below
+        to experience the power of AI-assisted storytelling.
       </p>
 
       <div className={styles.featurePreview}>
-        <div className={styles.previewCard}>
+        <button
+          className={styles.previewCardClickable}
+          onClick={() => handlePathSelect('writers-room')}
+        >
           <div className={styles.previewIcon}><PenIcon /></div>
           <h4>Writer&apos;s Room</h4>
           <p>AI-powered writing that understands your story</p>
-        </div>
-        <div className={styles.previewCard}>
+        </button>
+        <button
+          className={styles.previewCardClickable}
+          onClick={() => handlePathSelect('cinema')}
+        >
           <div className={styles.previewIcon}><FilmIcon /></div>
           <h4>Cinema Mode</h4>
           <p>Visualize scenes with cinematic precision</p>
-        </div>
-        <div className={styles.previewCard}>
+        </button>
+        <button
+          className={styles.previewCardClickable}
+          onClick={() => handlePathSelect('instant-export')}
+        >
           <div className={styles.previewIcon}><RocketIcon /></div>
           <h4>Instant Export</h4>
-          <p>Professional-grade output in seconds</p>
-        </div>
+          <p>Quick start - create and export right away</p>
+        </button>
       </div>
 
       <div className={styles.stepActions}>
-        <button className={styles.primaryButton} onClick={onNext}>
-          Let&apos;s Begin <ArrowRightIcon />
-        </button>
         <button className={styles.textButton} onClick={onSkip}>
           Skip Tour
         </button>
@@ -494,7 +509,167 @@ function PreviewCinemaStep({ onNext, onBack }: StepProps) {
   );
 }
 
-function SeeResultsStep({ onNext, onBack }: StepProps) {
+function TryCinemaGenerationStep({ onNext, onBack }: StepProps) {
+  const { markCinemaPreviewed, consumeTrialCredit, progress } = useOnboarding();
+  const [prompt, setPrompt] = useState('');
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [hasAttempted, setHasAttempted] = useState(false);
+
+  const samplePrompts = [
+    'A mysterious figure silhouetted against a neon-lit cityscape at night',
+    'An ancient temple hidden deep in a misty jungle at dawn',
+    'A futuristic spacecraft approaching a massive space station',
+  ];
+
+  const handleGenerate = async () => {
+    if (!prompt.trim() || progress.trialCreditsRemaining <= 0) return;
+
+    setIsGenerating(true);
+    setGenerationError(null);
+    setHasAttempted(true);
+    try {
+      const creditUsed = consumeTrialCredit();
+      if (!creditUsed) return;
+
+      const response = await fetch('/api/demo/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt,
+          genre: 'cinematic',
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success && data.imageUrl) {
+        setGeneratedImage(data.imageUrl);
+        markCinemaPreviewed();
+      } else {
+        // Show error but allow continuing
+        setGenerationError(data.error || 'Image generation is temporarily unavailable. You can still continue to explore the platform.');
+        markCinemaPreviewed();
+      }
+    } catch (error) {
+      console.error('Image generation failed:', error);
+      setGenerationError('Image generation is temporarily unavailable. You can still continue to explore the platform.');
+      markCinemaPreviewed();
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div className={styles.stepContent}>
+      <div className={styles.stepIcon}>
+        <FilmIcon />
+      </div>
+      <h2 className={styles.stepTitle}>Generate Your First Scene</h2>
+      <p className={styles.stepDescription}>
+        Describe a cinematic scene and watch AI bring it to life with stunning visuals.
+      </p>
+
+      <div className={styles.inputGroup}>
+        <label htmlFor="cinema-prompt">Describe your scene</label>
+        <textarea
+          id="cinema-prompt"
+          placeholder="e.g., A lone detective standing in a rain-soaked alley, neon signs reflecting on wet pavement..."
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          className={styles.textArea}
+          rows={3}
+        />
+      </div>
+
+      <div className={styles.suggestionChips}>
+        <span className={styles.chipLabel}>Try one:</span>
+        {samplePrompts.map((p, i) => (
+          <button
+            key={i}
+            className={styles.chip}
+            onClick={() => setPrompt(p)}
+          >
+            {p.substring(0, 30)}...
+          </button>
+        ))}
+      </div>
+
+      {generatedImage && (
+        <div className={styles.generatedImageOutput}>
+          <h4>Generated Scene</h4>
+          <div className={styles.imageFrame}>
+            <img src={generatedImage} alt="Generated scene" />
+          </div>
+        </div>
+      )}
+
+      {generationError && (
+        <div className={styles.errorMessage}>
+          {generationError}
+        </div>
+      )}
+
+      <div className={styles.creditsRemaining}>
+        <SparkleIcon />
+        <span>{progress.trialCreditsRemaining} trial generation{progress.trialCreditsRemaining !== 1 ? 's' : ''} remaining</span>
+      </div>
+
+      <div className={styles.stepActions}>
+        <button className={styles.secondaryButton} onClick={onBack}>
+          Back
+        </button>
+        {generatedImage || (hasAttempted && generationError) ? (
+          <button className={styles.primaryButton} onClick={onNext}>
+            Continue <ArrowRightIcon />
+          </button>
+        ) : (
+          <button
+            className={styles.primaryButton}
+            onClick={handleGenerate}
+            disabled={!prompt.trim() || isGenerating || progress.trialCreditsRemaining <= 0}
+          >
+            {isGenerating ? 'Generating...' : 'Generate Scene'} <SparkleIcon />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface SeeResultsStepProps extends StepProps {
+  selectedPath: 'writers-room' | 'cinema' | 'instant-export' | null;
+}
+
+function SeeResultsStep({ onNext, onBack, selectedPath }: SeeResultsStepProps) {
+  // Show path-specific achievements
+  const getAchievements = () => {
+    switch (selectedPath) {
+      case 'writers-room':
+        return [
+          { text: 'Created your first project' },
+          { text: 'Explored Writer\'s Room AI' },
+          { text: 'Generated AI-powered content' },
+        ];
+      case 'cinema':
+        return [
+          { text: 'Created your first project' },
+          { text: 'Discovered Cinema Mode' },
+          { text: 'Generated a visual scene' },
+        ];
+      case 'instant-export':
+        return [
+          { text: 'Created your first project' },
+          { text: 'Ready to start creating' },
+        ];
+      default:
+        return [
+          { text: 'Created your first project' },
+          { text: 'Explored the platform' },
+        ];
+    }
+  };
+
   return (
     <div className={styles.stepContent}>
       <div className={styles.stepIconSuccess}>
@@ -507,22 +682,12 @@ function SeeResultsStep({ onNext, onBack }: StepProps) {
       </p>
 
       <div className={styles.achievementList}>
-        <div className={styles.achievement}>
-          <CheckIcon />
-          <span>Created your first project</span>
-        </div>
-        <div className={styles.achievement}>
-          <CheckIcon />
-          <span>Explored Writer&apos;s Room AI</span>
-        </div>
-        <div className={styles.achievement}>
-          <CheckIcon />
-          <span>Generated AI content</span>
-        </div>
-        <div className={styles.achievement}>
-          <CheckIcon />
-          <span>Discovered Cinema Mode</span>
-        </div>
+        {getAchievements().map((achievement, index) => (
+          <div key={index} className={styles.achievement}>
+            <CheckIcon />
+            <span>{achievement.text}</span>
+          </div>
+        ))}
       </div>
 
       <div className={styles.comparisonTeaser}>
@@ -622,6 +787,7 @@ export function OnboardingModal() {
   const {
     progress,
     showOnboarding,
+    selectPath,
     nextStep,
     prevStep,
     dismissOnboarding,
@@ -641,7 +807,7 @@ export function OnboardingModal() {
   const renderStep = () => {
     switch (progress.currentStep) {
       case 'welcome':
-        return <WelcomeStep onNext={nextStep} onSkip={handleSkip} />;
+        return <WelcomeStep onNext={nextStep} onSkip={handleSkip} onSelectPath={selectPath} />;
       case 'create-project':
         return <CreateProjectStep onNext={nextStep} onBack={prevStep} />;
       case 'explore-writers-room':
@@ -650,14 +816,16 @@ export function OnboardingModal() {
         return <TryAIGenerationStep onNext={nextStep} onBack={prevStep} />;
       case 'preview-cinema':
         return <PreviewCinemaStep onNext={nextStep} onBack={prevStep} />;
+      case 'try-cinema-generation':
+        return <TryCinemaGenerationStep onNext={nextStep} onBack={prevStep} />;
       case 'see-results':
-        return <SeeResultsStep onNext={nextStep} onBack={prevStep} />;
+        return <SeeResultsStep onNext={nextStep} onBack={prevStep} selectedPath={progress.selectedPath} />;
       case 'upgrade-prompt':
         return <UpgradePromptStep onNext={completeOnboarding} />;
       case 'completed':
         return null;
       default:
-        return <WelcomeStep onNext={nextStep} onSkip={handleSkip} />;
+        return <WelcomeStep onNext={nextStep} onSkip={handleSkip} onSelectPath={selectPath} />;
     }
   };
 
@@ -687,11 +855,11 @@ export function OnboardingModal() {
         {/* Step content */}
         {renderStep()}
 
-        {/* Step indicator */}
+        {/* Step indicator - show dots based on total steps */}
         <div className={styles.stepIndicator}>
-          {ONBOARDING_STEPS.slice(0, -1).map((step, index) => (
+          {Array.from({ length: totalSteps }).map((_, index) => (
             <div
-              key={step}
+              key={index}
               className={`${styles.stepDot} ${
                 index < currentStepIndex
                   ? styles.completed
@@ -706,16 +874,5 @@ export function OnboardingModal() {
     </div>
   );
 }
-
-const ONBOARDING_STEPS = [
-  'welcome',
-  'create-project',
-  'explore-writers-room',
-  'try-ai-generation',
-  'preview-cinema',
-  'see-results',
-  'upgrade-prompt',
-  'completed',
-];
 
 export default OnboardingModal;

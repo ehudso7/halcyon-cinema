@@ -18,13 +18,17 @@ export type OnboardingStep =
   | 'explore-writers-room'
   | 'try-ai-generation'
   | 'preview-cinema'
+  | 'try-cinema-generation'
   | 'see-results'
   | 'upgrade-prompt'
   | 'completed';
 
+export type OnboardingPath = 'writers-room' | 'cinema' | 'instant-export' | null;
+
 export interface OnboardingProgress {
   currentStep: OnboardingStep;
   completedSteps: OnboardingStep[];
+  selectedPath: OnboardingPath;
   hasCreatedProject: boolean;
   hasTriedWritersRoom: boolean;
   hasGeneratedContent: boolean;
@@ -44,6 +48,7 @@ export interface OnboardingContextValue {
   totalSteps: number;
   // Actions
   startOnboarding: () => void;
+  selectPath: (path: OnboardingPath) => void;
   nextStep: () => void;
   prevStep: () => void;
   goToStep: (step: OnboardingStep) => void;
@@ -59,16 +64,51 @@ export interface OnboardingContextValue {
   resetOnboarding: () => void;
 }
 
-const ONBOARDING_STEPS: OnboardingStep[] = [
+// Different step sequences for each onboarding path
+const WRITERS_ROOM_STEPS: OnboardingStep[] = [
   'welcome',
   'create-project',
   'explore-writers-room',
   'try-ai-generation',
-  'preview-cinema',
   'see-results',
   'upgrade-prompt',
   'completed',
 ];
+
+const CINEMA_STEPS: OnboardingStep[] = [
+  'welcome',
+  'create-project',
+  'preview-cinema',
+  'try-cinema-generation',
+  'see-results',
+  'upgrade-prompt',
+  'completed',
+];
+
+const INSTANT_EXPORT_STEPS: OnboardingStep[] = [
+  'welcome',
+  'create-project',
+  'see-results',
+  'upgrade-prompt',
+  'completed',
+];
+
+// Default steps (used when no path selected - fallback to writers room)
+const ONBOARDING_STEPS: OnboardingStep[] = WRITERS_ROOM_STEPS;
+
+// Helper to get steps for a given path
+function getStepsForPath(path: OnboardingPath): OnboardingStep[] {
+  switch (path) {
+    case 'writers-room':
+      return WRITERS_ROOM_STEPS;
+    case 'cinema':
+      return CINEMA_STEPS;
+    case 'instant-export':
+      return INSTANT_EXPORT_STEPS;
+    default:
+      return ONBOARDING_STEPS;
+  }
+}
 
 const TRIAL_CREDITS = 3; // Free trial generations for onboarding
 
@@ -77,6 +117,7 @@ const STORAGE_KEY = 'halcyon-onboarding-progress';
 const defaultProgress: OnboardingProgress = {
   currentStep: 'welcome',
   completedSteps: [],
+  selectedPath: null,
   hasCreatedProject: false,
   hasTriedWritersRoom: false,
   hasGeneratedContent: false,
@@ -157,8 +198,10 @@ export function OnboardingProvider({
 
   const isOnboarding = shouldShowOnboarding && progress.currentStep !== 'completed';
 
-  const currentStepIndex = ONBOARDING_STEPS.indexOf(progress.currentStep);
-  const totalSteps = ONBOARDING_STEPS.length - 1; // Exclude 'completed'
+  // Get the steps array based on the selected path
+  const stepsForPath = getStepsForPath(progress.selectedPath);
+  const currentStepIndex = stepsForPath.indexOf(progress.currentStep);
+  const totalSteps = stepsForPath.length - 1; // Exclude 'completed'
 
   // ============================================================================
   // Actions
@@ -172,11 +215,19 @@ export function OnboardingProvider({
     }));
   }, []);
 
+  const selectPath = useCallback((path: OnboardingPath) => {
+    setProgress((prev) => ({
+      ...prev,
+      selectedPath: path,
+    }));
+  }, []);
+
   const nextStep = useCallback(() => {
     setProgress((prev) => {
-      const currentIndex = ONBOARDING_STEPS.indexOf(prev.currentStep);
-      const nextIndex = Math.min(currentIndex + 1, ONBOARDING_STEPS.length - 1);
-      const nextStepValue = ONBOARDING_STEPS[nextIndex];
+      const steps = getStepsForPath(prev.selectedPath);
+      const currentIndex = steps.indexOf(prev.currentStep);
+      const nextIndex = Math.min(currentIndex + 1, steps.length - 1);
+      const nextStepValue = steps[nextIndex];
 
       return {
         ...prev,
@@ -190,11 +241,12 @@ export function OnboardingProvider({
 
   const prevStep = useCallback(() => {
     setProgress((prev) => {
-      const currentIndex = ONBOARDING_STEPS.indexOf(prev.currentStep);
+      const steps = getStepsForPath(prev.selectedPath);
+      const currentIndex = steps.indexOf(prev.currentStep);
       const prevIndex = Math.max(currentIndex - 1, 0);
       return {
         ...prev,
-        currentStep: ONBOARDING_STEPS[prevIndex],
+        currentStep: steps[prevIndex],
       };
     });
   }, []);
@@ -302,6 +354,7 @@ export function OnboardingProvider({
     currentStepIndex,
     totalSteps,
     startOnboarding,
+    selectPath,
     nextStep,
     prevStep,
     goToStep,
