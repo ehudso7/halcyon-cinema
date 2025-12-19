@@ -9,6 +9,7 @@ const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000';
 
 export interface AuthSession {
   cookies: string;
+  csrfToken: string;
   userId: string;
   email: string;
 }
@@ -37,13 +38,13 @@ export async function registerUser(
 }
 
 /**
- * Login and return session cookies
+ * Login and return session cookies with CSRF token
  */
 export async function loginUser(
   email: string,
   password: string
-): Promise<string> {
-  // Step 1: Get CSRF token
+): Promise<{ cookies: string; csrfToken: string }> {
+  // Step 1: Get CSRF token for NextAuth
   const csrfResponse = await fetch(`${BASE_URL}/api/auth/csrf`);
   if (!csrfResponse.ok) {
     throw new Error('Failed to get CSRF token');
@@ -74,8 +75,24 @@ export async function loginUser(
   // Extract all cookies from the login response
   const sessionCookies = loginResponse.headers.get('set-cookie') || '';
 
-  // Combine CSRF and session cookies
-  return combineCookies(csrfCookies, sessionCookies);
+  // Step 3: Get our custom CSRF token for API requests
+  const customCsrfResponse = await fetch(`${BASE_URL}/api/csrf-token`, {
+    headers: {
+      'Cookie': combineCookies(csrfCookies, sessionCookies),
+    },
+  });
+
+  if (!customCsrfResponse.ok) {
+    throw new Error('Failed to get custom CSRF token');
+  }
+
+  const customCsrfData = await customCsrfResponse.json();
+  const customCsrfCookies = customCsrfResponse.headers.get('set-cookie') || '';
+
+  // Combine all cookies
+  const allCookies = combineCookies(csrfCookies, sessionCookies, customCsrfCookies);
+
+  return { cookies: allCookies, csrfToken: customCsrfData.token };
 }
 
 /**
@@ -91,9 +108,9 @@ export async function createAuthenticatedSession(
   const name = 'E2E Test User';
 
   const { userId } = await registerUser(email, password, name);
-  const cookies = await loginUser(email, password);
+  const { cookies, csrfToken } = await loginUser(email, password);
 
-  return { cookies, userId, email };
+  return { cookies, csrfToken, userId, email };
 }
 
 /**
@@ -110,51 +127,68 @@ export async function authGet(
 }
 
 /**
- * Make an authenticated POST request
+ * Make an authenticated POST request with CSRF token
  */
 export async function authPost(
   path: string,
   cookies: string,
-  body: object
+  body: object,
+  csrfToken?: string
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Cookie': cookies,
+  };
+  if (csrfToken) {
+    headers['x-csrf-token'] = csrfToken;
+  }
   return fetch(`${BASE_URL}${path}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': cookies,
-    },
+    headers,
     body: JSON.stringify(body),
   });
 }
 
 /**
- * Make an authenticated PUT request
+ * Make an authenticated PUT request with CSRF token
  */
 export async function authPut(
   path: string,
   cookies: string,
-  body: object
+  body: object,
+  csrfToken?: string
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Cookie': cookies,
+  };
+  if (csrfToken) {
+    headers['x-csrf-token'] = csrfToken;
+  }
   return fetch(`${BASE_URL}${path}`, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-      'Cookie': cookies,
-    },
+    headers,
     body: JSON.stringify(body),
   });
 }
 
 /**
- * Make an authenticated DELETE request
+ * Make an authenticated DELETE request with CSRF token
  */
 export async function authDelete(
   path: string,
-  cookies: string
+  cookies: string,
+  csrfToken?: string
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Cookie': cookies,
+  };
+  if (csrfToken) {
+    headers['x-csrf-token'] = csrfToken;
+  }
   return fetch(`${BASE_URL}${path}`, {
     method: 'DELETE',
-    headers: { 'Cookie': cookies },
+    headers,
   });
 }
 

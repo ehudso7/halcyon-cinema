@@ -34,7 +34,7 @@ describe('E2E Journey: Project Management', () => {
       const response = await authPost('/api/projects', session.cookies, {
         name: 'Test Cinema Project',
         description: 'A test project for E2E testing',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(201);
 
@@ -53,7 +53,7 @@ describe('E2E Journey: Project Management', () => {
     it('should create a project with just a name', async () => {
       const response = await authPost('/api/projects', session.cookies, {
         name: 'Minimal Project',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(201);
 
@@ -64,7 +64,7 @@ describe('E2E Journey: Project Management', () => {
     it('should reject project without name', async () => {
       const response = await authPost('/api/projects', session.cookies, {
         description: 'No name provided',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(400);
       const data = await response.json();
@@ -75,7 +75,7 @@ describe('E2E Journey: Project Management', () => {
       const response = await authPost('/api/projects', session.cookies, {
         name: '   ',
         description: 'Empty name',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(400);
     });
@@ -125,7 +125,8 @@ describe('E2E Journey: Project Management', () => {
       const response = await authPut(
         `/api/projects/${createdProjectId}`,
         session.cookies,
-        { name: 'Updated Project Name' }
+        { name: 'Updated Project Name' },
+        session.csrfToken
       );
 
       expect(response.status).toBe(200);
@@ -138,7 +139,8 @@ describe('E2E Journey: Project Management', () => {
       const response = await authPut(
         `/api/projects/${createdProjectId}`,
         session.cookies,
-        { description: 'Updated description' }
+        { description: 'Updated description' },
+        session.csrfToken
       );
 
       expect(response.status).toBe(200);
@@ -151,7 +153,8 @@ describe('E2E Journey: Project Management', () => {
       const response = await authPut(
         `/api/projects/${createdProjectId}`,
         session.cookies,
-        { name: '' }
+        { name: '' },
+        session.csrfToken
       );
 
       expect(response.status).toBe(400);
@@ -165,7 +168,7 @@ describe('E2E Journey: Project Management', () => {
       // Create a project specifically to delete
       const response = await authPost('/api/projects', session.cookies, {
         name: 'Project To Delete',
-      });
+      }, session.csrfToken);
       const project = await response.json();
       projectToDelete = project.id;
     });
@@ -173,7 +176,8 @@ describe('E2E Journey: Project Management', () => {
     it('should delete a project', async () => {
       const response = await authDelete(
         `/api/projects/${projectToDelete}`,
-        session.cookies
+        session.cookies,
+        session.csrfToken
       );
 
       expect(response.status).toBe(200);
@@ -189,7 +193,8 @@ describe('E2E Journey: Project Management', () => {
     it('should return 404 when deleting non-existent project', async () => {
       const response = await authDelete(
         '/api/projects/non-existent-id',
-        session.cookies
+        session.cookies,
+        session.csrfToken
       );
 
       expect([401, 404]).toContain(response.status);
@@ -207,7 +212,7 @@ describe('E2E Journey: Project Management', () => {
       // Create a project with the original user
       const response = await authPost('/api/projects', session.cookies, {
         name: 'Isolated Project',
-      });
+      }, session.csrfToken);
       const project = await response.json();
       isolatedProjectId = project.id;
     }, 30000);
@@ -226,7 +231,8 @@ describe('E2E Journey: Project Management', () => {
       const response = await authPut(
         `/api/projects/${isolatedProjectId}`,
         otherSession.cookies,
-        { name: 'Hacked Name' }
+        { name: 'Hacked Name' },
+        otherSession.csrfToken
       );
 
       expect([401, 403, 404]).toContain(response.status);
@@ -235,7 +241,8 @@ describe('E2E Journey: Project Management', () => {
     it('should not allow another user to delete the project', async () => {
       const response = await authDelete(
         `/api/projects/${isolatedProjectId}`,
-        otherSession.cookies
+        otherSession.cookies,
+        otherSession.csrfToken
       );
 
       expect([401, 403, 404]).toContain(response.status);
