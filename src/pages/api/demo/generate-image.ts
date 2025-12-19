@@ -120,10 +120,10 @@ export default async function handler(
     });
 
     // Generate the image (medium quality for demo)
-    // Note: gpt-image-1.5 uses 'low'/'medium'/'high'/'auto' quality values
+    // Note: gpt-image-1 uses 'low'/'medium'/'high'/'auto' quality values
     const result = await generateImage({
       prompt: enhancedPrompt,
-      model: 'gpt-image-1.5', // Fast and cost-effective
+      model: 'gpt-image-1', // OpenAI's latest native image generation model
       size: '1024x1024',
       quality: 'medium',
     });

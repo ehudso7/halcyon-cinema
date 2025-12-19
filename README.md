@@ -56,7 +56,7 @@ Generate a complete cinematic project from a single prompt:
 
 | Feature | Description | Powered By |
 |---------|-------------|------------|
-| **Image Generation** | Cinematic-quality visuals from text prompts | DALL-E 3 |
+| **Image Generation** | Cinematic-quality visuals from text prompts | GPT Image 1 (OpenAI's latest) |
 | **Video Generation** | Transform static scenes into motion | Replicate |
 | **Music Generation** | AI-composed soundtracks for your scenes | Replicate |
 | **Voiceover** | AI-generated narration and dialogue | OpenAI TTS |
@@ -107,7 +107,7 @@ Transform written works into visual storyboards:
 | **Authentication** | [NextAuth.js](https://next-auth.js.org/) |
 | **Database** | [PostgreSQL](https://www.postgresql.org/) via [Supabase](https://supabase.com/) |
 | **Storage** | [Supabase Storage](https://supabase.com/storage) |
-| **AI/ML** | [OpenAI](https://openai.com/) (DALL-E 3, GPT-4o-mini, TTS) |
+| **AI/ML** | [OpenAI](https://openai.com/) (GPT Image 1, GPT-4o-mini, TTS) |
 | **Video/Music** | [Replicate](https://replicate.com/) |
 | **Payments** | [Stripe](https://stripe.com/) |
 | **Styling** | CSS Modules |
@@ -398,7 +398,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- [OpenAI](https://openai.com/) for DALL-E, GPT, and TTS APIs
+- [OpenAI](https://openai.com/) for GPT Image 1, GPT, and TTS APIs
 - [Replicate](https://replicate.com/) for video and music generation
 - [Vercel](https://vercel.com/) for hosting and deployment
 - [Supabase](https://supabase.com/) for database and storage

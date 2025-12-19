@@ -7,7 +7,7 @@ import { deductCredits, getUserCredits, CreditError } from '@/utils/db';
 import { TIER_CREDITS, QualityTier } from '@/config/ai-settings';
 
 // Valid parameter values for OpenAI API
-const VALID_MODELS = ['dall-e-3', 'gpt-image-1.5'];
+const VALID_MODELS = ['dall-e-3', 'gpt-image-1'];
 const DALLE3_SIZES = ['1024x1024', '1024x1792', '1792x1024'];
 const GPT_IMAGE_SIZES = ['1024x1024', '1536x1024', '1024x1536', 'auto'];
 const VALID_QUALITIES = ['standard', 'hd'];
@@ -90,8 +90,8 @@ export default async function handler(
     }
   }
 
-  // Validate model parameter (default to gpt-image-1.5 for speed and cost)
-  const selectedModel = model || 'gpt-image-1.5';
+  // Validate model parameter (default to gpt-image-1 - OpenAI's latest native image model)
+  const selectedModel = model || 'gpt-image-1';
   if (!VALID_MODELS.includes(selectedModel)) {
     return res.status(400).json({ error: `Invalid model. Must be one of: ${VALID_MODELS.join(', ')}` });
   }
@@ -110,10 +110,10 @@ export default async function handler(
     return res.status(400).json({ error: `Invalid style. Must be one of: ${VALID_STYLES.join(', ')}` });
   }
 
-  // Validate outputFormat (GPT Image 1.5 only)
+  // Validate outputFormat (GPT Image 1 only)
   if (outputFormat) {
-    if (selectedModel !== 'gpt-image-1.5') {
-      return res.status(400).json({ error: 'Output format is only supported for gpt-image-1.5 model' });
+    if (selectedModel !== 'gpt-image-1') {
+      return res.status(400).json({ error: 'Output format is only supported for gpt-image-1 model' });
     }
     if (!VALID_OUTPUT_FORMATS.includes(outputFormat)) {
       return res.status(400).json({ error: `Invalid output format. Must be one of: ${VALID_OUTPUT_FORMATS.join(', ')}` });

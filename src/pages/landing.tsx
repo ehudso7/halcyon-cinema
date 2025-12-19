@@ -43,7 +43,7 @@ const testimonials = [
 const faqs = [
   {
     question: "How does HALCYON generate images?",
-    answer: "HALCYON uses state-of-the-art AI models including DALL-E 3 to transform your natural language descriptions into stunning visuals. Simply describe your scene, select a style, and watch your vision come to life.",
+    answer: "HALCYON uses OpenAI's latest GPT Image 1 model to transform your natural language descriptions into stunning visuals. Simply describe your scene, select a style, and watch your vision come to life.",
   },
   {
     question: "What visual styles are available?",
@@ -306,7 +306,7 @@ export default function LandingPage() {
       <Head>
         <title>HALCYON-Cinema | The Future of Visual Storytelling</title>
         <meta name="description" content="HALCYON is the AI-native cinematic studio redefining how stories are visualized. Transform imagination into cinema-quality storyboards, scenes, and visual narratives in seconds." />
-        <meta name="keywords" content="AI movie maker, storyboard generator, cinematic AI, DALL-E 3, film production, GPT-4 filmmaking, concept art AI, visual storytelling, next-gen content creation" />
+        <meta name="keywords" content="AI movie maker, storyboard generator, cinematic AI, GPT Image 1, film production, GPT-4o filmmaking, concept art AI, visual storytelling, next-gen content creation" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta property="og:title" content="HALCYON-Cinema | The Future of Visual Storytelling" />
         <meta property="og:description" content="The pioneering AI studio for filmmakers, creators, and visionaries. Build cinema-quality visuals from natural language." />
@@ -357,7 +357,7 @@ export default function LandingPage() {
             <h1 className={styles.title}>HALCYON</h1>
             <p className={styles.tagline}>The Future of Visual Storytelling Starts Here.</p>
             <p className={styles.subhead}>
-              HALCYON is the visionary AI studio redefining cinematic creation. Transform imagination into cinema-quality storyboards, scenes, and visual narratives — powered by GPT-4 and DALL-E 3.
+              HALCYON is the visionary AI studio redefining cinematic creation. Transform imagination into cinema-quality storyboards, scenes, and visual narratives — powered by GPT-4o and GPT Image 1.
             </p>
             <div className={styles.buttons}>
               {session ? (
@@ -584,7 +584,7 @@ export default function LandingPage() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
-                  DALL-E 3 image generation
+                  GPT Image 1 generation
                 </li>
                 <li>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -814,7 +814,7 @@ export default function LandingPage() {
             </div>
             <div className={styles.footerBottom}>
               <p className={styles.footerText}>
-                Powered by GPT-4 Vision, DALL-E 3 & Next.js 16
+                Powered by GPT-4o, GPT Image 1 & Next.js 16
               </p>
               <p className={styles.footerCopy}>
                 © {new Date().getFullYear()} HALCYON-Cinema. Pioneering the future of visual storytelling.

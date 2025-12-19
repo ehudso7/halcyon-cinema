@@ -66,7 +66,7 @@ export default function Footer() {
           <div className={styles.badges}>
             <span className={styles.badge}>Next.js 16</span>
             <span className={styles.badge}>TypeScript</span>
-            <span className={styles.badge}>DALL-E 3</span>
+            <span className={styles.badge}>GPT Image 1</span>
           </div>
         </div>
       </div>
