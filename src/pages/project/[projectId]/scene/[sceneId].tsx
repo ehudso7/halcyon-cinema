@@ -185,6 +185,10 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
 
         const videoResult = await videoResponse.json();
 
+        if (!videoResponse.ok) {
+          throw new Error(videoResult.error || `Video generation failed with status ${videoResponse.status}`);
+        }
+
         if (!videoResult.success && videoResult.status !== 'processing') {
           throw new Error(videoResult.error || 'Failed to generate video');
         }

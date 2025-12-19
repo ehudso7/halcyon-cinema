@@ -31,7 +31,7 @@ describe('E2E Journey: Export Flows', () => {
     const projectResponse = await authPost('/api/projects', session.cookies, {
       name: 'Export Test Project',
       description: 'A project for testing export functionality',
-    });
+    }, session.csrfToken);
     const project = await projectResponse.json();
     projectId = project.id;
 
@@ -40,7 +40,7 @@ describe('E2E Journey: Export Flows', () => {
       projectId,
       prompt: 'A dramatic scene for export testing',
       imageUrl: 'https://example.com/test-image.png',
-    });
+    }, session.csrfToken);
     const scene = await sceneResponse.json();
     sceneId = scene.id;
 
@@ -49,14 +49,14 @@ describe('E2E Journey: Export Flows', () => {
       name: 'Test Character',
       description: 'A character for export testing',
       traits: ['brave', 'smart'],
-    });
+    }, session.csrfToken);
 
     // Add lore
     await authPost(`/api/projects/${projectId}/lore`, session.cookies, {
       type: 'location',
       name: 'Test Location',
       summary: 'A location for export testing',
-    });
+    }, session.csrfToken);
   }, 30000);
 
   describe('Project Export Flow', () => {
@@ -184,7 +184,8 @@ describe('E2E Journey: Export Flows', () => {
       const response = await authPost(
         `/api/export/project/${projectId}`,
         session.cookies,
-        {}
+        {},
+        session.csrfToken
       );
 
       expect(response.status).toBe(405);
@@ -194,7 +195,8 @@ describe('E2E Journey: Export Flows', () => {
       const response = await authPost(
         `/api/export/scene/${sceneId}?projectId=${projectId}`,
         session.cookies,
-        {}
+        {},
+        session.csrfToken
       );
 
       expect(response.status).toBe(405);

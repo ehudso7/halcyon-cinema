@@ -33,7 +33,7 @@ describe('E2E Journey: Scene Management', () => {
     const projectResponse = await authPost('/api/projects', session.cookies, {
       name: 'Scene Test Project',
       description: 'Project for scene E2E tests',
-    });
+    }, session.csrfToken);
     const project = await projectResponse.json();
     projectId = project.id;
   }, 30000);
@@ -43,7 +43,7 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPost('/api/scenes', session.cookies, {
         projectId,
         prompt: 'A dramatic sunset over a cyberpunk city skyline',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(201);
 
@@ -60,7 +60,7 @@ describe('E2E Journey: Scene Management', () => {
         projectId,
         prompt: 'A mysterious forest with glowing mushrooms',
         imageUrl: 'https://example.com/forest.png',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(201);
 
@@ -78,7 +78,7 @@ describe('E2E Journey: Scene Management', () => {
           mood: 'epic',
           cameraAngle: 'wide shot',
         },
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(201);
 
@@ -90,7 +90,7 @@ describe('E2E Journey: Scene Management', () => {
     it('should reject scene without projectId', async () => {
       const response = await authPost('/api/scenes', session.cookies, {
         prompt: 'A scene without a project',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(400);
       const data = await response.json();
@@ -100,7 +100,7 @@ describe('E2E Journey: Scene Management', () => {
     it('should reject scene without prompt', async () => {
       const response = await authPost('/api/scenes', session.cookies, {
         projectId,
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(400);
       const data = await response.json();
@@ -111,7 +111,7 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPost('/api/scenes', session.cookies, {
         projectId,
         prompt: '   ',
-      });
+      }, session.csrfToken);
 
       expect(response.status).toBe(400);
     });
@@ -120,7 +120,7 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPost('/api/scenes', session.cookies, {
         projectId: 'non-existent-project-id',
         prompt: 'A scene for a missing project',
-      });
+      }, session.csrfToken);
 
       expect([401, 404]).toContain(response.status);
     });
@@ -168,7 +168,8 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPut(
         `/api/scenes/${createdSceneId}?projectId=${projectId}`,
         session.cookies,
-        { prompt: 'Updated: A neon-lit alley in the rain' }
+        { prompt: 'Updated: A neon-lit alley in the rain' },
+        session.csrfToken
       );
 
       expect(response.status).toBe(200);
@@ -181,7 +182,8 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPut(
         `/api/scenes/${createdSceneId}?projectId=${projectId}`,
         session.cookies,
-        { imageUrl: 'https://example.com/updated-image.png' }
+        { imageUrl: 'https://example.com/updated-image.png' },
+        session.csrfToken
       );
 
       expect(response.status).toBe(200);
@@ -195,7 +197,8 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPut(
         `/api/scenes/${createdSceneId}?projectId=${projectId}`,
         session.cookies,
-        { metadata: { style: 'noir', mood: 'mysterious' } }
+        { metadata: { style: 'noir', mood: 'mysterious' } },
+        session.csrfToken
       );
 
       expect(response.status).toBe(200);
@@ -216,7 +219,7 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPost('/api/scenes', session.cookies, {
         projectId,
         prompt: 'Scene to be deleted',
-      });
+      }, session.csrfToken);
       const scene = await response.json();
       sceneToDelete = scene.id;
     });
@@ -224,7 +227,8 @@ describe('E2E Journey: Scene Management', () => {
     it('should delete a scene', async () => {
       const response = await authDelete(
         `/api/scenes/${sceneToDelete}?projectId=${projectId}`,
-        session.cookies
+        session.cookies,
+        session.csrfToken
       );
 
       expect(response.status).toBe(200);
@@ -240,7 +244,8 @@ describe('E2E Journey: Scene Management', () => {
     it('should return 404 when deleting non-existent scene', async () => {
       const response = await authDelete(
         `/api/scenes/non-existent-scene-id?projectId=${projectId}`,
-        session.cookies
+        session.cookies,
+        session.csrfToken
       );
 
       expect([401, 404]).toContain(response.status);
@@ -259,7 +264,7 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPost('/api/scenes', otherSession.cookies, {
         projectId,
         prompt: 'Unauthorized scene creation',
-      });
+      }, otherSession.csrfToken);
 
       expect([401, 403]).toContain(response.status);
     });
@@ -277,7 +282,8 @@ describe('E2E Journey: Scene Management', () => {
       const response = await authPut(
         `/api/scenes/${createdSceneId}?projectId=${projectId}`,
         otherSession.cookies,
-        { prompt: 'Unauthorized update' }
+        { prompt: 'Unauthorized update' },
+        otherSession.csrfToken
       );
 
       expect([401, 403, 404]).toContain(response.status);
@@ -286,7 +292,8 @@ describe('E2E Journey: Scene Management', () => {
     it('should not allow another user to delete scene', async () => {
       const response = await authDelete(
         `/api/scenes/${createdSceneId}?projectId=${projectId}`,
-        otherSession.cookies
+        otherSession.cookies,
+        otherSession.csrfToken
       );
 
       expect([401, 403, 404]).toContain(response.status);
