@@ -14,6 +14,7 @@ import { trackGeneration } from '@/components/UsageStats';
 import { Project, Scene } from '@/types';
 import { getProjectByIdAsync, getSceneByIdAsync } from '@/utils/storage';
 import { authOptions } from '@/pages/api/auth/[...nextauth]';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/Scene.module.css';
 
 interface ScenePageProps {
@@ -31,6 +32,7 @@ interface ImageHistoryItem {
 
 export default function ScenePage({ project, scene: initialScene, sceneIndex }: ScenePageProps) {
   const router = useRouter();
+  const { csrfFetch } = useCSRF();
   const [scene, setScene] = useState<Scene>(initialScene);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showRegenerate, setShowRegenerate] = useState(false);
@@ -172,7 +174,7 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
 
       if (data.contentType === 'video') {
         // Generate video
-        const videoResponse = await fetch('/api/generate-video', {
+        const videoResponse = await csrfFetch('/api/generate-video', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -228,7 +230,7 @@ export default function ScenePage({ project, scene: initialScene, sceneIndex }: 
         mediaType = 'video';
       } else {
         // Generate image
-        const imageResponse = await fetch('/api/generate-image', {
+        const imageResponse = await csrfFetch('/api/generate-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

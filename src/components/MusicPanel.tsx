@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MusicIcon, CogIcon } from './Icons';
+import { useCSRF } from '@/hooks/useCSRF';
 import styles from './MusicPanel.module.css';
 
 interface MusicPanelProps {
@@ -61,6 +62,7 @@ export default function MusicPanel({
   sceneTitle,
   initialPrompt = '',
 }: MusicPanelProps) {
+  const { csrfFetch } = useCSRF();
   const [prompt, setPrompt] = useState(initialPrompt);
   const [selectedGenre, setSelectedGenre] = useState<Genre>('cinematic');
   const [selectedMood, setSelectedMood] = useState<Mood>('dramatic');
@@ -90,7 +92,7 @@ export default function MusicPanel({
     setProgress('Starting music generation...');
 
     try {
-      const response = await fetch('/api/generate-music', {
+      const response = await csrfFetch('/api/generate-music', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
