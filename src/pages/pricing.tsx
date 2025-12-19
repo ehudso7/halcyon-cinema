@@ -8,13 +8,25 @@ import { authOptions } from '@/pages/api/auth/[...nextauth]';
 import { useCSRF } from '@/hooks/useCSRF';
 import styles from '@/styles/Pricing.module.css';
 
+/**
+ * Error message displayed when CSRF token fails to load.
+ * Used for security token validation in payment flows.
+ */
 const CSRF_ERROR_MESSAGE = 'Security token failed to load. Please refresh the page.';
 
+/**
+ * Props for the PricingPage component.
+ */
 interface PricingPageProps {
+  /** Whether the user is currently logged in */
   isLoggedIn: boolean;
+  /** The user's current subscription tier (e.g., 'starter', 'creator', 'studio') */
   currentTier?: string;
+  /** Number of generation credits remaining in the user's account */
   creditsRemaining?: number;
+  /** Whether Stripe payment processing is configured */
   stripeConfigured: boolean;
+  /** Stripe price IDs for all subscription plans and credit packs */
   priceIds: {
     starterMonthly: string;
     starterYearly: string;
@@ -30,24 +42,49 @@ interface PricingPageProps {
   };
 }
 
+/**
+ * Represents a subscription pricing plan with monthly and yearly options.
+ */
 interface PricingPlan {
+  /** Unique identifier for the plan */
   id: string;
+  /** Display name of the plan */
   name: string;
+  /** Monthly subscription price in USD */
   monthlyPrice: number;
+  /** Yearly subscription price in USD */
   yearlyPrice: number;
+  /** Stripe price ID for monthly billing */
   monthlyPriceId: string;
+  /** Stripe price ID for yearly billing */
   yearlyPriceId: string;
+  /** Number of generation credits included per month */
   credits: number;
+  /** List of features included in the plan */
   features: string[];
+  /** Whether this plan should be highlighted as popular */
   popular?: boolean;
 }
 
+/**
+ * Represents a one-time credit pack purchase option.
+ */
 interface CreditPack {
+  /** Number of credits in the pack */
   credits: number;
+  /** Price in USD */
   price: number;
+  /** Stripe price ID for this credit pack */
   priceId: string;
 }
 
+/**
+ * Pricing page component displaying subscription plans and credit packs.
+ * Handles Stripe checkout integration for subscriptions and one-time purchases.
+ *
+ * @param props - The component props
+ * @returns The rendered pricing page
+ */
 export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining, stripeConfigured, priceIds }: PricingPageProps) {
   const router = useRouter();
   const { csrfFetch, loading: csrfLoading, error: csrfError } = useCSRF();
@@ -133,6 +170,12 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
     { credits: 1000, price: 60, priceId: priceIds.credits1000 },
   ];
 
+  /**
+   * Handles subscription checkout by creating a Stripe checkout session.
+   * Redirects unauthenticated users to sign in first.
+   *
+   * @param plan - The pricing plan to subscribe to
+   */
   const handleSubscribe = async (plan: PricingPlan) => {
     if (!isLoggedIn) {
       router.push('/auth/signin?callbackUrl=/pricing');
@@ -168,6 +211,12 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
     }
   };
 
+  /**
+   * Handles one-time credit pack purchase by creating a Stripe checkout session.
+   * Redirects unauthenticated users to sign in first.
+   *
+   * @param pack - The credit pack to purchase
+   */
   const handleBuyCredits = async (pack: CreditPack) => {
     if (!isLoggedIn) {
       router.push('/auth/signin?callbackUrl=/pricing');
@@ -427,6 +476,13 @@ export default function PricingPage({ isLoggedIn, currentTier, creditsRemaining,
   );
 }
 
+/**
+ * Server-side props fetcher for the pricing page.
+ * Retrieves user session, credit balance, and Stripe configuration.
+ *
+ * @param context - Next.js server-side context
+ * @returns Props including login status, credits, and Stripe price IDs
+ */
 export const getServerSideProps: GetServerSideProps<PricingPageProps> = async (context) => {
   const session = await getServerSession(context.req, context.res, authOptions);
 
