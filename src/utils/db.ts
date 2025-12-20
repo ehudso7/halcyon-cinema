@@ -15,6 +15,18 @@ function parseIntEnv(name: string, defaultValue: number): number {
 }
 
 /**
+ * Validate that a URL string is a valid PostgreSQL connection string.
+ * PostgreSQL URLs must start with "postgres://" or "postgresql://".
+ * This prevents SQLite paths (file:./dev.db) or other formats from being
+ * incorrectly treated as PostgreSQL connection strings.
+ */
+const POSTGRES_URL_PATTERN = /^postgres(ql)?:\/\//i;
+
+function isValidPostgresUrl(url: string | undefined): boolean {
+  return !!url && POSTGRES_URL_PATTERN.test(url);
+}
+
+/**
  * Check if Postgres is available - evaluated at runtime, not module load time.
  * This is important for serverless environments where env vars might not be
  * available during module initialization.
@@ -25,14 +37,11 @@ function parseIntEnv(name: string, defaultValue: number): number {
 function checkPostgresAvailable(): boolean {
   // Check for full connection URLs first
   // Validate that the URL is actually a PostgreSQL connection string (not SQLite or other formats)
-  const postgresUrl = process.env.POSTGRES_URL;
-  const databaseUrl = process.env.DATABASE_URL;
-
-  if (postgresUrl && /^postgres(ql)?:\/\//i.test(postgresUrl)) {
+  if (isValidPostgresUrl(process.env.POSTGRES_URL)) {
     return true;
   }
 
-  if (databaseUrl && /^postgres(ql)?:\/\//i.test(databaseUrl)) {
+  if (isValidPostgresUrl(process.env.DATABASE_URL)) {
     return true;
   }
 
@@ -99,14 +108,13 @@ function stripSslModeFromUrl(url: string): string {
  */
 function getDatabaseUrl(): string | undefined {
   const isVercel = process.env.VERCEL === '1';
-  const isValidPostgresUrl = (urlStr: string) => /^postgres(ql)?:\/\//i.test(urlStr);
 
   let url: string | undefined;
 
   // Prefer explicit connection URLs - only use if they're valid PostgreSQL URLs
-  if (process.env.POSTGRES_URL && isValidPostgresUrl(process.env.POSTGRES_URL)) {
+  if (isValidPostgresUrl(process.env.POSTGRES_URL)) {
     url = process.env.POSTGRES_URL;
-  } else if (process.env.DATABASE_URL && isValidPostgresUrl(process.env.DATABASE_URL)) {
+  } else if (isValidPostgresUrl(process.env.DATABASE_URL)) {
     url = process.env.DATABASE_URL;
   } else {
     // Fall back to building from individual components
