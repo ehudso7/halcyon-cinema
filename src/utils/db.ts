@@ -24,7 +24,15 @@ function parseIntEnv(name: string, defaultValue: number): number {
  */
 function checkPostgresAvailable(): boolean {
   // Check for full connection URLs first
-  if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
+  // Validate that the URL is actually a PostgreSQL connection string (not SQLite or other formats)
+  const postgresUrl = process.env.POSTGRES_URL;
+  const databaseUrl = process.env.DATABASE_URL;
+
+  if (postgresUrl && /^postgres(ql)?:\/\//i.test(postgresUrl)) {
+    return true;
+  }
+
+  if (databaseUrl && /^postgres(ql)?:\/\//i.test(databaseUrl)) {
     return true;
   }
 
@@ -91,13 +99,14 @@ function stripSslModeFromUrl(url: string): string {
  */
 function getDatabaseUrl(): string | undefined {
   const isVercel = process.env.VERCEL === '1';
+  const isValidPostgresUrl = (urlStr: string) => /^postgres(ql)?:\/\//i.test(urlStr);
 
   let url: string | undefined;
 
-  // Prefer explicit connection URLs
-  if (process.env.POSTGRES_URL) {
+  // Prefer explicit connection URLs - only use if they're valid PostgreSQL URLs
+  if (process.env.POSTGRES_URL && isValidPostgresUrl(process.env.POSTGRES_URL)) {
     url = process.env.POSTGRES_URL;
-  } else if (process.env.DATABASE_URL) {
+  } else if (process.env.DATABASE_URL && isValidPostgresUrl(process.env.DATABASE_URL)) {
     url = process.env.DATABASE_URL;
   } else {
     // Fall back to building from individual components
