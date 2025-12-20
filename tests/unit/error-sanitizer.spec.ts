@@ -76,8 +76,8 @@ describe('Error Sanitizer', () => {
       const errorObj = { code: 'ERROR_123', details: 'some details' };
       const result = sanitizeGenerationError(errorObj, 'video');
 
-      // Should convert to string representation
-      expect(result).toBeDefined();
+      // Should return proper fallback message instead of [object Object]
+      expect(result).toBe('Video generation failed.');
     });
   });
 
