@@ -49,7 +49,9 @@ export default async function handler(
   }
 
   // Determine media type for error messages (default to 'video')
-  const mediaType: 'video' | 'music' = type === 'music' ? 'music' : 'video';
+  // Validate that type is a string and one of the expected values
+  const typeValue = typeof type === 'string' ? type : undefined;
+  const mediaType: 'video' | 'music' = typeValue === 'music' ? 'music' : 'video';
 
   // Validate prediction ID format (UUID-like)
   if (!/^[a-z0-9]{20,}$/i.test(predictionId)) {

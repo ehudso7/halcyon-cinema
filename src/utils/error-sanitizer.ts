@@ -69,6 +69,9 @@ export function sanitizeGenerationError(
       if (typeof maybeMessage === 'string' && maybeMessage.trim()) {
         return maybeMessage;
       }
+      // For objects without message property, return empty to trigger fallback
+      // This avoids returning unhelpful "[object Object]" strings
+      return '';
     }
     return String(error ?? '');
   })();
